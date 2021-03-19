@@ -1,0 +1,61 @@
+{
+  "name": "wheat-v1-core",
+  "version": "1.0.0",
+  "description": "WHEAT Core smart contracts",
+  "files": [
+    "/contracts/**/*.sol",
+    "/build/contracts/*.json"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@openzeppelin/contracts": "3.3.0",
+    "@truffle/hdwallet-provider": "^1.2.2",
+    "dotenv": "^8.2.0",
+    "ganache-cli": "^6.12.2",
+    "truffle": "^5.1.66",
+    "truffle-flattener": "^1.5.0"
+  },
+  "scripts": {
+    "build": "truffle compile",
+    "deploy": "truffle migrate",
+    "deploy:mainnet": "npm run set:mainnet && truffle migrate --network mainnet",
+    "deploy:ropsten": "npm run set:ropsten && truffle migrate --network ropsten",
+    "deploy:rinkeby": "npm run set:rinkeby && truffle migrate --network rinkeby",
+    "deploy:kovan": "npm run set:kovan && truffle migrate --network kovan",
+    "deploy:goerli": "npm run set:goerli && truffle migrate --network goerli",
+    "deploy:bscmain": "npm run set:bscmain && truffle migrate --network bscmain",
+    "deploy:bsctest": "npm run set:bsctest && truffle migrate --network bsctest",
+    "deploy:ftmmain": "npm run set:ftmmain && truffle migrate --network ftmmain",
+    "deploy:ftmtest": "npm run set:ftmtest && truffle migrate --network ftmtest",
+    "set:mainnet": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Mainnet/g' contracts/network/$.sol",
+    "set:ropsten": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Ropsten/g' contracts/network/$.sol",
+    "set:rinkeby": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Rinkeby/g' contracts/network/$.sol",
+    "set:kovan": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Kovan/g' contracts/network/$.sol",
+    "set:goerli": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Goerli/g' contracts/network/$.sol",
+    "set:bscmain": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Bscmain/g' contracts/network/$.sol",
+    "set:bsctest": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Bsctest/g' contracts/network/$.sol",
+    "set:ftmmain": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Ftmmain/g' contracts/network/$.sol",
+    "set:ftmtest": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Ftmtest/g' contracts/network/$.sol",
+    "source": "truffle-flattener contracts/Deployer.sol | sed '/^.*SPDX-License-Identifier:.*$/d' | sed '1s/^/\\/\\/ SPDX-License-Identifier: GPL-3.0-only\\n\\n/' > WHEAT.sol",
+    "test": "truffle test",
+    "test:mainnet": "npm run set:mainnet && truffle test",
+    "test:ropsten": "npm run set:ropsten && truffle test",
+    "test:rinkeby": "npm run set:rinkeby && truffle test",
+    "test:kovan": "npm run set:kovan && truffle test",
+    "test:goerli": "npm run set:goerli && truffle test",
+    "test:bscmain": "GAS_LIMIT=30000000 npm run set:bscmain && truffle test",
+    "test:bsctest": "GAS_LIMIT=30000000 npm run set:bsctest && truffle test",
+    "test:ftmmain": "npm run set:ftmmain && truffle test",
+    "test:ftmtest": "npm run set:ftmtest && truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GrowthDeFi/wheat-v1-core.git"
+  },
+  "author": "raugfer",
+  "license": "GPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/GrowthDeFi/wheat-v1-core/issues"
+  },
+  "homepage": "https://github.com/GrowthDeFi/wheat-v1-core#readme"
+}
