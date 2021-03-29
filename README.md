@@ -7,10 +7,10 @@ This repository contains the source code for the WHEAT smart contracts
 
 ## Deployed Contracts
 
-| Token         | BSCmain Address                                                                                                       |
+| Token         | BSC Mainnet Address                                                                                                   |
 | ------------- | --------------------------------------------------------------------------------------------------------------------- |
 
-| Token         | BSCtest Address                                                                                                       |
+| Token         | BSC Testnet Address                                                                                                   |
 | ------------- | --------------------------------------------------------------------------------------------------------------------- |
 
 ## Repository Organization
