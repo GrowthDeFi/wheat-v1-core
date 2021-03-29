@@ -2,7 +2,6 @@
 pragma solidity ^0.6.0;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 
 import { $ } from "./network/$.sol";
 
@@ -37,8 +36,5 @@ library LibDeployer1
 {
 	function publishContract() public returns (address _address)
 	{
-		// bytes memory _bytecode = abi.encodePacked(type(Contract).creationCode);
-		// Contract(_address).construct();
-		// return Create2.deploy(0, bytes32(0), _bytecode);
 	}
 }

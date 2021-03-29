@@ -39,8 +39,8 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 	address public exchange;
 
 	address public dev;
-	address public collector;
 	address public treasury;
+	address public collector;
 
 	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
@@ -59,7 +59,7 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
-		address _dev, address _collector, address _treasury)
+		address _dev, address _treasury, address _collector)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
@@ -74,8 +74,8 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 		routingToken = _routingToken;
 		rewardToken = _rewardToken;
 		dev = _dev;
-		collector = _collector;
 		treasury = _treasury;
+		collector = _collector;
 		_mint(address(1), 1); // avoids division by zero
 	}
 
@@ -159,20 +159,20 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 		emit ChangeDev(_oldDev, _newDev);
 	}
 
-	function setCollector(address _newCollector) external onlyOwner nonReentrant
-	{
-		require(_newCollector != address(0), "invalid address");
-		address _oldCollector = collector;
-		collector = _newCollector;
-		emit ChangeCollector(_oldCollector, _newCollector);
-	}
-
 	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
 		treasury = _newTreasury;
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
+	}
+
+	function setCollector(address _newCollector) external onlyOwner nonReentrant
+	{
+		require(_newCollector != address(0), "invalid address");
+		address _oldCollector = collector;
+		collector = _newCollector;
+		emit ChangeCollector(_oldCollector, _newCollector);
 	}
 
 	function setDepositFee(uint256 _newDepositFee) external onlyOwner nonReentrant
@@ -272,8 +272,8 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeDev(address _oldDev, address _newDev);
-	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
+	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeDepositFee(uint256 _oldDepositFee, uint256 _newDepositFee);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
