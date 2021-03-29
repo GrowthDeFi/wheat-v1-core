@@ -15,4 +15,19 @@ library Math
 	{
 		return _amount1 > _amount2 ? _amount1 : _amount2;
 	}
+
+	function _sqrt(uint256 _y) internal pure returns (uint256 _z)
+	{
+		if (_y > 3) {
+			_z = _y;
+			uint256 _x = _y / 2 + 1;
+			while (_x < _z) {
+				_z = _x;
+				_x = (_y / _x + _x) / 2;
+			}
+			return _z;
+		}
+		if (_y > 0) return 1;
+		return 0;
+	}
 }
