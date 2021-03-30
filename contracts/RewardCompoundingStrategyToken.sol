@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { EnumerableSet } from "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { Exchange } from "./Exchange.sol";
+import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
@@ -15,10 +14,9 @@ import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityP
 import { MasterChef } from "./interop/MasterChef.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
-contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
+contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
-	using EnumerableSet for EnumerableSet.AddressSet;
 
 	uint256 constant MAXIMUM_DEPOSIT_FEE = 5e16; // 5%
 	uint256 constant DEFAULT_DEPOSIT_FEE = 3e16; // 3%
@@ -47,15 +45,6 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 
 	uint256 private lastTotalSupply = 1;
 	uint256 private lastTotalReserve = 1;
-
-	EnumerableSet.AddressSet private whitelist;
-
-	modifier onlyEOAorWhitelist()
-	{
-		address _from = _msgSender();
-		require(tx.origin == _from || whitelist.contains(_from), "access denied");
-		_;
-	}
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
@@ -189,16 +178,6 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 		uint256 _oldPerformanceFee = performanceFee;
 		performanceFee = _newPerformanceFee;
 		emit ChangePerformanceFee(_oldPerformanceFee, _newPerformanceFee);
-	}
-
-	function addToWhitelist(address _address) external onlyOwner nonReentrant
-	{
-		require(whitelist.add(_address), "already listed");
-	}
-
-	function removeFromWhitelist(address _address) external onlyOwner nonReentrant
-	{
-		require(whitelist.remove(_address), "not listed");
 	}
 
 	function _calcCostFromShares(uint256 _shares) internal view returns (uint256 _cost)

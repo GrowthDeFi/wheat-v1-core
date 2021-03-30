@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { EnumerableSet } from "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
 import { MasterChef } from "./interop/MasterChef.sol";
 
-contract FeeCollector is Ownable, ReentrancyGuard
+contract FeeCollector is ReentrancyGuard, WhitelistGuard
 {
-	using EnumerableSet for EnumerableSet.AddressSet;
-
 	uint256 constant MIGRATION_WAIT_INTERVAL = 1 days;
 	uint256 constant MIGRATION_OPEN_INTERVAL = 1 days;
 
@@ -25,15 +23,6 @@ contract FeeCollector is Ownable, ReentrancyGuard
 
 	uint256 public migrationTimestamp;
 	address public migrationRecipient;
-
-	EnumerableSet.AddressSet private whitelist;
-
-	modifier onlyEOAorWhitelist()
-	{
-		address _from = _msgSender();
-		require(tx.origin == _from || whitelist.contains(_from), "access denied");
-		_;
-	}
 
 	constructor (address _masterChef, address _buyback) public
 	{
@@ -99,16 +88,6 @@ contract FeeCollector is Ownable, ReentrancyGuard
 		for (uint256 _i = 0; _i < _pids.length; _i++) {
 			hodllist[_i] = _hodl;
 		}
-	}
-
-	function addToWhitelist(address _address) external onlyOwner nonReentrant
-	{
-		require(whitelist.add(_address), "already listed");
-	}
-
-	function removeFromWhitelist(address _address) external onlyOwner nonReentrant
-	{
-		require(whitelist.remove(_address), "not listed");
 	}
 
 	function _calcReward() internal view returns (uint256 _reward)
