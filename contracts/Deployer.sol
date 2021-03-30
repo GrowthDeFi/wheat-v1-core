@@ -20,6 +20,7 @@ contract Deployer is Ownable
 
 	uint256 constant INITIAL_WHEAT_PER_BLOCK = 1e18;
 
+	address public exchange;
 	address public admin;
 	address public treasury;
 	address public dev;
@@ -102,6 +103,7 @@ contract Deployer is Ownable
 	function addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
 		address _address = LibDeployer3.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, collector);
+		RewardCompoundingStrategyToken(_address).setExchange(exchange);
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_address), false);
 		strategies.push(_address);
 	}
