@@ -90,6 +90,31 @@ contract Deployer is Ownable
 		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
 		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
 
+		uint256[] memory _hodllist = new uint256[](22);
+		_hodllist[0] = 1;
+		_hodllist[1] = 2;
+		_hodllist[2] = 3;
+		_hodllist[3] = 5;
+		_hodllist[4] = 7;
+		_hodllist[5] = 12;
+		_hodllist[6] = 14;
+		_hodllist[7] = 15;
+		_hodllist[8] = 25;
+		_hodllist[9] = 51;
+		_hodllist[10] = 52;
+		_hodllist[11] = 53;
+		_hodllist[12] = 55;
+		_hodllist[13] = 63;
+		_hodllist[14] = 70;
+		_hodllist[15] = 75;
+		_hodllist[16] = 81;
+		_hodllist[17] = 84;
+		_hodllist[18] = 85;
+		_hodllist[19] = 0; // TODO find out pid for pair
+		_hodllist[20] = 106;
+		_hodllist[21] = 108;
+		FeeCollector(collector).updateHodllist(_hodllist, true);
+
 		// transfer ownerships
 		Ownable(wheat).transferOwnership(masterChef);
 		Ownable(stkWheat).transferOwnership(masterChef);

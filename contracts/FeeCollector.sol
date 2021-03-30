@@ -17,6 +17,7 @@ contract FeeCollector is Ownable, ReentrancyGuard
 	uint256 constant MIGRATION_OPEN_INTERVAL = 1 days;
 
 	address private immutable masterChef;
+	mapping (uint256 => bool) private hodllist;
 
 	address public immutable rewardToken;
 
@@ -93,6 +94,13 @@ contract FeeCollector is Ownable, ReentrancyGuard
 		emit Migrate(_migrationRecipient, _migrationTimestamp);
 	}
 
+	function updateHodllist(uint256[] memory _pids, bool _hodl) external onlyOwner nonReentrant
+	{
+		for (uint256 _i = 0; _i < _pids.length; _i++) {
+			hodllist[_i] = _hodl;
+		}
+	}
+
 	function addToWhitelist(address _address) external onlyOwner nonReentrant
 	{
 		require(whitelist.add(_address), "already listed");
@@ -117,21 +125,17 @@ contract FeeCollector is Ownable, ReentrancyGuard
 	{
 		uint256 _poolLength = MasterChef(masterChef).poolLength();
 		for (uint256 _pid = 1; _pid < _poolLength; _pid++) {
+			if (!hodllist[_pid]) continue;
 			(address _token,,,) = MasterChef(masterChef).poolInfo(_pid);
 			uint256 _balance = Transfers._getBalance(_token);
 			if (_balance > 0) {
 				Transfers._approveFunds(_token, masterChef, _balance);
-				try MasterChef(masterChef).deposit(_pid, _balance) {
-				} catch (bytes memory /* _data */) {
-					Transfers._approveFunds(_token, masterChef, 0);
-				}
+				MasterChef(masterChef).deposit(_pid, _balance);
 				continue;
 			}
 			uint256 _reward = MasterChef(masterChef).pendingCake(_pid, address(this));
 			if (_reward > 0) {
-				try MasterChef(masterChef).withdraw(_pid, 1) {
-				} catch (bytes memory /* _data */) {
-				}
+				MasterChef(masterChef).withdraw(_pid, 0);
 				continue;
 			}
 		}
@@ -144,20 +148,18 @@ contract FeeCollector is Ownable, ReentrancyGuard
 		uint256 _poolLength = MasterChef(masterChef).poolLength();
 		if (_emergency) {
 			for (uint256 _pid = 1; _pid < _poolLength; _pid++) {
-				try MasterChef(masterChef).emergencyWithdraw(_pid) {
-				} catch (bytes memory /* _data */) {
-				}
+				if (!hodllist[_pid]) continue;
+				MasterChef(masterChef).emergencyWithdraw(_pid);
 				(address _token,,,) = MasterChef(masterChef).poolInfo(_pid);
 				uint256 _balance = Transfers._getBalance(_token);
 				Transfers._pushFunds(_token, migrationRecipient, _balance);
 			}
 		} else {
 			for (uint256 _pid = 1; _pid < _poolLength; _pid++) {
+				if (!hodllist[_pid]) continue;
 				(uint256 _amount,) = MasterChef(masterChef).userInfo(_pid, address(this));
 				if (_amount > 0) {
-					try MasterChef(masterChef).withdraw(_pid, _amount) {
-					} catch (bytes memory /* _data */) {
-					}
+					MasterChef(masterChef).withdraw(_pid, _amount);
 				}
 				(address _token,,,) = MasterChef(masterChef).poolInfo(_pid);
 				uint256 _balance = Transfers._getBalance(_token);

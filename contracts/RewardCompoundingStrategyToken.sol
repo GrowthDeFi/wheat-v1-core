@@ -255,9 +255,7 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 		require(exchange != address(0), "exchange not set");
 		uint256 _pendingRewardAmount = MasterChef(masterChef).pendingCake(pid, address(this));
 		if (_pendingRewardAmount > 0) {
-			MasterChef(masterChef).withdraw(pid, 1);
-			Transfers._approveFunds(reserveToken, masterChef, 1);
-			MasterChef(masterChef).deposit(pid, 1);
+			MasterChef(masterChef).withdraw(pid, 0);
 		}
 		if (routingToken != rewardToken) {
 			uint256 _rewardAmount = Transfers._getBalance(rewardToken);

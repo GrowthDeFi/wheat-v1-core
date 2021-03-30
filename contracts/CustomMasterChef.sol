@@ -195,8 +195,8 @@ contract CustomMasterChef is Ownable
 			}
 		}
 		if (_amount > 0) {
-		pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-		user.amount = user.amount.add(_amount);
+			pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+			user.amount = user.amount.add(_amount);
 		}
 		user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
 		emit Deposit(msg.sender, _pid, _amount);
