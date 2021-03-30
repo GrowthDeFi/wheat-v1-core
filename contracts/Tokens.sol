@@ -22,19 +22,3 @@ contract stkWHEAT is MintableStakeToken
 	{
 	}
 }
-
-contract stkBNB_CAKE is RewardCompoundingStrategyToken
-{
-	constructor (address _dev, address _treasury, address _collector)
-		RewardCompoundingStrategyToken("staked BNB/CAKE", "stkBNB/CAKE", 18, $.PancakeSwap_MASTERCHEF, 1, $.CAKE, _dev, _treasury, _collector) public
-	{
-	}
-}
-
-contract stkBNB_BUSD is RewardCompoundingStrategyToken
-{
-	constructor (address _dev, address _treasury, address _collector)
-		RewardCompoundingStrategyToken("staked BNB/BUSD", "stkBNB/BUSD", 18, $.PancakeSwap_MASTERCHEF, 2, $.WBNB, _dev, _treasury, _collector) public
-	{
-	}
-}

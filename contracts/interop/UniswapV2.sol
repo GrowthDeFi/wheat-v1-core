@@ -6,6 +6,13 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /**
  * @dev Minimal set of declarations for Uniswap V2 interoperability.
  */
+interface Factory
+{
+	function getPair(address _tokenA, address _tokenB) external view returns (address _pair);
+
+	function createPair(address _tokenA, address _tokenB) external returns (address _pair);
+}
+
 interface PoolToken is IERC20
 {
 }
