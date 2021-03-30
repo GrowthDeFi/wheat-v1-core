@@ -4,6 +4,7 @@ pragma solidity ^0.6.0;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import { Buyback } from "./Buyback.sol";
 import { CustomMasterChef } from "./CustomMasterChef.sol";
 import { FeeCollector } from "./FeeCollector.sol";
 import { RewardCompoundingStrategyToken } from "./RewardCompoundingStrategyToken.sol";
@@ -47,8 +48,6 @@ contract Deployer is Ownable
 		treasury = DEFAULT_TREASURY;
 		dev = DEFAULT_DEV;
 
-		collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, buyback);
-
 		// configure MasterChef
 		wheat = LibDeployer1.publish_WHEAT();
 		stkWheat = LibDeployer1.publish_stkWHEAT(wheat);
@@ -89,6 +88,9 @@ contract Deployer is Ownable
 		addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
 		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
 		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
+
+		buyback = LibDeployer1.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO);
+		collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, buyback);
 
 		uint256[] memory _hodllist = new uint256[](22);
 		_hodllist[0] = 1;
@@ -151,6 +153,11 @@ library LibDeployer1
 	function publish_stkWHEAT(address _wheat) public returns (address _address)
 	{
 		return address(new stkWHEAT(_wheat));
+	}
+
+	function publish_Buyback(address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2) public returns (address _address)
+	{
+		return address(new Buyback(_rewardToken, _routingToken, _buybackToken1, _buybackToken2));
 	}
 
 	function publish_FeeCollector(address _masterChef, address _buyback) public returns (address _address)
