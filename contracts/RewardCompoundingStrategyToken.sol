@@ -98,7 +98,7 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 		return _cost;
 	}
 
-	function pendingReward() external view returns (uint256 _rewardsCost)
+	function pendingReward() external view returns (uint256 _rewardCost)
 	{
 		return _calcReward();
 	}
@@ -189,6 +189,16 @@ contract RewardCompoundingStrategyToken is ERC20, Ownable, ReentrancyGuard
 		uint256 _oldPerformanceFee = performanceFee;
 		performanceFee = _newPerformanceFee;
 		emit ChangePerformanceFee(_oldPerformanceFee, _newPerformanceFee);
+	}
+
+	function addToWhitelist(address _address) external onlyOwner nonReentrant
+	{
+		require(whitelist.add(_address), "already listed");
+	}
+
+	function removeFromWhitelist(address _address) external onlyOwner nonReentrant
+	{
+		require(whitelist.remove(_address), "not listed");
 	}
 
 	function _calcCostFromShares(uint256 _shares) internal view returns (uint256 _cost)

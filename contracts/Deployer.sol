@@ -5,6 +5,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { CustomMasterChef } from "./CustomMasterChef.sol";
+import { FeeCollector } from "./FeeCollector.sol";
 import { RewardCompoundingStrategyToken } from "./RewardCompoundingStrategyToken.sol";
 import { WHEAT, stkWHEAT } from "./Tokens.sol";
 
@@ -25,6 +26,7 @@ contract Deployer is Ownable
 	address public treasury;
 	address public dev;
 	address public collector;
+	address public buyback;
 	address public wheat;
 	address public stkWheat;
 	address public masterChef;
@@ -44,6 +46,8 @@ contract Deployer is Ownable
 		admin = DEFAULT_ADMIN;
 		treasury = DEFAULT_TREASURY;
 		dev = DEFAULT_DEV;
+
+		collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, buyback);
 
 		// configure MasterChef
 		wheat = LibDeployer1.publish_WHEAT();
@@ -67,7 +71,7 @@ contract Deployer is Ownable
 		addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
 		addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
 		addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
-		addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.BETH, 2000);
+		addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
 		addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
 		addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
 		addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
@@ -80,7 +84,7 @@ contract Deployer is Ownable
 		addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
 		addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
 		addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
-		addStrategy("staked UST/MIR", "stkUST/MIR", 102, $.UST, 1000);
+		addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 0, $.WBNB, 1000); // TODO find out pid for pair
 		addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
 		addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
 		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
@@ -90,6 +94,7 @@ contract Deployer is Ownable
 		Ownable(wheat).transferOwnership(masterChef);
 		Ownable(stkWheat).transferOwnership(masterChef);
 		Ownable(masterChef).transferOwnership(admin);
+		Ownable(collector).transferOwnership(admin);
 		for (uint256 _i = 0; _i < strategies.length; _i++) {
 			Ownable(strategies[_i]).transferOwnership(admin);
 		}
@@ -121,6 +126,11 @@ library LibDeployer1
 	function publish_stkWHEAT(address _wheat) public returns (address _address)
 	{
 		return address(new stkWHEAT(_wheat));
+	}
+
+	function publish_FeeCollector(address _masterChef, address _buyback) public returns (address _address)
+	{
+		return address(new FeeCollector(_masterChef, _buyback));
 	}
 }
 
