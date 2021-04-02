@@ -50,8 +50,8 @@ contract Deployer is Ownable
 
 		// configure MasterChef
 		wheat = LibDeployer1.publish_WHEAT();
-		stkWheat = LibDeployer1.publish_stkWHEAT(wheat);
-		masterChef = LibDeployer2.publish_CustomMasterChef(wheat, stkWheat, INITIAL_WHEAT_PER_BLOCK, block.number);
+		stkWheat = LibDeployer2.publish_stkWHEAT(wheat);
+		masterChef = LibDeployer3.publish_CustomMasterChef(wheat, stkWheat, INITIAL_WHEAT_PER_BLOCK, block.number);
 
 		CustomMasterChef(masterChef).set(0, 15000, false);
 
@@ -89,7 +89,7 @@ contract Deployer is Ownable
 		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
 		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
 
-		buyback = LibDeployer1.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO);
+		buyback = LibDeployer2.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO);
 		collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, buyback);
 
 		uint256[] memory _hodllist = new uint256[](22);
@@ -134,7 +134,7 @@ contract Deployer is Ownable
 
 	function addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
-		address _address = LibDeployer3.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, collector);
+		address _address = LibDeployer4.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, collector);
 		RewardCompoundingStrategyToken(_address).setExchange(exchange);
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_address), false);
 		strategies.push(_address);
@@ -150,6 +150,14 @@ library LibDeployer1
 		return address(new WHEAT());
 	}
 
+	function publish_FeeCollector(address _masterChef, address _buyback) public returns (address _address)
+	{
+		return address(new FeeCollector(_masterChef, _buyback));
+	}
+}
+
+library LibDeployer2
+{
 	function publish_stkWHEAT(address _wheat) public returns (address _address)
 	{
 		return address(new stkWHEAT(_wheat));
@@ -159,14 +167,9 @@ library LibDeployer1
 	{
 		return address(new Buyback(_rewardToken, _routingToken, _buybackToken1, _buybackToken2));
 	}
-
-	function publish_FeeCollector(address _masterChef, address _buyback) public returns (address _address)
-	{
-		return address(new FeeCollector(_masterChef, _buyback));
-	}
 }
 
-library LibDeployer2
+library LibDeployer3
 {
 	function publish_CustomMasterChef(address _wheat, address _stkWheat, uint256 _cakePerBlock, uint256 _startBlock) public returns (address _address)
 	{
@@ -174,7 +177,7 @@ library LibDeployer2
 	}
 }
 
-library LibDeployer3
+library LibDeployer4
 {
 	function publish_RewardCompoundingStrategyToken(string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
