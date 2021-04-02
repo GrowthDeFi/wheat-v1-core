@@ -83,7 +83,7 @@ contract Deployer is Ownable
 		addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
 		addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
 		addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
-		addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 0, $.WBNB, 1000); // TODO find out pid for pair
+		addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 79, $.WBNB, 1000);
 		addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
 		addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
 		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
@@ -109,10 +109,10 @@ contract Deployer is Ownable
 		_hodllist[13] = 63;
 		_hodllist[14] = 70;
 		_hodllist[15] = 75;
-		_hodllist[16] = 81;
-		_hodllist[17] = 84;
-		_hodllist[18] = 85;
-		_hodllist[19] = 0; // TODO find out pid for pair
+		_hodllist[16] = 79;
+		_hodllist[17] = 81;
+		_hodllist[18] = 84;
+		_hodllist[19] = 85;
 		_hodllist[20] = 106;
 		_hodllist[21] = 108;
 		FeeCollector(collector).updateHodllist(_hodllist, true);
