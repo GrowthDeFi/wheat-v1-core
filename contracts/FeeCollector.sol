@@ -15,21 +15,29 @@ contract FeeCollector is ReentrancyGuard, WhitelistGuard
 	uint256 constant MIGRATION_OPEN_INTERVAL = 1 days;
 
 	address private immutable masterChef;
-	mapping (uint256 => bool) private hodllist;
+	uint256 private immutable pid;
 
+	address public immutable reserveToken;
 	address public immutable rewardToken;
 
 	address public buyback;
+	address public treasury;
 
 	uint256 public migrationTimestamp;
 	address public migrationRecipient;
 
-	constructor (address _masterChef, address _buyback) public
+	constructor (address _masterChef, uint256 _pid, address _buyback, address _treasury) public
 	{
+		uint256 _poolLength = MasterChef(_masterChef).poolLength();
+		require(1 <= _pid && _pid < _poolLength, "invalid pid");
 		address _rewardToken = MasterChef(_masterChef).cake();
+		(address _reserveToken,,,) = MasterChef(_masterChef).poolInfo(_pid);
 		masterChef = _masterChef;
+		pid = _pid;
+		reserveToken = _reserveToken;
 		rewardToken = _rewardToken;
 		buyback = _buyback;
+		treasury = _treasury;
 	}
 
 	function pendingReward() external view returns (uint256 _reward)
@@ -42,12 +50,28 @@ contract FeeCollector is ReentrancyGuard, WhitelistGuard
 		_gulpReward();
 	}
 
+	function recoverLostFunds(address _token) external onlyOwner nonReentrant
+	{
+		require(_token != reserveToken, "invalid token");
+		require(_token != rewardToken, "invalid token");
+		uint256 _balance = Transfers._getBalance(_token);
+		Transfers._pushFunds(_token, treasury, _balance);
+	}
+
 	function setBuyback(address _newBuyback) external onlyOwner nonReentrant
 	{
 		require(_newBuyback != address(0), "invalid address");
 		address _oldBuyback = buyback;
 		buyback = _newBuyback;
 		emit ChangeBuyback(_oldBuyback, _newBuyback);
+	}
+
+	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
+	{
+		require(_newTreasury != address(0), "invalid address");
+		address _oldTreasury = treasury;
+		treasury = _newTreasury;
+		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
 	function announceMigration(address _migrationRecipient) external onlyOwner nonReentrant
@@ -83,73 +107,47 @@ contract FeeCollector is ReentrancyGuard, WhitelistGuard
 		emit Migrate(_migrationRecipient, _migrationTimestamp);
 	}
 
-	function updateHodllist(uint256[] memory _pids, bool _hodl) external onlyOwner nonReentrant
-	{
-		for (uint256 _i = 0; _i < _pids.length; _i++) {
-			hodllist[_i] = _hodl;
-		}
-	}
-
 	function _calcReward() internal view returns (uint256 _reward)
 	{
 		_reward = Transfers._getBalance(rewardToken);
-		uint256 _poolLength = MasterChef(masterChef).poolLength();
-		for (uint256 _pid = 1; _pid < _poolLength; _pid++) {
-			_reward += MasterChef(masterChef).pendingCake(_pid, address(this));
-		}
+		_reward += MasterChef(masterChef).pendingCake(pid, address(this));
 		return _reward;
 	}
 
 	function _gulpReward() internal
 	{
-		uint256 _poolLength = MasterChef(masterChef).poolLength();
-		for (uint256 _pid = 1; _pid < _poolLength; _pid++) {
-			if (!hodllist[_pid]) continue;
-			(address _token,,,) = MasterChef(masterChef).poolInfo(_pid);
-			uint256 _balance = Transfers._getBalance(_token);
-			if (_balance > 0) {
-				Transfers._approveFunds(_token, masterChef, _balance);
-				MasterChef(masterChef).deposit(_pid, _balance);
-				continue;
-			}
-			uint256 _reward = MasterChef(masterChef).pendingCake(_pid, address(this));
-			if (_reward > 0) {
-				MasterChef(masterChef).withdraw(_pid, 0);
-				continue;
+		uint256 _reserveBalance = Transfers._getBalance(reserveToken);
+		if (_reserveBalance > 0) {
+			Transfers._approveFunds(reserveToken, masterChef, _reserveBalance);
+			MasterChef(masterChef).deposit(pid, _reserveBalance);
+		} else {
+			uint256 _pendingReward = MasterChef(masterChef).pendingCake(pid, address(this));
+			if (_pendingReward > 0) {
+				MasterChef(masterChef).withdraw(pid, 0);
 			}
 		}
-		uint256 _balance = Transfers._getBalance(rewardToken);
-		Transfers._pushFunds(rewardToken, buyback, _balance);
+		uint256 _rewardBalance = Transfers._getBalance(rewardToken);
+		Transfers._pushFunds(rewardToken, buyback, _rewardBalance);
 	}
 
 	function _migrate(bool _emergency) internal
 	{
-		uint256 _poolLength = MasterChef(masterChef).poolLength();
 		if (_emergency) {
-			for (uint256 _pid = 1; _pid < _poolLength; _pid++) {
-				if (!hodllist[_pid]) continue;
-				MasterChef(masterChef).emergencyWithdraw(_pid);
-				(address _token,,,) = MasterChef(masterChef).poolInfo(_pid);
-				uint256 _balance = Transfers._getBalance(_token);
-				Transfers._pushFunds(_token, migrationRecipient, _balance);
-			}
+			MasterChef(masterChef).emergencyWithdraw(pid);
 		} else {
-			for (uint256 _pid = 1; _pid < _poolLength; _pid++) {
-				if (!hodllist[_pid]) continue;
-				(uint256 _amount,) = MasterChef(masterChef).userInfo(_pid, address(this));
-				if (_amount > 0) {
-					MasterChef(masterChef).withdraw(_pid, _amount);
-				}
-				(address _token,,,) = MasterChef(masterChef).poolInfo(_pid);
-				uint256 _balance = Transfers._getBalance(_token);
-				Transfers._pushFunds(_token, migrationRecipient, _balance);
+			(uint256 _amount,) = MasterChef(masterChef).userInfo(pid, address(this));
+			if (_amount > 0) {
+				MasterChef(masterChef).withdraw(pid, _amount);
 			}
-			uint256 _balance = Transfers._getBalance(rewardToken);
-			Transfers._pushFunds(rewardToken, buyback, _balance);
+			uint256 _rewardBalance = Transfers._getBalance(rewardToken);
+			Transfers._pushFunds(rewardToken, buyback, _rewardBalance);
 		}
+		uint256 _reserveBalance = Transfers._getBalance(reserveToken);
+		Transfers._pushFunds(reserveToken, migrationRecipient, _reserveBalance);
 	}
 
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
+	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event AnnounceMigration(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
 	event CancelMigration(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
 	event Migrate(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);

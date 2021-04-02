@@ -26,11 +26,11 @@ contract Deployer is Ownable
 	address public admin;
 	address public treasury;
 	address public dev;
-	address public collector;
 	address public buyback;
 	address public wheat;
 	address public stkWheat;
 	address public masterChef;
+	address[] public collectors;
 	address[] public strategies;
 
 	bool public deployed = false;
@@ -90,38 +90,14 @@ contract Deployer is Ownable
 		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
 
 		buyback = LibDeployer2.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO);
-		collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, buyback);
-
-		uint256[] memory _hodllist = new uint256[](22);
-		_hodllist[0] = 1;
-		_hodllist[1] = 2;
-		_hodllist[2] = 3;
-		_hodllist[3] = 5;
-		_hodllist[4] = 7;
-		_hodllist[5] = 12;
-		_hodllist[6] = 14;
-		_hodllist[7] = 15;
-		_hodllist[8] = 25;
-		_hodllist[9] = 51;
-		_hodllist[10] = 52;
-		_hodllist[11] = 53;
-		_hodllist[12] = 55;
-		_hodllist[13] = 63;
-		_hodllist[14] = 70;
-		_hodllist[15] = 75;
-		_hodllist[16] = 79;
-		_hodllist[17] = 81;
-		_hodllist[18] = 84;
-		_hodllist[19] = 85;
-		_hodllist[20] = 106;
-		_hodllist[21] = 108;
-		FeeCollector(collector).updateHodllist(_hodllist, true);
 
 		// transfer ownerships
 		Ownable(wheat).transferOwnership(masterChef);
 		Ownable(stkWheat).transferOwnership(masterChef);
 		Ownable(masterChef).transferOwnership(admin);
-		Ownable(collector).transferOwnership(admin);
+		for (uint256 _i = 0; _i < collectors.length; _i++) {
+			Ownable(collectors[_i]).transferOwnership(admin);
+		}
 		for (uint256 _i = 0; _i < strategies.length; _i++) {
 			Ownable(strategies[_i]).transferOwnership(admin);
 		}
@@ -134,10 +110,12 @@ contract Deployer is Ownable
 
 	function addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
-		address _address = LibDeployer4.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, collector);
-		RewardCompoundingStrategyToken(_address).setExchange(exchange);
-		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_address), false);
-		strategies.push(_address);
+		address _collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, _pid, buyback, treasury);
+		collectors.push(_collector);
+		address _strategy = LibDeployer4.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, _collector);
+		RewardCompoundingStrategyToken(_strategy).setExchange(exchange);
+		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
+		strategies.push(_strategy);
 	}
 
 	event DeployPerformed();
@@ -150,9 +128,9 @@ library LibDeployer1
 		return address(new WHEAT());
 	}
 
-	function publish_FeeCollector(address _masterChef, address _buyback) public returns (address _address)
+	function publish_FeeCollector(address _masterChef, uint256 _pid, address _buyback, address _treasury) public returns (address _address)
 	{
-		return address(new FeeCollector(_masterChef, _buyback));
+		return address(new FeeCollector(_masterChef, _pid, _buyback, _treasury));
 	}
 }
 
