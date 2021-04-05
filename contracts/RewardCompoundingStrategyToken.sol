@@ -6,6 +6,8 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { Exchange } from "./Exchange.sol";
+import { IStrategyToken } from "./IStrategyToken.sol";
+import { LibPerformanceFee } from "./LibPerformanceFee.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -14,15 +16,13 @@ import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityP
 import { MasterChef } from "./interop/MasterChef.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
-contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
+contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
+	using LibPerformanceFee for LibPerformanceFee.Self;
 
 	uint256 constant MAXIMUM_DEPOSIT_FEE = 5e16; // 5%
 	uint256 constant DEFAULT_DEPOSIT_FEE = 3e16; // 3%
-
-	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 20e16; // 20%
 
 	uint256 constant DEPOSIT_FEE_COLLECTOR_SHARE = 833333333333333333; // 5/6
 	uint256 constant DEPOSIT_FEE_DEV_SHARE = 166666666666666667; // 1/6
@@ -30,7 +30,7 @@ contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuar
 	address private immutable masterChef;
 	uint256 private immutable pid;
 
-	address public immutable reserveToken;
+	address public immutable override reserveToken;
 	address public immutable routingToken;
 	address public immutable rewardToken;
 
@@ -41,10 +41,8 @@ contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuar
 	address public collector;
 
 	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
-	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
 
-	uint256 private lastTotalSupply = 1;
-	uint256 private lastTotalReserve = 1;
+	LibPerformanceFee.Self lpf;
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
@@ -66,25 +64,26 @@ contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuar
 		treasury = _treasury;
 		collector = _collector;
 		_mint(address(1), 1); // avoids division by zero
+		lpf.init();
 	}
 
-	function totalReserve() public view returns (uint256 _totalReserve)
+	function totalReserve() public view override returns (uint256 _totalReserve)
 	{
 		(_totalReserve,) = MasterChef(masterChef).userInfo(pid, address(this));
 		if (_totalReserve == uint256(-1)) return _totalReserve;
 		return _totalReserve + 1; // avoids division by zero
 	}
 
-	function calcSharesFromCost(uint256 _cost) external view returns (uint256 _shares)
+	function calcSharesFromAmount(uint256 _amount) external view override returns (uint256 _shares)
 	{
-		(,,,_shares) = _calcSharesFromCost(_cost);
+		(,,,_shares) = _calcSharesFromAmount(_amount);
 		return _shares;
 	}
 
-	function calcCostFromShares(uint256 _shares) external view returns (uint256 _cost)
+	function calcAmountFromShares(uint256 _shares) external view override returns (uint256 _amount)
 	{
-		(_cost) = _calcCostFromShares(_shares);
-		return _cost;
+		(_amount) = _calcAmountFromShares(_shares);
+		return _amount;
 	}
 
 	function pendingReward() external view returns (uint256 _rewardCost)
@@ -94,34 +93,34 @@ contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuar
 
 	function pendingPerformanceFee() external view returns (uint256 _feeCost)
 	{
-		return _calcPerformanceFee();
+		return lpf.calcPerformanceFee();
 	}
 
-	function deposit(uint256 _cost) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount) external override onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
-		(uint256 _devCost, uint256 _collectorCost, uint256 _netCost, uint256 _shares) = _calcSharesFromCost(_cost);
-		Transfers._pullFunds(reserveToken, _from, _cost);
-		Transfers._pushFunds(reserveToken, dev, _devCost);
-		Transfers._pushFunds(reserveToken, collector, _collectorCost);
-		Transfers._approveFunds(reserveToken, masterChef, _netCost);
-		MasterChef(masterChef).deposit(pid, _netCost);
+		(uint256 _devAmount, uint256 _collectorAmount, uint256 _netAmount, uint256 _shares) = _calcSharesFromAmount(_amount);
+		Transfers._pullFunds(reserveToken, _from, _amount);
+		Transfers._pushFunds(reserveToken, dev, _devAmount);
+		Transfers._pushFunds(reserveToken, collector, _collectorAmount);
+		Transfers._approveFunds(reserveToken, masterChef, _netAmount);
+		MasterChef(masterChef).deposit(pid, _netAmount);
 		_mint(_from, _shares);
 	}
 
-	function withdraw(uint256 _shares) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares) external override onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
-		(uint256 _cost) = _calcCostFromShares(_shares);
-		MasterChef(masterChef).withdraw(pid, _cost);
-		Transfers._pushFunds(reserveToken, _from, _cost);
+		(uint256 _amount) = _calcAmountFromShares(_shares);
+		MasterChef(masterChef).withdraw(pid, _amount);
+		Transfers._pushFunds(reserveToken, _from, _amount);
 		_burn(_from, _shares);
 	}
 
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
 		_gulpReward();
-		_gulpPerformanceFee();
+		lpf.gulpPerformanceFee(collector);
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
@@ -174,25 +173,24 @@ contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuar
 
 	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner nonReentrant
 	{
-		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
-		uint256 _oldPerformanceFee = performanceFee;
-		performanceFee = _newPerformanceFee;
+		uint256 _oldPerformanceFee = lpf.performanceFee;
+		lpf.setPerformanceFee(_newPerformanceFee);
 		emit ChangePerformanceFee(_oldPerformanceFee, _newPerformanceFee);
 	}
 
-	function _calcCostFromShares(uint256 _shares) internal view returns (uint256 _cost)
+	function _calcAmountFromShares(uint256 _shares) internal view returns (uint256 _amount)
 	{
 		return _shares.mul(totalReserve()) / totalSupply();
 	}
 
-	function _calcSharesFromCost(uint256 _cost) internal view returns (uint256 _devCost, uint256 _collectorCost, uint256 _netCost, uint256 _shares)
+	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _devAmount, uint256 _collectorAmount, uint256 _netAmount, uint256 _shares)
 	{
-		uint256 _feeCost = _cost.mul(depositFee) / 1e18;
-		_devCost = (_feeCost * DEPOSIT_FEE_DEV_SHARE) / 1e18;
-		_collectorCost = _feeCost - _devCost;
-		_netCost = _cost - _feeCost;
-		_shares = _netCost.mul(totalSupply()) / totalReserve();
-		return (_devCost, _collectorCost, _netCost, _shares);
+		uint256 _feeAmount = _amount.mul(depositFee) / 1e18;
+		_devAmount = (_feeAmount * DEPOSIT_FEE_DEV_SHARE) / 1e18;
+		_collectorAmount = _feeAmount - _devAmount;
+		_netAmount = _amount - _feeAmount;
+		_shares = _netAmount.mul(totalSupply()) / totalReserve();
+		return (_devAmount, _collectorAmount, _netAmount, _shares);
 	}
 
 	function _calcReward() internal view returns (uint256 _rewardCost)
@@ -206,27 +204,6 @@ contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuar
 			_routingAmount = Exchange(exchange).calcConversionFromInput(rewardToken, routingToken, _rewardAmount);
 		}
 		return UniswapV2LiquidityPoolAbstraction.estimateJoinPool(reserveToken, routingToken, _routingAmount);
-	}
-
-	function _calcPerformanceFee() internal view returns (uint256 _feeCost)
-	{
-		uint256 _oldTotalSupply = lastTotalSupply;
-		uint256 _oldTotalReserve = lastTotalReserve;
-
-		uint256 _newTotalSupply = totalSupply();
-		uint256 _newTotalReserve = totalReserve();
-
-		// calculates the profit using the following formula
-		// ((P1 - P0) * S1 * f) / P1
-		// where P1 = R1 / S1 and P0 = R0 / S0
-		uint256 _positive = _oldTotalSupply.mul(_newTotalReserve);
-		uint256 _negative = _newTotalSupply.mul(_oldTotalReserve);
-		if (_positive > _negative) {
-			uint256 _profitCost = (_positive - _negative) / _oldTotalSupply;
-			return _profitCost.mul(performanceFee).div(1e18);
-		}
-
-		return 0;
 	}
 
 	function _gulpReward() internal
@@ -247,20 +224,92 @@ contract RewardCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuar
 		MasterChef(masterChef).deposit(pid, _rewardCost);
 	}
 
-	function _gulpPerformanceFee() internal
-	{
-		uint256 _feeCost = _calcPerformanceFee();
-		if (_feeCost > 0) {
-			Transfers._pushFunds(reserveToken, collector, _feeCost);
-			lastTotalSupply = totalSupply();
-			lastTotalReserve = totalReserve();
-		}
-	}
-
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeDev(address _oldDev, address _newDev);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeDepositFee(uint256 _oldDepositFee, uint256 _newDepositFee);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
+}
+
+library LibRewardCompoundingStrategyToken
+{
+	using SafeMath for uint256;
+	using LibRewardCompoundingStrategyToken for LibRewardCompoundingStrategyToken.Self;
+
+	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
+	uint256 constant DEFAULT_PERFORMANCE_FEE = 20e16; // 20%
+
+	struct Self {
+		address token;
+
+		uint256 performanceFee;
+
+		uint256 lastTotalSupply;
+		uint256 lastTotalReserve;
+	}
+
+	function init(Self storage _self, address _token) public
+	{
+		_self.token = _token;
+
+		_self.performanceFee = DEFAULT_PERFORMANCE_FEE;
+
+		_self.lastTotalSupply = 1;
+		_self.lastTotalReserve = 1;
+	}
+
+	function setPerformanceFee(Self storage _self, uint256 _newPerformanceFee) public
+	{
+		_self._setPerformanceFee(_newPerformanceFee);
+	}
+
+	function calcPerformanceFee(Self storage _self) public view returns (uint256 _feeCost)
+	{
+		return _self._calcPerformanceFee();
+	}
+
+	function gulpPerformanceFee(Self storage _self) public
+	{
+		_self._gulpPerformanceFee();
+	}
+
+	function _setPerformanceFee(Self storage _self, uint256 _newPerformanceFee) internal
+	{
+		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
+		_self.performanceFee = _newPerformanceFee;
+	}
+
+	function _calcPerformanceFee(Self storage _self) internal view returns (uint256 _feeCost)
+	{
+		uint256 _oldTotalSupply = _self.lastTotalSupply;
+		uint256 _oldTotalReserve = _self.lastTotalReserve;
+
+		uint256 _newTotalSupply = RewardCompoundingStrategyToken(_self.token).totalSupply();
+		uint256 _newTotalReserve = RewardCompoundingStrategyToken(_self.token).totalReserve();
+
+		// calculates the profit using the following formula
+		// ((P1 - P0) * S1 * f) / P1
+		// where P1 = R1 / S1 and P0 = R0 / S0
+		uint256 _positive = _oldTotalSupply.mul(_newTotalReserve);
+		uint256 _negative = _newTotalSupply.mul(_oldTotalReserve);
+		if (_positive > _negative) {
+			uint256 _profitCost = (_positive - _negative) / _oldTotalSupply;
+			return _profitCost.mul(_self.performanceFee) / 1e18;
+		}
+
+		return 0;
+	}
+
+	function _gulpPerformanceFee(Self storage _self) internal
+	{
+		uint256 _feeCost = _self._calcPerformanceFee();
+		if (_feeCost > 0) {
+			address _reserveToken = RewardCompoundingStrategyToken(_self.token).reserveToken();
+			address _collector = RewardCompoundingStrategyToken(_self.token).collector();
+			Transfers._pushFunds(_reserveToken, _collector, _feeCost);
+			_self.lastTotalSupply = RewardCompoundingStrategyToken(_self.token).totalSupply();
+			_self.lastTotalReserve = RewardCompoundingStrategyToken(_self.token).totalReserve();
+		}
+	}
 }
