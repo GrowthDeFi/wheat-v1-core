@@ -20,16 +20,18 @@ contract Deployer is Ownable
 	address constant DEFAULT_TREASURY = 0x2165fa4a32B9c228cD55713f77d2e977297D03e8; // G
 	address constant DEFAULT_DEV = 0x7674D2a14076e8af53AC4ba9bBCf0c19FeBe8899;
 
+	address constant DEFAULT_EXCHANGE = 0xFae3C478cC92B93c639f6673b6d888e627F24B7A;
+
 	uint256 constant INITIAL_WHEAT_PER_BLOCK = 1e18;
 
-	address public exchange;
 	address public admin;
 	address public treasury;
 	address public dev;
-	address public buyback;
+	address public exchange;
 	address public wheat;
 	address public stkWheat;
 	address public masterChef;
+	address public buyback;
 	address[] public collectors;
 	address[] public strategies;
 
@@ -95,6 +97,7 @@ contract Deployer is Ownable
 		Ownable(wheat).transferOwnership(masterChef);
 		Ownable(stkWheat).transferOwnership(masterChef);
 		Ownable(masterChef).transferOwnership(admin);
+		Ownable(buyback).transferOwnership(admin);
 		for (uint256 _i = 0; _i < collectors.length; _i++) {
 			Ownable(collectors[_i]).transferOwnership(admin);
 		}
