@@ -5,21 +5,18 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { Exchange } from "./Exchange.sol";
 import { IStrategyToken } from "./IStrategyToken.sol";
 import { LibPerformanceFee } from "./LibPerformanceFee.sol";
+import { LibRewardCompoundingStrategy } from "./LibRewardCompoundingStrategy.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
-import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
-
-import { MasterChef } from "./interop/MasterChef.sol";
-import { Pair } from "./interop/UniswapV2.sol";
 
 contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
 	using LibPerformanceFee for LibPerformanceFee.Self;
+	using LibRewardCompoundingStrategy for LibRewardCompoundingStrategy.Self;
 
 	uint256 constant MAXIMUM_DEPOSIT_FEE = 5e16; // 5%
 	uint256 constant DEFAULT_DEPOSIT_FEE = 3e16; // 3%
@@ -27,21 +24,13 @@ contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuar
 	uint256 constant DEPOSIT_FEE_COLLECTOR_SHARE = 833333333333333333; // 5/6
 	uint256 constant DEPOSIT_FEE_DEV_SHARE = 166666666666666667; // 1/6
 
-	address private immutable masterChef;
-	uint256 private immutable pid;
-
-	address public immutable override reserveToken;
-	address public immutable routingToken;
-	address public immutable rewardToken;
-
-	address public exchange;
-
 	address public dev;
 	address public treasury;
 	address public collector;
 
 	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
 
+	LibRewardCompoundingStrategy.Self lrcs;
 	LibPerformanceFee.Self lpf;
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
@@ -50,26 +39,42 @@ contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuar
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
-		uint256 _poolLength = MasterChef(_masterChef).poolLength();
-		require(1 <= _pid && _pid < _poolLength, "invalid pid");
-		(address _reserveToken,,,) = MasterChef(_masterChef).poolInfo(_pid);
-		require(_routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
-		address _rewardToken = MasterChef(_masterChef).cake();
-		masterChef = _masterChef;
-		pid = _pid;
-		reserveToken = _reserveToken;
-		routingToken = _routingToken;
-		rewardToken = _rewardToken;
+		lrcs.init(_masterChef, _pid, _routingToken);
+		lpf.init(lrcs.reserveToken);
 		dev = _dev;
 		treasury = _treasury;
 		collector = _collector;
 		_mint(address(1), 1); // avoids division by zero
-		lpf.init();
+	}
+
+	function reserveToken() external view override returns (address _reserveToken)
+	{
+		return lrcs.reserveToken;
+	}
+
+	function routingToken() external view returns (address _routingToken)
+	{
+		return lrcs.routingToken;
+	}
+
+	function rewardToken() external view returns (address _rewardToken)
+	{
+		return lrcs.rewardToken;
+	}
+
+	function exchange() external view returns (address _exchange)
+	{
+		return lrcs.exchange;
+	}
+
+	function performanceFee() external view returns (uint256 _performanceFee)
+	{
+		return lpf.performanceFee;
 	}
 
 	function totalReserve() public view override returns (uint256 _totalReserve)
 	{
-		(_totalReserve,) = MasterChef(masterChef).userInfo(pid, address(this));
+		_totalReserve = lrcs.totalReserve();
 		if (_totalReserve == uint256(-1)) return _totalReserve;
 		return _totalReserve + 1; // avoids division by zero
 	}
@@ -86,9 +91,9 @@ contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuar
 		return _amount;
 	}
 
-	function pendingReward() external view returns (uint256 _rewardCost)
+	function pendingReward() external view returns (uint256 _rewardAmount)
 	{
-		return _calcReward();
+		return lrcs.calcReward();
 	}
 
 	function pendingPerformanceFee() external view returns (uint256 _feeCost)
@@ -100,11 +105,10 @@ contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuar
 	{
 		address _from = msg.sender;
 		(uint256 _devAmount, uint256 _collectorAmount, uint256 _netAmount, uint256 _shares) = _calcSharesFromAmount(_amount);
-		Transfers._pullFunds(reserveToken, _from, _amount);
-		Transfers._pushFunds(reserveToken, dev, _devAmount);
-		Transfers._pushFunds(reserveToken, collector, _collectorAmount);
-		Transfers._approveFunds(reserveToken, masterChef, _netAmount);
-		MasterChef(masterChef).deposit(pid, _netAmount);
+		Transfers._pullFunds(lrcs.reserveToken, _from, _amount);
+		Transfers._pushFunds(lrcs.reserveToken, dev, _devAmount);
+		Transfers._pushFunds(lrcs.reserveToken, collector, _collectorAmount);
+		lrcs.deposit(_netAmount);
 		_mint(_from, _shares);
 	}
 
@@ -112,30 +116,30 @@ contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuar
 	{
 		address _from = msg.sender;
 		(uint256 _amount) = _calcAmountFromShares(_shares);
-		MasterChef(masterChef).withdraw(pid, _amount);
-		Transfers._pushFunds(reserveToken, _from, _amount);
 		_burn(_from, _shares);
+		lrcs.withdraw(_amount);
+		Transfers._pushFunds(lrcs.reserveToken, _from, _amount);
 	}
 
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
-		_gulpReward();
+		lrcs.gulpReward();
 		lpf.gulpPerformanceFee(collector);
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 	{
-		require(_token != reserveToken, "invalid token");
-		require(_token != routingToken, "invalid token");
-		require(_token != rewardToken, "invalid token");
+		require(_token != lrcs.reserveToken, "invalid token");
+		require(_token != lrcs.routingToken, "invalid token");
+		require(_token != lrcs.rewardToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
 	function setExchange(address _newExchange) external onlyOwner nonReentrant
 	{
-		address _oldExchange = exchange;
-		exchange = _newExchange;
+		address _oldExchange = lrcs.exchange;
+		lrcs.setExchange(_newExchange);
 		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
@@ -193,123 +197,10 @@ contract RewardCompoundingStrategyToken is IStrategyToken, ERC20, ReentrancyGuar
 		return (_devAmount, _collectorAmount, _netAmount, _shares);
 	}
 
-	function _calcReward() internal view returns (uint256 _rewardCost)
-	{
-		require(exchange != address(0), "exchange not set");
-		uint256 _pendingRewardAmount = MasterChef(masterChef).pendingCake(pid, address(this));
-		uint256 _collectedRewardAmount = Transfers._getBalance(rewardToken);
-		uint256 _rewardAmount = _pendingRewardAmount.add(_collectedRewardAmount);
-		uint256 _routingAmount = _rewardAmount;
-		if (routingToken != rewardToken) {
-			_routingAmount = Exchange(exchange).calcConversionFromInput(rewardToken, routingToken, _rewardAmount);
-		}
-		return UniswapV2LiquidityPoolAbstraction.estimateJoinPool(reserveToken, routingToken, _routingAmount);
-	}
-
-	function _gulpReward() internal
-	{
-		require(exchange != address(0), "exchange not set");
-		uint256 _pendingRewardAmount = MasterChef(masterChef).pendingCake(pid, address(this));
-		if (_pendingRewardAmount > 0) {
-			MasterChef(masterChef).withdraw(pid, 0);
-		}
-		if (routingToken != rewardToken) {
-			uint256 _rewardAmount = Transfers._getBalance(rewardToken);
-			Transfers._approveFunds(rewardToken, exchange, _rewardAmount);
-			Exchange(exchange).convertFundsFromInput(rewardToken, routingToken, _rewardAmount, 1);
-		}
-		uint256 _routingAmount = Transfers._getBalance(routingToken);
-		uint256 _rewardCost = UniswapV2LiquidityPoolAbstraction.joinPool(reserveToken, routingToken, _routingAmount);
-		Transfers._approveFunds(reserveToken, masterChef, _rewardCost);
-		MasterChef(masterChef).deposit(pid, _rewardCost);
-	}
-
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeDev(address _oldDev, address _newDev);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeDepositFee(uint256 _oldDepositFee, uint256 _newDepositFee);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
-}
-
-library LibRewardCompoundingStrategyToken
-{
-	using SafeMath for uint256;
-	using LibRewardCompoundingStrategyToken for LibRewardCompoundingStrategyToken.Self;
-
-	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 20e16; // 20%
-
-	struct Self {
-		address token;
-
-		uint256 performanceFee;
-
-		uint256 lastTotalSupply;
-		uint256 lastTotalReserve;
-	}
-
-	function init(Self storage _self, address _token) public
-	{
-		_self.token = _token;
-
-		_self.performanceFee = DEFAULT_PERFORMANCE_FEE;
-
-		_self.lastTotalSupply = 1;
-		_self.lastTotalReserve = 1;
-	}
-
-	function setPerformanceFee(Self storage _self, uint256 _newPerformanceFee) public
-	{
-		_self._setPerformanceFee(_newPerformanceFee);
-	}
-
-	function calcPerformanceFee(Self storage _self) public view returns (uint256 _feeCost)
-	{
-		return _self._calcPerformanceFee();
-	}
-
-	function gulpPerformanceFee(Self storage _self) public
-	{
-		_self._gulpPerformanceFee();
-	}
-
-	function _setPerformanceFee(Self storage _self, uint256 _newPerformanceFee) internal
-	{
-		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
-		_self.performanceFee = _newPerformanceFee;
-	}
-
-	function _calcPerformanceFee(Self storage _self) internal view returns (uint256 _feeCost)
-	{
-		uint256 _oldTotalSupply = _self.lastTotalSupply;
-		uint256 _oldTotalReserve = _self.lastTotalReserve;
-
-		uint256 _newTotalSupply = RewardCompoundingStrategyToken(_self.token).totalSupply();
-		uint256 _newTotalReserve = RewardCompoundingStrategyToken(_self.token).totalReserve();
-
-		// calculates the profit using the following formula
-		// ((P1 - P0) * S1 * f) / P1
-		// where P1 = R1 / S1 and P0 = R0 / S0
-		uint256 _positive = _oldTotalSupply.mul(_newTotalReserve);
-		uint256 _negative = _newTotalSupply.mul(_oldTotalReserve);
-		if (_positive > _negative) {
-			uint256 _profitCost = (_positive - _negative) / _oldTotalSupply;
-			return _profitCost.mul(_self.performanceFee) / 1e18;
-		}
-
-		return 0;
-	}
-
-	function _gulpPerformanceFee(Self storage _self) internal
-	{
-		uint256 _feeCost = _self._calcPerformanceFee();
-		if (_feeCost > 0) {
-			address _reserveToken = RewardCompoundingStrategyToken(_self.token).reserveToken();
-			address _collector = RewardCompoundingStrategyToken(_self.token).collector();
-			Transfers._pushFunds(_reserveToken, _collector, _feeCost);
-			_self.lastTotalSupply = RewardCompoundingStrategyToken(_self.token).totalSupply();
-			_self.lastTotalReserve = RewardCompoundingStrategyToken(_self.token).totalReserve();
-		}
-	}
 }

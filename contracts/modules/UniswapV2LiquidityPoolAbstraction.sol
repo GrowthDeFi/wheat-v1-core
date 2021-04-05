@@ -18,7 +18,7 @@ library UniswapV2LiquidityPoolAbstraction
 {
 	using SafeMath for uint256;
 
-	function estimateJoinPool(address _pair, address _token, uint256 _amount) public view returns (uint256 _shares)
+	function _estimateJoinPool(address _pair, address _token, uint256 _amount) internal view returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;
@@ -37,7 +37,7 @@ library UniswapV2LiquidityPoolAbstraction
 		return _shares;
 	}
 
-	function estimateExitPool(address _pair, address _token, uint256 _shares) public view returns (uint256 _amount)
+	function _estimateExitPool(address _pair, address _token, uint256 _shares) internal view returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;
@@ -55,7 +55,7 @@ library UniswapV2LiquidityPoolAbstraction
 		return _amount;
 	}
 
-	function joinPool(address _pair, address _token, uint256 _amount) public returns (uint256 _shares)
+	function _joinPool(address _pair, address _token, uint256 _amount) internal returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;
@@ -78,7 +78,7 @@ library UniswapV2LiquidityPoolAbstraction
 		return _shares;
 	}
 
-	function exitPool(address _pair, address _token, uint256 _shares) public returns (uint256 _amount)
+	function _exitPool(address _pair, address _token, uint256 _shares) internal returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;

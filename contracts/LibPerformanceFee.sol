@@ -16,15 +16,17 @@ library LibPerformanceFee
 	uint256 constant DEFAULT_PERFORMANCE_FEE = 20e16; // 20%
 
 	struct Self {
+		address reserveToken;
+
 		uint256 performanceFee;
 
 		uint256 lastTotalSupply;
 		uint256 lastTotalReserve;
 	}
 
-	function init(Self storage _self) public
+	function init(Self storage _self, address _reserveToken) public
 	{
-		_self._init();
+		_self._init(_reserveToken);
 	}
 
 	function setPerformanceFee(Self storage _self, uint256 _newPerformanceFee) public
@@ -42,8 +44,10 @@ library LibPerformanceFee
 		_self._gulpPerformanceFee(_to);
 	}
 
-	function _init(Self storage _self) internal
+	function _init(Self storage _self, address _reserveToken) internal
 	{
+		_self.reserveToken = _reserveToken;
+
 		_self.performanceFee = DEFAULT_PERFORMANCE_FEE;
 
 		_self.lastTotalSupply = 1;
@@ -81,8 +85,7 @@ library LibPerformanceFee
 	{
 		uint256 _feeAmount = _self._calcPerformanceFee();
 		if (_feeAmount > 0) {
-			address _reserveToken = IStrategyToken(address(this)).reserveToken();
-			Transfers._pushFunds(_reserveToken, _to, _feeAmount);
+			Transfers._pushFunds(_self.reserveToken, _to, _feeAmount);
 			_self.lastTotalSupply = IStrategyToken(address(this)).totalSupply();
 			_self.lastTotalReserve = IStrategyToken(address(this)).totalReserve();
 		}
