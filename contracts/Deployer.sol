@@ -10,7 +10,10 @@ import { FeeCollector } from "./FeeCollector.sol";
 import { RewardCompoundingStrategyToken } from "./RewardCompoundingStrategyToken.sol";
 import { WHEAT, stkWHEAT } from "./Tokens.sol";
 
-import { Factory } from "./interop/UniswapV2.sol";
+import { Factory, Pair } from "./interop/UniswapV2.sol";
+
+import { Transfers } from "./modules/Transfers.sol";
+import { Wrapping } from "./modules/Wrapping.sol";
 
 import { $ } from "./network/$.sol";
 
@@ -23,6 +26,9 @@ contract Deployer is Ownable
 	address constant DEFAULT_EXCHANGE = 0xFae3C478cC92B93c639f6673b6d888e627F24B7A;
 
 	uint256 constant INITIAL_WHEAT_PER_BLOCK = 1e18;
+
+	uint256 constant WHEAT_LIQUIDITY_ALLOCATION = 10000e18; // 10k WHEAT
+	uint256 public constant WBNB_LIQUIDITY_ALLOCATION = 275e18; // ~100k USD at deploy
 
 	address public admin;
 	address public treasury;
@@ -42,9 +48,15 @@ contract Deployer is Ownable
 		require($.NETWORK == $.network(), "wrong network");
 	}
 
-	function deploy() external onlyOwner
+	function deploy() external payable onlyOwner
 	{
+		uint256 _amount = msg.value;
+		require(_amount == WBNB_LIQUIDITY_ALLOCATION, "BNB amount mismatch");
+
 		require(!deployed, "deploy unavailable");
+
+		// wraps LP liquidity BNB into WBNB
+		Wrapping._wrap($.WBNB, WBNB_LIQUIDITY_ALLOCATION);
 
 		admin = DEFAULT_ADMIN;
 		treasury = DEFAULT_TREASURY;
@@ -67,8 +79,14 @@ contract Deployer is Ownable
 		CustomMasterChef(masterChef).add(1000, IERC20(_GRO_gROOT), false);
 		CustomMasterChef(masterChef).add(1000, IERC20(_BNB_gROOT), false);
 
+		// adds the liquidity to the WHEAT/BNB LP
+		WHEAT(wheat).mint(_BNB_WHEAT, WHEAT_LIQUIDITY_ALLOCATION);
+		Transfers._pushFunds($.WBNB, _BNB_WHEAT, WBNB_LIQUIDITY_ALLOCATION);
+		Pair(_BNB_WHEAT).mint(DEFAULT_TREASURY);
+
 		// publish strategy tokens
 		addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 20000);
+/*
 		addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
 		addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
 		addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
@@ -90,8 +108,13 @@ contract Deployer is Ownable
 		addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
 		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
 		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
+*/
 
 		buyback = LibDeployer2.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO);
+
+		require(Transfers._getBalance($.WBNB) == 0, "WBNB left over");
+		require(Transfers._getBalance(wheat) == 0, "WHEAT left over");
+		require(Transfers._getBalance(_BNB_WHEAT) == 0, "BNB/WHEAT LP shares left over");
 
 		// transfer ownerships
 		Ownable(wheat).transferOwnership(masterChef);

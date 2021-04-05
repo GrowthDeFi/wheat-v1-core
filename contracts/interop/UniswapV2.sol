@@ -22,6 +22,8 @@ interface Pair is PoolToken
 	function getReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast);
 	function token0() external view returns (address _token0);
 	function token1() external view returns (address _token1);
+
+	function mint(address _to) external returns (uint256 _liquidity);
 }
 
 interface Router01

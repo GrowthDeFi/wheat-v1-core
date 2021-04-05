@@ -25,6 +25,7 @@ module.exports = async (deployer, network, [account]) => {
   if (['development'].includes(network)) {
     console.log('Performing the deploy...');
     const contract = await Deployer.deployed();
-    await contract.deploy();
+    const value = await contract.WBNB_LIQUIDITY_ALLOCATION();
+    await contract.deploy({ value });
   }
 };
