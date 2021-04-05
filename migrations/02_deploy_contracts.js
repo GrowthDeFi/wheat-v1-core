@@ -2,6 +2,7 @@ const Deployer = artifacts.require('Deployer');
 const LibDeployer1 = artifacts.require('LibDeployer1');
 const LibDeployer2 = artifacts.require('LibDeployer2');
 const LibDeployer3 = artifacts.require('LibDeployer3');
+const LibDeployer4 = artifacts.require('LibDeployer4');
 const LibPerformanceFee = artifacts.require('LibPerformanceFee');
 const UniswapV2LiquidityPoolAbstraction = artifacts.require('UniswapV2LiquidityPoolAbstraction');
 
