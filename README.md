@@ -16,7 +16,7 @@ This repository contains the source code for the WHEAT smart contracts
 ## MasterChef Mainnet Configuration
 
 | WHEAT pid | Token           | Alloc Points | CAKE pid | Routing Token |
-| ----------| --------------- | ----------------------- | ------------- |
+| ----------| --------------- | -------------|--------- | ------------- |
 | 0         | WHEAT           | 15000        | -        | -             |
 | 1         | BNB/WHEAT       | 30000        | -        | -             |
 | 2         | BNB/GRO         | 3000         | -        | -             |
