@@ -27,5 +27,23 @@ module.exports = async (deployer, network, [account]) => {
     const contract = await Deployer.deployed();
     const value = await contract.WBNB_LIQUIDITY_ALLOCATION();
     await contract.deploy({ value });
+
+    console.log('Publishing batch 1...');
+    await contract.batch1();
+
+    console.log('Publishing batch 2...');
+    await contract.batch2();
+
+    console.log('Publishing batch 3...');
+    await contract.batch3();
+
+    console.log('Publishing batch 4...');
+    await contract.batch4();
+
+    console.log('Publishing batch 5...');
+    await contract.batch5();
+
+    console.log('Publishing batch 6...');
+    await contract.batch6();
   }
 };

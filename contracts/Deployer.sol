@@ -38,10 +38,12 @@ contract Deployer is Ownable
 	address public stkWheat;
 	address public masterChef;
 	address public buyback;
-	address[] public collectors;
-	address[] public strategies;
 
-	bool public deployed = false;
+	enum Stage {
+		Deploy, Batch1, Batch2, Batch3, Batch4, Batch5, Batch6, Done
+	}
+
+	Stage public stage = Stage.Deploy;
 
 	constructor () public
 	{
@@ -50,10 +52,10 @@ contract Deployer is Ownable
 
 	function deploy() external payable onlyOwner
 	{
+		require(stage == Stage.Deploy, "unavailable");
+
 		uint256 _amount = msg.value;
 		require(_amount == WBNB_LIQUIDITY_ALLOCATION, "BNB amount mismatch");
-
-		require(!deployed, "deploy unavailable");
 
 		// wraps LP liquidity BNB into WBNB
 		Wrapping._wrap($.WBNB, WBNB_LIQUIDITY_ALLOCATION);
@@ -84,32 +86,6 @@ contract Deployer is Ownable
 		Transfers._pushFunds($.WBNB, _BNB_WHEAT, WBNB_LIQUIDITY_ALLOCATION);
 		Pair(_BNB_WHEAT).mint(DEFAULT_TREASURY);
 
-		// publish strategy tokens
-		addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 20000);
-/*
-		addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
-		addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
-		addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
-		addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
-		addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
-		addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
-		addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
-		addStrategy("staked BNB/ADA", "stkBNB/ADA", 3, $.WBNB, 1000);
-		addStrategy("staked BUSD/UST", "stkBUSD/UST", 63, $.BUSD, 1000);
-		addStrategy("staked BUSD/DAI", "stkBUSD/DAI", 52, $.BUSD, 1000);
-		addStrategy("staked BUSD/USDC", "stkBUSD/USDC", 53, $.BUSD, 1000);
-		addStrategy("staked BTCB/bBADGER", "stkBTCB/bBADGER", 106, $.BTCB, 1000);
-		addStrategy("staked BNB/BSCX", "stkBNB/BSCX", 51, $.WBNB, 1000);
-		addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
-		addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
-		addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
-		addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 79, $.WBNB, 1000);
-		addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
-		addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
-		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
-		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
-*/
-
 		buyback = LibDeployer2.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO);
 
 		require(Transfers._getBalance($.WBNB) == 0, "WBNB left over");
@@ -119,29 +95,83 @@ contract Deployer is Ownable
 		// transfer ownerships
 		Ownable(wheat).transferOwnership(masterChef);
 		Ownable(stkWheat).transferOwnership(masterChef);
-		Ownable(masterChef).transferOwnership(admin);
 		Ownable(buyback).transferOwnership(admin);
-		for (uint256 _i = 0; _i < collectors.length; _i++) {
-			Ownable(collectors[_i]).transferOwnership(admin);
-		}
-		for (uint256 _i = 0; _i < strategies.length; _i++) {
-			Ownable(strategies[_i]).transferOwnership(admin);
-		}
 
-		// wrap up the deployment
+		stage = Stage.Batch1;
+	}
+
+	function batch1() external onlyOwner
+	{
+		require(stage == Stage.Batch1, "unavailable");
+		addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 20000);
+		addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
+		addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
+		addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
+		stage = Stage.Batch2;
+	}
+
+	function batch2() external onlyOwner
+	{
+		require(stage == Stage.Batch2, "unavailable");
+		addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
+		addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
+		addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
+		addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
+		stage = Stage.Batch3;
+	}
+
+	function batch3() external onlyOwner
+	{
+		require(stage == Stage.Batch3, "unavailable");
+		addStrategy("staked BNB/ADA", "stkBNB/ADA", 3, $.WBNB, 1000);
+		addStrategy("staked BUSD/UST", "stkBUSD/UST", 63, $.BUSD, 1000);
+		addStrategy("staked BUSD/DAI", "stkBUSD/DAI", 52, $.BUSD, 1000);
+		addStrategy("staked BUSD/USDC", "stkBUSD/USDC", 53, $.BUSD, 1000);
+		stage = Stage.Batch4;
+	}
+
+	function batch4() external onlyOwner
+	{
+		require(stage == Stage.Batch4, "unavailable");
+		addStrategy("staked BTCB/bBADGER", "stkBTCB/bBADGER", 106, $.BTCB, 1000);
+		addStrategy("staked BNB/BSCX", "stkBNB/BSCX", 51, $.WBNB, 1000);
+		addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
+		addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
+		stage = Stage.Batch5;
+	}
+
+	function batch5() external onlyOwner
+	{
+		require(stage == Stage.Batch5, "unavailable");
+		addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
+		addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 79, $.WBNB, 1000);
+		addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
+		addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
+		stage = Stage.Batch6;
+	}
+
+	function batch6() external onlyOwner
+	{
+		require(stage == Stage.Batch6, "unavailable");
+		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
+		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
+
+		// transfer ownerships
+		Ownable(masterChef).transferOwnership(admin);
 		renounceOwnership();
-		deployed = true;
 		emit DeployPerformed();
+
+		stage = Stage.Done;
 	}
 
 	function addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
 		address _collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, _pid, buyback, treasury);
-		collectors.push(_collector);
+		Ownable(_collector).transferOwnership(admin);
 		address _strategy = LibDeployer4.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, _collector);
 		RewardCompoundingStrategyToken(_strategy).setExchange(exchange);
+		Ownable(_strategy).transferOwnership(admin);
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
-		strategies.push(_strategy);
 	}
 
 	event DeployPerformed();
