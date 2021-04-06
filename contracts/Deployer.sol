@@ -22,7 +22,7 @@ contract Deployer is Ownable
 	address constant DEFAULT_ADMIN = 0xBf70B751BB1FC725bFbC4e68C4Ec4825708766c5; // S
 	address constant DEFAULT_TREASURY = 0x2165fa4a32B9c228cD55713f77d2e977297D03e8; // G
 	address constant DEFAULT_DEV = 0x7674D2a14076e8af53AC4ba9bBCf0c19FeBe8899;
-	address constant DEFAULT_FUND = 0x2165fa4a32B9c228cD55713f77d2e977297D03e8; // G
+	address constant DEFAULT_FUND = 0xBf70B751BB1FC725bFbC4e68C4Ec4825708766c5; // S
 
 	uint256 public constant INITIAL_WHEAT_PER_BLOCK = 1e18;
 
