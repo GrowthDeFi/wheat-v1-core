@@ -161,17 +161,17 @@ contract Deployer is Ownable
 		// transfer ownerships
 		Ownable(masterChef).transferOwnership(admin);
 		renounceOwnership();
-		emit DeployPerformed();
 
 		stage = Stage.Done;
+		emit DeployPerformed();
 	}
 
 	function addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
 		address _collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, _pid, buyback, treasury);
-		Ownable(_collector).transferOwnership(admin);
 		address _strategy = LibDeployer4.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, _collector);
 		RewardCompoundingStrategyToken(_strategy).setExchange(exchange);
+		Ownable(_collector).transferOwnership(admin);
 		Ownable(_strategy).transferOwnership(admin);
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
 	}
