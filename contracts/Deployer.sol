@@ -73,7 +73,7 @@ contract Deployer is Ownable
 		// configure MasterChef
 		wheat = LibDeployer1.publish_WHEAT();
 		stkWheat = LibDeployer2.publish_stkWHEAT(wheat);
-		masterChef = LibDeployer3.publish_CustomMasterChef(wheat, stkWheat, INITIAL_WHEAT_PER_BLOCK, block.number);
+		masterChef = LibDeployer1.publish_CustomMasterChef(wheat, stkWheat, INITIAL_WHEAT_PER_BLOCK, block.number);
 		masterChefAdmin = LibDeployer3.publish_MasterChefAdmin(masterChef);
 
 		CustomMasterChef(masterChef).set(0, 15000, false);
@@ -204,9 +204,9 @@ library LibDeployer1
 		return address(new WHEAT());
 	}
 
-	function publish_FeeCollector(address _masterChef, uint256 _pid, address _buyback, address _treasury) public returns (address _address)
+	function publish_CustomMasterChef(address _wheat, address _stkWheat, uint256 _cakePerBlock, uint256 _startBlock) public returns (address _address)
 	{
-		return address(new FeeCollector(_masterChef, _pid, _buyback, _treasury));
+		return address(new CustomMasterChef(_wheat, _stkWheat, _cakePerBlock, _startBlock));
 	}
 }
 
@@ -225,23 +225,8 @@ library LibDeployer2
 
 library LibDeployer3
 {
-	function publish_CustomMasterChef(address _wheat, address _stkWheat, uint256 _cakePerBlock, uint256 _startBlock) public returns (address _address)
-	{
-		return address(new CustomMasterChef(_wheat, _stkWheat, _cakePerBlock, _startBlock));
-	}
-
 	function publish_MasterChefAdmin(address _masterChef) public returns (address _address)
 	{
 		return address(new MasterChefAdmin(_masterChef));
-	}
-}
-
-library LibDeployer4
-{
-	function publish_RewardCompoundingStrategyToken(string memory _name, string memory _symbol, uint8 _decimals,
-		address _masterChef, uint256 _pid, address _routingToken,
-		address _dev, address _treasury, address _collector) public returns (address _address)
-	{
-		return address(new RewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector));
 	}
 }

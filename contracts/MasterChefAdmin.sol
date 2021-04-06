@@ -6,9 +6,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { CustomMasterChef } from "./CustomMasterChef.sol";
+import { FeeCollector } from "./FeeCollector.sol";
 import { RewardCompoundingStrategyToken } from "./RewardCompoundingStrategyToken.sol";
-
-import { LibDeployer1, LibDeployer4 } from "./Deployer.sol";
 
 contract MasterChefAdmin is Ownable, ReentrancyGuard
 {
@@ -44,11 +43,26 @@ contract MasterChefAdmin is Ownable, ReentrancyGuard
 		address _buyback, address _exchange, address _dev, address _treasury) external onlyOwner
 	{
 		address _owner = msg.sender;
-		address _collector = LibDeployer1.publish_FeeCollector(_masterChef, _pid, _buyback, _treasury);
-		address _strategy = LibDeployer4.publish_RewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector);
+		address _collector = newFeeCollector(_masterChef, _pid, _buyback, _treasury);
+		address _strategy = LibMasterChefAdmin.newRewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector);
 		RewardCompoundingStrategyToken(_strategy).setExchange(_exchange);
 		Ownable(_collector).transferOwnership(_owner);
 		Ownable(_strategy).transferOwnership(_owner);
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
+	}
+
+	function newFeeCollector(address _masterChef, uint256 _pid, address _buyback, address _treasury) internal returns (address _address)
+	{
+		return address(new FeeCollector(_masterChef, _pid, _buyback, _treasury));
+	}
+}
+
+library LibMasterChefAdmin
+{
+	function newRewardCompoundingStrategyToken(string memory _name, string memory _symbol, uint8 _decimals,
+		address _masterChef, uint256 _pid, address _routingToken,
+		address _dev, address _treasury, address _collector) public returns (address _address)
+	{
+		return address(new RewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector));
 	}
 }
