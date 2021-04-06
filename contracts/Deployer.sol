@@ -105,58 +105,70 @@ contract Deployer is Ownable
 	function batch1() external onlyOwner
 	{
 		require(stage == Stage.Batch1, "unavailable");
-		addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 20000);
-		addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
-		addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
-		addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
+		if ($.NETWORK == $.Network.Bscmain) {
+			addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 20000);
+			addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
+			addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
+			addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
+		}
 		stage = Stage.Batch2;
 	}
 
 	function batch2() external onlyOwner
 	{
 		require(stage == Stage.Batch2, "unavailable");
-		addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
-		addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
-		addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
-		addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
+		if ($.NETWORK == $.Network.Bscmain) {
+			addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
+			addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
+			addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
+			addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
+		}
 		stage = Stage.Batch3;
 	}
 
 	function batch3() external onlyOwner
 	{
 		require(stage == Stage.Batch3, "unavailable");
-		addStrategy("staked BNB/ADA", "stkBNB/ADA", 3, $.WBNB, 1000);
-		addStrategy("staked BUSD/UST", "stkBUSD/UST", 63, $.BUSD, 1000);
-		addStrategy("staked BUSD/DAI", "stkBUSD/DAI", 52, $.BUSD, 1000);
-		addStrategy("staked BUSD/USDC", "stkBUSD/USDC", 53, $.BUSD, 1000);
+		if ($.NETWORK == $.Network.Bscmain) {
+			addStrategy("staked BNB/ADA", "stkBNB/ADA", 3, $.WBNB, 1000);
+			addStrategy("staked BUSD/UST", "stkBUSD/UST", 63, $.BUSD, 1000);
+			addStrategy("staked BUSD/DAI", "stkBUSD/DAI", 52, $.BUSD, 1000);
+			addStrategy("staked BUSD/USDC", "stkBUSD/USDC", 53, $.BUSD, 1000);
+		}
 		stage = Stage.Batch4;
 	}
 
 	function batch4() external onlyOwner
 	{
 		require(stage == Stage.Batch4, "unavailable");
-		addStrategy("staked BTCB/bBADGER", "stkBTCB/bBADGER", 106, $.BTCB, 1000);
-		addStrategy("staked BNB/BSCX", "stkBNB/BSCX", 51, $.WBNB, 1000);
-		addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
-		addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
+		if ($.NETWORK == $.Network.Bscmain) {
+			addStrategy("staked BTCB/bBADGER", "stkBTCB/bBADGER", 106, $.BTCB, 1000);
+			addStrategy("staked BNB/BSCX", "stkBNB/BSCX", 51, $.WBNB, 1000);
+			addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
+			addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
+		}
 		stage = Stage.Batch5;
 	}
 
 	function batch5() external onlyOwner
 	{
 		require(stage == Stage.Batch5, "unavailable");
-		addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
-		addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 79, $.WBNB, 1000);
-		addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
-		addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
+		if ($.NETWORK == $.Network.Bscmain) {
+			addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
+			addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 79, $.WBNB, 1000);
+			addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
+			addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
+		}
 		stage = Stage.Batch6;
 	}
 
 	function batch6() external onlyOwner
 	{
 		require(stage == Stage.Batch6, "unavailable");
-		addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
-		addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
+		if ($.NETWORK == $.Network.Bscmain) {
+			addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
+			addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
+		}
 
 		// transfer ownerships
 		Ownable(masterChef).transferOwnership(admin);

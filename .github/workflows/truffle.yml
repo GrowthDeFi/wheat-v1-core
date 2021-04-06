@@ -29,4 +29,4 @@ jobs:
         INFURA_PROJECT_ID: ${{ secrets.INFURA_PROJECT_ID }}
         PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
     - run: ./scripts/start-bscmain-fork.sh & rm -rf ./build/ && npm run test:bscmain && pkill node
-#    - run: ./scripts/start-bsctest-fork.sh & rm -rf ./build/ && npm run test:bsctest && pkill node
+    - run: ./scripts/start-bsctest-fork.sh & rm -rf ./build/ && npm run test:bsctest && pkill node
