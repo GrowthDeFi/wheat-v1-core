@@ -25,15 +25,17 @@ contract Deployer is Ownable
 
 	address constant DEFAULT_EXCHANGE = 0xFae3C478cC92B93c639f6673b6d888e627F24B7A;
 
-	uint256 constant INITIAL_WHEAT_PER_BLOCK = 1e18;
+	uint256 public constant INITIAL_WHEAT_PER_BLOCK = 1e18;
 
-	uint256 constant WHEAT_LIQUIDITY_ALLOCATION = 10000e18; // 10k WHEAT
+	uint256 public constant WHEAT_LIQUIDITY_ALLOCATION = 10000e18; // 10k WHEAT
 	uint256 public constant WBNB_LIQUIDITY_ALLOCATION = 275e18; // ~100k USD at deploy
 
 	address public admin;
 	address public treasury;
 	address public dev;
+
 	address public exchange;
+
 	address public wheat;
 	address public stkWheat;
 	address public masterChef;
