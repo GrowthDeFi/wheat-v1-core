@@ -111,6 +111,10 @@ contract Deployer is Ownable
 			addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
 			addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
 		}
+		if ($.NETWORK == $.Network.Bsctest) {
+			addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 2, $.CAKE, 20000);
+			addStrategy("staked BNB/ETH", "stkBNB/ETH", 1, $.WBNB, 3000);
+		}
 		stage = Stage.Batch2;
 	}
 
