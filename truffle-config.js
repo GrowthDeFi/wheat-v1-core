@@ -6,7 +6,6 @@ const privateKey = process.env['PRIVATE_KEY'];
 const ankrProjectId = process.env['ANKR_PROJECT_ID'];
 const ankrApikeyBscmain = process.env['ANKR_APIKEY_BSCMAIN'];
 const ankrApikeyBsctest = process.env['ANKR_APIKEY_BSCTEST'];
-const infuraProjectId = process.env['INFURA_PROJECT_ID'];
 
 module.exports = {
   compilers: {
@@ -19,36 +18,6 @@ module.exports = {
     },
   },
   networks: {
-    mainnet: {
-      network_id: 1,
-      gasPrice,
-      networkCheckTimeout: 10000, // fixes truffle bug
-      provider: () => new HDWalletProvider(privateKey, 'https://mainnet.infura.io/v3/' + infuraProjectId),
-    },
-    ropsten: {
-      network_id: 3,
-      networkCheckTimeout: 10000, // fixes truffle bug
-      provider: () => new HDWalletProvider(privateKey, 'https://ropsten.infura.io/v3/' + infuraProjectId),
-      skipDryRun: true,
-    },
-    rinkeby: {
-      network_id: 4,
-      networkCheckTimeout: 10000, // fixes truffle bug
-      provider: () => new HDWalletProvider(privateKey, 'https://rinkeby.infura.io/v3/' + infuraProjectId),
-      skipDryRun: true,
-    },
-    kovan: {
-      network_id: 42,
-      networkCheckTimeout: 10000, // fixes truffle bug
-      provider: () => new HDWalletProvider(privateKey, 'https://kovan.infura.io/v3/' + infuraProjectId),
-      skipDryRun: true,
-    },
-    goerli: {
-      network_id: 5,
-      networkCheckTimeout: 10000, // fixes truffle bug
-      provider: () => new HDWalletProvider(privateKey, 'https://goerli.infura.io/v3/' + infuraProjectId),
-      skipDryRun: true,
-    },
     bscmain: {
       network_id: 56,
       gasPrice,
@@ -78,18 +47,6 @@ module.exports = {
       // provider: () => new HDWalletProvider(privateKey, 'https://data-seed-prebsc-2-s2.binance.org:8545/'),
       // provider: () => new HDWalletProvider(privateKey, 'https://data-seed-prebsc-1-s3.binance.org:8545/'),
       // provider: () => new HDWalletProvider(privateKey, 'https://data-seed-prebsc-2-s3.binance.org:8545/'),
-      skipDryRun: true,
-    },
-    ftmmain: {
-      network_id: 250,
-      gasPrice,
-      networkCheckTimeout: 10000, // fixes truffle bug
-      provider: () => new HDWalletProvider(privateKey, 'https://rpcapi.fantom.network/'),
-    },
-    ftmtest: {
-      network_id: 4002,
-      networkCheckTimeout: 10000, // fixes truffle bug
-      provider: () => new HDWalletProvider(privateKey, 'https://rpc.testnet.fantom.network/'),
       skipDryRun: true,
     },
     development: {
