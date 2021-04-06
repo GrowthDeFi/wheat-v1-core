@@ -4,6 +4,7 @@ pragma solidity ^0.6.0;
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import { Exchange } from "./Exchange.sol";
+import { IStrategyToken } from "./IStrategyToken.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
@@ -16,6 +17,12 @@ library LibRewardCompoundingStrategy
 	using SafeMath for uint256;
 	using LibRewardCompoundingStrategy for LibRewardCompoundingStrategy.Self;
 
+	uint256 constant MAXIMUM_DEPOSIT_FEE = 5e16; // 5%
+	uint256 constant DEFAULT_DEPOSIT_FEE = 3e16; // 3%
+
+	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
+	uint256 constant DEFAULT_PERFORMANCE_FEE = 20e16; // 20%
+
 	struct Self {
 		address masterChef;
 		uint256 pid;
@@ -25,6 +32,12 @@ library LibRewardCompoundingStrategy
 		address rewardToken;
 
 		address exchange;
+
+		uint256 depositFee;
+		uint256 performanceFee;
+
+		uint256 lastTotalSupply;
+		uint256 lastTotalReserve;
 	}
 
 	function init(Self storage _self, address _masterChef, uint256 _pid, address _routingToken) public
@@ -42,6 +55,11 @@ library LibRewardCompoundingStrategy
 		return _self._calcReward();
 	}
 
+	function calcPerformanceFee(Self storage _self) public view returns (uint256 _feeAmount)
+	{
+		return _self._calcPerformanceFee();
+	}
+
 	function deposit(Self storage _self, uint256 _amount) public
 	{
 		_self._deposit(_amount);
@@ -57,9 +75,24 @@ library LibRewardCompoundingStrategy
 		_self._gulpReward();
 	}
 
+	function gulpPerformanceFee(Self storage _self, address _to) public
+	{
+		_self._gulpPerformanceFee(_to);
+	}
+
 	function setExchange(Self storage _self, address _exchange) public
 	{
 		_self._setExchange(_exchange);
+	}
+
+	function setDepositFee(Self storage _self, uint256 _newDepositFee) public
+	{
+		_self._setDepositFee(_newDepositFee);
+	}
+
+	function setPerformanceFee(Self storage _self, uint256 _newPerformanceFee) public
+	{
+		_self._setPerformanceFee(_newPerformanceFee);
 	}
 
 	function _init(Self storage _self, address _masterChef, uint256 _pid, address _routingToken) internal
@@ -74,6 +107,10 @@ library LibRewardCompoundingStrategy
 		_self.reserveToken = _reserveToken;
 		_self.routingToken = _routingToken;
 		_self.rewardToken = _rewardToken;
+		_self.depositFee = DEFAULT_DEPOSIT_FEE;
+		_self.performanceFee = DEFAULT_PERFORMANCE_FEE;
+		_self.lastTotalSupply = 1;
+		_self.lastTotalReserve = 1;
 	}
 
 	function _totalReserve(Self storage _self) internal view returns (uint256 _reserve)
@@ -93,6 +130,27 @@ library LibRewardCompoundingStrategy
 			_totalConverted = Exchange(_self.exchange).calcConversionFromInput(_self.rewardToken, _self.routingToken, _totalReward);
 		}
 		return UniswapV2LiquidityPoolAbstraction._estimateJoinPool(_self.reserveToken, _self.routingToken, _totalConverted);
+	}
+
+	function _calcPerformanceFee(Self storage _self) internal view returns (uint256 _feeAmount)
+	{
+		uint256 _oldTotalSupply = _self.lastTotalSupply;
+		uint256 _oldTotalReserve = _self.lastTotalReserve;
+
+		uint256 _newTotalSupply = IStrategyToken(address(this)).totalSupply();
+		uint256 _newTotalReserve = IStrategyToken(address(this)).totalReserve();
+
+		// calculates the profit using the following formula
+		// ((P1 - P0) * S1 * f) / P1
+		// where P1 = R1 / S1 and P0 = R0 / S0
+		uint256 _positive = _oldTotalSupply.mul(_newTotalReserve);
+		uint256 _negative = _newTotalSupply.mul(_oldTotalReserve);
+		if (_positive > _negative) {
+			uint256 _profitAmount = (_positive - _negative) / _oldTotalSupply;
+			return _profitAmount.mul(_self.performanceFee) / 1e18;
+		}
+
+		return 0;
 	}
 
 	function _deposit(Self storage _self, uint256 _amount) internal
@@ -123,8 +181,31 @@ library LibRewardCompoundingStrategy
 		_self._deposit(_rewardAmount);
 	}
 
+	function _gulpPerformanceFee(Self storage _self, address _to) internal
+	{
+		uint256 _feeAmount = _self._calcPerformanceFee();
+		if (_feeAmount > 0) {
+			_self._withdraw(_feeAmount);
+			Transfers._pushFunds(_self.reserveToken, _to, _feeAmount);
+			_self.lastTotalSupply = IStrategyToken(address(this)).totalSupply();
+			_self.lastTotalReserve = IStrategyToken(address(this)).totalReserve();
+		}
+	}
+
 	function _setExchange(Self storage _self, address _exchange) internal
 	{
 		_self.exchange = _exchange;
+	}
+
+	function _setDepositFee(Self storage _self, uint256 _newDepositFee) internal
+	{
+		require(_newDepositFee <= MAXIMUM_DEPOSIT_FEE, "invalid rate");
+		_self.depositFee = _newDepositFee;
+	}
+
+	function _setPerformanceFee(Self storage _self, uint256 _newPerformanceFee) internal
+	{
+		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
+		_self.performanceFee = _newPerformanceFee;
 	}
 }
