@@ -7,6 +7,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Buyback } from "./Buyback.sol";
 import { CustomMasterChef } from "./CustomMasterChef.sol";
 import { FeeCollector } from "./FeeCollector.sol";
+import { MasterChefAdmin } from "./MasterChefAdmin.sol";
 import { RewardCompoundingStrategyToken } from "./RewardCompoundingStrategyToken.sol";
 import { WHEAT, stkWHEAT } from "./Tokens.sol";
 
@@ -39,6 +40,7 @@ contract Deployer is Ownable
 	address public wheat;
 	address public stkWheat;
 	address public masterChef;
+	address public masterChefAdmin;
 	address public buyback;
 
 	enum Stage {
@@ -72,6 +74,7 @@ contract Deployer is Ownable
 		wheat = LibDeployer1.publish_WHEAT();
 		stkWheat = LibDeployer2.publish_stkWHEAT(wheat);
 		masterChef = LibDeployer3.publish_CustomMasterChef(wheat, stkWheat, INITIAL_WHEAT_PER_BLOCK, block.number);
+		masterChefAdmin = LibDeployer3.publish_MasterChefAdmin(masterChef);
 
 		CustomMasterChef(masterChef).set(0, 15000, false);
 
@@ -100,6 +103,7 @@ contract Deployer is Ownable
 		// transfer ownerships
 		Ownable(wheat).transferOwnership(masterChef);
 		Ownable(stkWheat).transferOwnership(masterChef);
+		Ownable(masterChef).transferOwnership(masterChefAdmin);
 		Ownable(buyback).transferOwnership(admin);
 
 		stage = Stage.Batch1;
@@ -178,7 +182,7 @@ contract Deployer is Ownable
 		}
 
 		// transfer ownerships
-		Ownable(masterChef).transferOwnership(admin);
+		Ownable(masterChefAdmin).transferOwnership(admin);
 		renounceOwnership();
 
 		stage = Stage.Done;
@@ -187,12 +191,7 @@ contract Deployer is Ownable
 
 	function addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
-		address _collector = LibDeployer1.publish_FeeCollector($.PancakeSwap_MASTERCHEF, _pid, buyback, treasury);
-		address _strategy = LibDeployer4.publish_RewardCompoundingStrategyToken(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, dev, treasury, _collector);
-		RewardCompoundingStrategyToken(_strategy).setExchange(exchange);
-		Ownable(_collector).transferOwnership(admin);
-		Ownable(_strategy).transferOwnership(admin);
-		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
+		MasterChefAdmin(masterChefAdmin).addStrategy(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, _allocPoint, buyback, exchange, dev, treasury);
 	}
 
 	event DeployPerformed();
@@ -229,6 +228,11 @@ library LibDeployer3
 	function publish_CustomMasterChef(address _wheat, address _stkWheat, uint256 _cakePerBlock, uint256 _startBlock) public returns (address _address)
 	{
 		return address(new CustomMasterChef(_wheat, _stkWheat, _cakePerBlock, _startBlock));
+	}
+
+	function publish_MasterChefAdmin(address _masterChef) public returns (address _address)
+	{
+		return address(new MasterChefAdmin(_masterChef));
 	}
 }
 

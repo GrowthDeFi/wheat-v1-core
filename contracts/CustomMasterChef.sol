@@ -92,9 +92,9 @@ contract CustomMasterChef is Ownable
 		cakePerBlock = _cakePerBlock;
 	}
 
-	function updateMultiplier(uint256 multiplierNumber) external onlyOwner
+	function updateMultiplier(uint256 _multiplierNumber) external onlyOwner
 	{
-		BONUS_MULTIPLIER = multiplierNumber;
+		BONUS_MULTIPLIER = _multiplierNumber;
 	}
 
 	function poolLength() external view returns (uint256)

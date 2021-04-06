@@ -8,11 +8,18 @@ const LibRewardCompoundingStrategy = artifacts.require('LibRewardCompoundingStra
 module.exports = async (deployer, network, [account]) => {
   console.log('Preparing the deployer contract...');
   await deployer.deploy(LibRewardCompoundingStrategy);
-  await deployer.deploy(LibDeployer1);
-  await deployer.deploy(LibDeployer2);
-  await deployer.deploy(LibDeployer3);
+
   deployer.link(LibRewardCompoundingStrategy, LibDeployer4);
   await deployer.deploy(LibDeployer4);
+
+  await deployer.deploy(LibDeployer1);
+
+  await deployer.deploy(LibDeployer2);
+
+  deployer.link(LibDeployer1, LibDeployer3);
+  deployer.link(LibDeployer4, LibDeployer3);
+  await deployer.deploy(LibDeployer3);
+
   deployer.link(LibDeployer1, Deployer);
   deployer.link(LibDeployer2, Deployer);
   deployer.link(LibDeployer3, Deployer);
