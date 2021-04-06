@@ -15,7 +15,9 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 
 	uint256 constant DEFAULT_REWARD_BUYBACK1_SHARE = 70e16; // 70%
 	uint256 constant DEFAULT_REWARD_BUYBACK2_SHARE = 15e16; // 15%
-	uint256 constant DEFAULT_REWARD_RESERVE_SHARE = 15e16; // 15%
+	uint256 constant DEFAULT_REWARD_FUND_SHARE = 15e16; // 15%
+
+	address constant public FURNACE = 0x000000000000000000000000000000000000dEaD;
 
 	address public immutable rewardToken;
 	address public immutable routingToken;
@@ -23,18 +25,19 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 	address public immutable buybackToken2;
 
 	address public exchange;
-	address public reserve;
+	address public fund;
 
 	uint256 public rewardBuyback1Share = DEFAULT_REWARD_BUYBACK1_SHARE;
 	uint256 public rewardBuyback2Share = DEFAULT_REWARD_BUYBACK2_SHARE;
-	uint256 public rewardReserveShare = DEFAULT_REWARD_RESERVE_SHARE;
+	uint256 public rewardFundShare = DEFAULT_REWARD_FUND_SHARE;
 
-	constructor (address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2) public
+	constructor (address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2, address _fund) public
 	{
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		buybackToken1 = _buybackToken1;
 		buybackToken2 = _buybackToken2;
+		fund = _fund;
 	}
 
 	function gulp() external onlyEOAorWhitelist nonReentrant
@@ -49,26 +52,26 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
-	function setReserve(address _newReserve) external onlyOwner nonReentrant
+	function setFund(address _newFund) external onlyOwner nonReentrant
 	{
-		address _oldReserve = reserve;
-		reserve = _newReserve;
-		emit ChangeReserve(_oldReserve, _newReserve);
+		address _oldFund = fund;
+		fund = _newFund;
+		emit ChangeFund(_oldFund, _newFund);
 	}
 
-	function setRewardSplit(uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share, uint256 _newRewardReserveShare) external onlyOwner nonReentrant
+	function setRewardSplit(uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share, uint256 _newRewardFundShare) external onlyOwner nonReentrant
 	{
 		require(_newRewardBuyback1Share <= 1e18, "invalid rate");
 		require(_newRewardBuyback2Share <= 1e18, "invalid rate");
-		require(_newRewardReserveShare <= 1e18, "invalid rate");
-		require(_newRewardBuyback1Share + _newRewardBuyback2Share + _newRewardReserveShare == 1e18, "invalid split");
+		require(_newRewardFundShare <= 1e18, "invalid rate");
+		require(_newRewardBuyback1Share + _newRewardBuyback2Share + _newRewardFundShare == 1e18, "invalid split");
 		uint256 _oldRewardBuyback1Share = rewardBuyback1Share;
 		uint256 _oldRewardBuyback2Share = rewardBuyback2Share;
-		uint256 _oldRewardReserveShare = rewardReserveShare;
+		uint256 _oldRewardFundShare = rewardFundShare;
 		rewardBuyback1Share = _newRewardBuyback1Share;
 		rewardBuyback2Share = _newRewardBuyback2Share;
-		rewardReserveShare = _newRewardReserveShare;
-		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _oldRewardReserveShare, _newRewardBuyback1Share, _newRewardBuyback2Share, _newRewardReserveShare);
+		rewardFundShare = _newRewardFundShare;
+		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _oldRewardFundShare, _newRewardBuyback1Share, _newRewardBuyback2Share, _newRewardFundShare);
 	}
 
 	function _gulp() internal
@@ -91,16 +94,15 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 
 	function _burn(address _token, uint256 _amount) internal
 	{
-		Transfers._pushFunds(_token, address(0), _amount);
+		Transfers._pushFunds(_token, FURNACE, _amount);
 	}
 
 	function _send(address _token, uint256 _amount) internal
 	{
-		require(reserve != address(0), "reserve not set");
-		Transfers._pushFunds(_token, reserve, _amount);
+		Transfers._pushFunds(_token, fund, _amount);
 	}
 
 	event ChangeExchange(address _oldExchange, address _newExchange);
-	event ChangeReserve(address _oldReserve, address _newReserve);
-	event ChangeRewardSplit(uint256 _oldRewardBuyback1Share, uint256 _oldRewardBuyback2Share, uint256 _oldRewardReserveShare, uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share, uint256 _newRewardReserveShare);
+	event ChangeFund(address _oldFund, address _newFund);
+	event ChangeRewardSplit(uint256 _oldRewardBuyback1Share, uint256 _oldRewardBuyback2Share, uint256 _oldRewardFundShare, uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share, uint256 _newRewardFundShare);
 }

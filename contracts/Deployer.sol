@@ -22,6 +22,7 @@ contract Deployer is Ownable
 	address constant DEFAULT_ADMIN = 0xBf70B751BB1FC725bFbC4e68C4Ec4825708766c5; // S
 	address constant DEFAULT_TREASURY = 0x2165fa4a32B9c228cD55713f77d2e977297D03e8; // G
 	address constant DEFAULT_DEV = 0x7674D2a14076e8af53AC4ba9bBCf0c19FeBe8899;
+	address constant DEFAULT_FUND = 0x2165fa4a32B9c228cD55713f77d2e977297D03e8; // G
 
 	uint256 public constant INITIAL_WHEAT_PER_BLOCK = 1e18;
 
@@ -31,6 +32,7 @@ contract Deployer is Ownable
 	address public admin;
 	address public treasury;
 	address public dev;
+	address public fund;
 
 	address public exchange;
 
@@ -88,7 +90,8 @@ contract Deployer is Ownable
 		Transfers._pushFunds($.WBNB, _BNB_WHEAT, WBNB_LIQUIDITY_ALLOCATION);
 		Pair(_BNB_WHEAT).mint(DEFAULT_TREASURY);
 
-		buyback = LibDeployer2.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO);
+		buyback = LibDeployer2.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO, fund);
+		Buyback(buyback).setExchange(exchange);
 
 		require(Transfers._getBalance($.WBNB) == 0, "WBNB left over");
 		require(Transfers._getBalance(wheat) == 0, "WHEAT left over");
@@ -215,9 +218,9 @@ library LibDeployer2
 		return address(new stkWHEAT(_wheat));
 	}
 
-	function publish_Buyback(address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2) public returns (address _address)
+	function publish_Buyback(address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2, address _fund) public returns (address _address)
 	{
-		return address(new Buyback(_rewardToken, _routingToken, _buybackToken1, _buybackToken2));
+		return address(new Buyback(_rewardToken, _routingToken, _buybackToken1, _buybackToken2, _fund));
 	}
 }
 
