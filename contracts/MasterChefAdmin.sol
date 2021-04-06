@@ -38,20 +38,20 @@ contract MasterChefAdmin is Ownable, ReentrancyGuard
 		CustomMasterChef(masterChef).set(_pid, _allocPoint, _withUpdate);
 	}
 
-	function addStrategy(string memory _name, string memory _symbol, uint8 _decimals,
+	function addRewardCompoundingStrategy(string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken, uint256 _allocPoint,
 		address _buyback, address _exchange, address _dev, address _treasury) external onlyOwner
 	{
 		address _owner = msg.sender;
-		address _collector = newFeeCollector(_masterChef, _pid, _buyback, _treasury);
-		address _strategy = LibMasterChefAdmin.newRewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector);
+		address _collector = new_FeeCollector(_masterChef, _pid, _buyback, _treasury);
+		address _strategy = LibMasterChefAdmin.new_RewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector);
 		RewardCompoundingStrategyToken(_strategy).setExchange(_exchange);
 		Ownable(_collector).transferOwnership(_owner);
 		Ownable(_strategy).transferOwnership(_owner);
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
 	}
 
-	function newFeeCollector(address _masterChef, uint256 _pid, address _buyback, address _treasury) internal returns (address _address)
+	function new_FeeCollector(address _masterChef, uint256 _pid, address _buyback, address _treasury) internal returns (address _address)
 	{
 		return address(new FeeCollector(_masterChef, _pid, _buyback, _treasury));
 	}
@@ -59,7 +59,7 @@ contract MasterChefAdmin is Ownable, ReentrancyGuard
 
 library LibMasterChefAdmin
 {
-	function newRewardCompoundingStrategyToken(string memory _name, string memory _symbol, uint8 _decimals,
+	function new_RewardCompoundingStrategyToken(string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
 		address _dev, address _treasury, address _collector) public returns (address _address)
 	{

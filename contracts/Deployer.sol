@@ -71,10 +71,10 @@ contract Deployer is Ownable
 		exchange = $.WHEAT_EXCHANGE_IMPL;
 
 		// configure MasterChef
-		wheat = LibDeployer1.publish_WHEAT();
-		stkWheat = LibDeployer2.publish_stkWHEAT(wheat);
-		masterChef = LibDeployer1.publish_CustomMasterChef(wheat, stkWheat, INITIAL_WHEAT_PER_BLOCK, block.number);
-		masterChefAdmin = LibDeployer3.publish_MasterChefAdmin(masterChef);
+		wheat = LibDeployer1.new_WHEAT();
+		stkWheat = LibDeployer2.new_stkWHEAT(wheat);
+		masterChef = LibDeployer1.new_CustomMasterChef(wheat, stkWheat, INITIAL_WHEAT_PER_BLOCK, block.number);
+		masterChefAdmin = LibDeployer3.new_MasterChefAdmin(masterChef);
 
 		CustomMasterChef(masterChef).set(0, 15000, false);
 
@@ -93,7 +93,7 @@ contract Deployer is Ownable
 		Transfers._pushFunds($.WBNB, _BNB_WHEAT, WBNB_LIQUIDITY_ALLOCATION);
 		Pair(_BNB_WHEAT).mint(DEFAULT_TREASURY);
 
-		buyback = LibDeployer2.publish_Buyback($.CAKE, $.WBNB, wheat, $.GRO, treasury, yield);
+		buyback = LibDeployer2.new_Buyback($.CAKE, $.WBNB, wheat, $.GRO, treasury, yield);
 		Buyback(buyback).setExchange(exchange);
 
 		require(Transfers._getBalance($.WBNB) == 0, "WBNB left over");
@@ -113,14 +113,14 @@ contract Deployer is Ownable
 	{
 		require(stage == Stage.Batch1, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
-			addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 20000);
-			addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
-			addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
-			addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
+			_addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 20000);
+			_addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
+			_addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
+			_addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
 		}
 		if ($.NETWORK == $.Network.Bsctest) {
-			addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 2, $.CAKE, 20000);
-			addStrategy("staked BNB/ETH", "stkBNB/ETH", 1, $.WBNB, 3000);
+			_addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 2, $.CAKE, 20000);
+			_addStrategy("staked BNB/ETH", "stkBNB/ETH", 1, $.WBNB, 3000);
 		}
 		stage = Stage.Batch2;
 	}
@@ -129,10 +129,10 @@ contract Deployer is Ownable
 	{
 		require(stage == Stage.Batch2, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
-			addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
-			addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
-			addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
-			addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
+			_addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
+			_addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
+			_addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
+			_addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
 		}
 		stage = Stage.Batch3;
 	}
@@ -141,10 +141,10 @@ contract Deployer is Ownable
 	{
 		require(stage == Stage.Batch3, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
-			addStrategy("staked BNB/ADA", "stkBNB/ADA", 3, $.WBNB, 1000);
-			addStrategy("staked BUSD/UST", "stkBUSD/UST", 63, $.BUSD, 1000);
-			addStrategy("staked BUSD/DAI", "stkBUSD/DAI", 52, $.BUSD, 1000);
-			addStrategy("staked BUSD/USDC", "stkBUSD/USDC", 53, $.BUSD, 1000);
+			_addStrategy("staked BNB/ADA", "stkBNB/ADA", 3, $.WBNB, 1000);
+			_addStrategy("staked BUSD/UST", "stkBUSD/UST", 63, $.BUSD, 1000);
+			_addStrategy("staked BUSD/DAI", "stkBUSD/DAI", 52, $.BUSD, 1000);
+			_addStrategy("staked BUSD/USDC", "stkBUSD/USDC", 53, $.BUSD, 1000);
 		}
 		stage = Stage.Batch4;
 	}
@@ -153,10 +153,10 @@ contract Deployer is Ownable
 	{
 		require(stage == Stage.Batch4, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
-			addStrategy("staked BTCB/bBADGER", "stkBTCB/bBADGER", 106, $.BTCB, 1000);
-			addStrategy("staked BNB/BSCX", "stkBNB/BSCX", 51, $.WBNB, 1000);
-			addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
-			addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
+			_addStrategy("staked BTCB/bBADGER", "stkBTCB/bBADGER", 106, $.BTCB, 1000);
+			_addStrategy("staked BNB/BSCX", "stkBNB/BSCX", 51, $.WBNB, 1000);
+			_addStrategy("staked BNB/BRY", "stkBNB/BRY", 75, $.WBNB, 1000);
+			_addStrategy("staked BNB/WATCH", "stkBNB/WATCH", 84, $.WBNB, 1000);
 		}
 		stage = Stage.Batch5;
 	}
@@ -165,10 +165,10 @@ contract Deployer is Ownable
 	{
 		require(stage == Stage.Batch5, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
-			addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
-			addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 79, $.WBNB, 1000);
-			addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
-			addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
+			_addStrategy("staked BNB/BTCST", "stkBNB/BTCST", 55, $.WBNB, 1000);
+			_addStrategy("staked BNB/bOPEN", "stkBNB/bOPEN", 79, $.WBNB, 1000);
+			_addStrategy("staked BUSD/IOTX", "stkBUSD/IOTX", 81, $.BUSD, 1000);
+			_addStrategy("staked BUSD/TPT", "stkBUSD/TPT", 85, $.BUSD, 1000);
 		}
 		stage = Stage.Batch6;
 	}
@@ -177,8 +177,8 @@ contract Deployer is Ownable
 	{
 		require(stage == Stage.Batch6, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
-			addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
-			addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
+			_addStrategy("staked BNB/ZIL", "stkBNB/ZIL", 108, $.WBNB, 1000);
+			_addStrategy("staked BNB/TWT", "stkBNB/TWT", 12, $.WBNB, 1000);
 		}
 
 		// transfer ownerships
@@ -189,9 +189,9 @@ contract Deployer is Ownable
 		emit DeployPerformed();
 	}
 
-	function addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
+	function _addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
-		MasterChefAdmin(masterChefAdmin).addStrategy(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, _allocPoint, buyback, exchange, dev, treasury);
+		MasterChefAdmin(masterChefAdmin).addRewardCompoundingStrategy(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, _allocPoint, buyback, exchange, dev, treasury);
 	}
 
 	event DeployPerformed();
@@ -199,12 +199,12 @@ contract Deployer is Ownable
 
 library LibDeployer1
 {
-	function publish_WHEAT() public returns (address _address)
+	function new_WHEAT() public returns (address _address)
 	{
 		return address(new WHEAT());
 	}
 
-	function publish_CustomMasterChef(address _wheat, address _stkWheat, uint256 _cakePerBlock, uint256 _startBlock) public returns (address _address)
+	function new_CustomMasterChef(address _wheat, address _stkWheat, uint256 _cakePerBlock, uint256 _startBlock) public returns (address _address)
 	{
 		return address(new CustomMasterChef(_wheat, _stkWheat, _cakePerBlock, _startBlock));
 	}
@@ -212,12 +212,12 @@ library LibDeployer1
 
 library LibDeployer2
 {
-	function publish_stkWHEAT(address _wheat) public returns (address _address)
+	function new_stkWHEAT(address _wheat) public returns (address _address)
 	{
 		return address(new stkWHEAT(_wheat));
 	}
 
-	function publish_Buyback(address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2, address _treasury, address _yield) public returns (address _address)
+	function new_Buyback(address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2, address _treasury, address _yield) public returns (address _address)
 	{
 		return address(new Buyback(_rewardToken, _routingToken, _buybackToken1, _buybackToken2, _treasury, _yield));
 	}
@@ -225,7 +225,7 @@ library LibDeployer2
 
 library LibDeployer3
 {
-	function publish_MasterChefAdmin(address _masterChef) public returns (address _address)
+	function new_MasterChefAdmin(address _masterChef) public returns (address _address)
 	{
 		return address(new MasterChefAdmin(_masterChef));
 	}
