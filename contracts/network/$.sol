@@ -42,7 +42,7 @@ library $
 	address constant PancakeSwap_MASTERCHEF =
 		// Binance Smart Chain
 		NETWORK == Network.Bscmain ? 0x73feaa1eE314F8c655E354234017bE2193C9E24E :
-		// NETWORK == Network.Bsctest ? 0x0000000000000000000000000000000000000000 :
+		NETWORK == Network.Bsctest ? 0x7C83Cab4B208A0cD5a1b222D8e6f9099C8F37897 :
 		0x0000000000000000000000000000000000000000;
 
 	address constant WBNB =
@@ -66,7 +66,7 @@ library $
 	address constant CAKE =
 		// Binance Smart Chain
 		NETWORK == Network.Bscmain ? 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82 :
-		// NETWORK == Network.Bsctest ? 0x0000000000000000000000000000000000000000 :
+		NETWORK == Network.Bsctest ? 0x2a94738549370A3973Ba778BbC5A424C83C8c633 :
 		0x0000000000000000000000000000000000000000;
 
 	address constant ETH =
