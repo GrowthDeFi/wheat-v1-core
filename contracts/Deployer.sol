@@ -67,6 +67,7 @@ contract Deployer is Ownable
 		admin = DEFAULT_ADMIN;
 		treasury = DEFAULT_TREASURY;
 		dev = DEFAULT_DEV;
+		yield = DEFAULT_YIELD;
 
 		exchange = $.WHEAT_EXCHANGE_IMPL;
 
