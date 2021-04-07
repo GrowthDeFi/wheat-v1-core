@@ -121,7 +121,7 @@ contract Deployer is Ownable
 		}
 		if ($.NETWORK == $.Network.Bsctest) {
 			_addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 2, $.CAKE, 20000);
-			_addStrategy("staked BNB/ETH", "stkBNB/ETH", 1, $.WBNB, 3000);
+			_addStrategy("staked BNB/ETH", "stkBNB/ETH", 4, $.WBNB, 3000);
 		}
 		stage = Stage.Batch2;
 	}
