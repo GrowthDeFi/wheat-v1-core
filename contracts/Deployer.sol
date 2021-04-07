@@ -192,7 +192,13 @@ contract Deployer is Ownable
 
 	function _addStrategy(string memory _name, string memory _symbol, uint256 _pid, address _routingToken, uint256 _allocPoint) internal
 	{
+		uint256 _length = CustomMasterChef(masterChef).poolLength();
 		MasterChefAdmin(masterChefAdmin).addRewardCompoundingStrategy(_name, _symbol, 18, $.PancakeSwap_MASTERCHEF, _pid, _routingToken, _allocPoint, buyback, exchange, dev, treasury);
+		(IERC20 _lptoken,,,) = CustomMasterChef(masterChef).poolInfo(_length);
+		address _strategy = address(_lptoken);
+		address _collector = RewardCompoundingStrategyToken(_strategy).collector();
+		Ownable(_collector).transferOwnership(admin);
+		Ownable(_strategy).transferOwnership(admin);
 	}
 
 	event DeployPerformed();
