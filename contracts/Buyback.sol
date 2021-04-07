@@ -47,6 +47,13 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 		_gulp();
 	}
 
+	function recoverLostFunds(address _token) external onlyOwner nonReentrant
+	{
+		require(_token != rewardToken, "invalid token");
+		uint256 _balance = Transfers._getBalance(_token);
+		Transfers._pushFunds(_token, treasury, _balance);
+	}
+
 	function setExchange(address _newExchange) external onlyOwner nonReentrant
 	{
 		address _oldExchange = exchange;
