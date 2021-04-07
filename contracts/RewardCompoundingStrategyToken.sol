@@ -5,7 +5,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { Exchange } from "./Exchange.sol";
+import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -318,7 +318,7 @@ library LibRewardCompoundingStrategy
 		uint256 _totalReward = _pendingReward.add(_collectedReward);
 		uint256 _totalConverted = _totalReward;
 		if (_self.routingToken != _self.rewardToken) {
-			_totalConverted = Exchange(_self.exchange).calcConversionFromInput(_self.rewardToken, _self.routingToken, _totalReward);
+			_totalConverted = IExchange(_self.exchange).calcConversionFromInput(_self.rewardToken, _self.routingToken, _totalReward);
 		}
 		return UniswapV2LiquidityPoolAbstraction._estimateJoinPool(_self.reserveToken, _self.routingToken, _totalConverted);
 	}
@@ -365,7 +365,7 @@ library LibRewardCompoundingStrategy
 		if (_self.routingToken != _self.rewardToken) {
 			uint256 _totalReward = Transfers._getBalance(_self.rewardToken);
 			Transfers._approveFunds(_self.rewardToken, _self.exchange, _totalReward);
-			Exchange(_self.exchange).convertFundsFromInput(_self.rewardToken, _self.routingToken, _totalReward, 1);
+			IExchange(_self.exchange).convertFundsFromInput(_self.rewardToken, _self.routingToken, _totalReward, 1);
 		}
 		uint256 _totalConverted = Transfers._getBalance(_self.routingToken);
 		uint256 _rewardAmount = UniswapV2LiquidityPoolAbstraction._joinPool(_self.reserveToken, _self.routingToken, _totalConverted);

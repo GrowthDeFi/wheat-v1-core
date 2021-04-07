@@ -4,7 +4,7 @@ pragma solidity ^0.6.0;
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { Exchange } from "./Exchange.sol";
+import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -95,14 +95,14 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 		require(exchange != address(0), "exchange not set");
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		Transfers._approveFunds(rewardToken, exchange, _balance);
-		uint256 _total = Exchange(exchange).convertFundsFromInput(rewardToken, routingToken, _balance, 1);
+		uint256 _total = IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _balance, 1);
 		uint256 _amount1 = _total.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _total.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
 		uint256 _burning = _amount1 + _amount2;
 		uint256 _sending = _total - _burning;
 		Transfers._approveFunds(routingToken, exchange, _burning);
-		uint256 _burning1 = Exchange(exchange).convertFundsFromInput(routingToken, buybackToken1, _amount1, 1);
-		uint256 _amount3 = Exchange(exchange).convertFundsFromInput(routingToken, buybackToken2, _amount2, 1);
+		uint256 _burning1 = IExchange(exchange).convertFundsFromInput(routingToken, buybackToken1, _amount1, 1);
+		uint256 _amount3 = IExchange(exchange).convertFundsFromInput(routingToken, buybackToken2, _amount2, 1);
 		uint256 _burning2 = _amount3 / 2;
 		uint256 _sending2 = _amount3 - _burning2;
 		_burn(buybackToken1, _burning1);

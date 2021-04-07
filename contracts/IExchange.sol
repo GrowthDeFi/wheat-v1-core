@@ -6,10 +6,9 @@ pragma solidity ^0.6.0;
  *      to estimate and convert funds whenever necessary. This furnishes
  *      client contracts with the flexibility to replace conversion strategy
  *      and routing, dynamically, by delegating these operations to different
- *      external contracts that share this common interface. See
- *      GExchangeImpl.sol for further documentation.
+ *      external contracts that share this common interface.
  */
-interface Exchange
+interface IExchange
 {
 	// view functions
 	function calcConversionFromInput(address _from, address _to, uint256 _inputAmount) external view returns (uint256 _outputAmount);
