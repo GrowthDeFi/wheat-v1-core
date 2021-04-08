@@ -41,11 +41,5 @@ module.exports = async (deployer, network, [account]) => {
 
     console.log('Publishing batch 4...');
     await contract.batch4();
-
-    console.log('Publishing batch 5...');
-    await contract.batch5();
-
-    console.log('Publishing batch 6...');
-    await contract.batch6();
   }
 };
