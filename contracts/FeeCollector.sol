@@ -19,6 +19,7 @@ contract FeeCollector is ReentrancyGuard, WhitelistGuard
 
 	address public immutable reserveToken;
 	address public immutable rewardToken;
+	address private immutable stakeToken;
 
 	address public buyback;
 	address public treasury;
@@ -29,31 +30,39 @@ contract FeeCollector is ReentrancyGuard, WhitelistGuard
 	constructor (address _masterChef, uint256 _pid, address _buyback, address _treasury) public
 	{
 		uint256 _poolLength = MasterChef(_masterChef).poolLength();
-		require(1 <= _pid && _pid < _poolLength, "invalid pid");
+		require(_pid < _poolLength, "invalid pid");
 		address _rewardToken = MasterChef(_masterChef).cake();
+		address _stakeToken = MasterChef(_masterChef).syrup();
 		(address _reserveToken,,,) = MasterChef(_masterChef).poolInfo(_pid);
 		masterChef = _masterChef;
 		pid = _pid;
 		reserveToken = _reserveToken;
 		rewardToken = _rewardToken;
+		stakeToken = _stakeToken;
 		buyback = _buyback;
 		treasury = _treasury;
 	}
 
-	function pendingReward() external view returns (uint256 _reward)
+	function pendingDeposit() external view returns (uint256 _depositAmount)
 	{
-		return _calcReward();
+		return _calcPendingDeposit();
+	}
+
+	function pendingReward() external view returns (uint256 _rewardAmount)
+	{
+		return _calcPendingReward();
 	}
 
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
-		_gulpReward();
+		_gulp();
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != rewardToken, "invalid token");
+		require(_token != stakeToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
@@ -107,23 +116,30 @@ contract FeeCollector is ReentrancyGuard, WhitelistGuard
 		emit Migrate(_migrationRecipient, _migrationTimestamp);
 	}
 
-	function _calcReward() internal view returns (uint256 _reward)
+	function _calcPendingDeposit() internal view returns (uint256 _depositAmount)
 	{
-		_reward = Transfers._getBalance(rewardToken);
-		_reward += MasterChef(masterChef).pendingCake(pid, address(this));
-		return _reward;
+		return Transfers._getBalance(reserveToken);
 	}
 
-	function _gulpReward() internal
+	function _calcPendingReward() internal view returns (uint256 _rewardAmount)
+	{
+		_rewardAmount = 0;
+		if (reserveToken != rewardToken) {
+			_rewardAmount += Transfers._getBalance(rewardToken);
+		}
+		_rewardAmount += MasterChef(masterChef).pendingCake(pid, address(this));
+		return _rewardAmount;
+	}
+
+	function _gulp() internal
 	{
 		uint256 _reserveBalance = Transfers._getBalance(reserveToken);
 		if (_reserveBalance > 0) {
-			Transfers._approveFunds(reserveToken, masterChef, _reserveBalance);
-			MasterChef(masterChef).deposit(pid, _reserveBalance);
+			_deposit(_reserveBalance);
 		} else {
 			uint256 _pendingReward = MasterChef(masterChef).pendingCake(pid, address(this));
 			if (_pendingReward > 0) {
-				MasterChef(masterChef).withdraw(pid, 0);
+				_withdraw(0);
 			}
 		}
 		uint256 _rewardBalance = Transfers._getBalance(rewardToken);
@@ -137,13 +153,35 @@ contract FeeCollector is ReentrancyGuard, WhitelistGuard
 		} else {
 			(uint256 _amount,) = MasterChef(masterChef).userInfo(pid, address(this));
 			if (_amount > 0) {
-				MasterChef(masterChef).withdraw(pid, _amount);
+				_withdraw(_amount);
 			}
 			uint256 _rewardBalance = Transfers._getBalance(rewardToken);
+			if (reserveToken == rewardToken) {
+				_rewardBalance -= _amount;
+			}
 			Transfers._pushFunds(rewardToken, buyback, _rewardBalance);
 		}
 		uint256 _reserveBalance = Transfers._getBalance(reserveToken);
 		Transfers._pushFunds(reserveToken, migrationRecipient, _reserveBalance);
+	}
+
+	function _deposit(uint256 _amount) internal
+	{
+		Transfers._approveFunds(reserveToken, masterChef, _amount);
+		if (pid == 0) {
+			MasterChef(masterChef).enterStaking(_amount);
+		} else {
+			MasterChef(masterChef).deposit(pid, _amount);
+		}
+	}
+
+	function _withdraw(uint256 _amount) internal
+	{
+		if (pid == 0) {
+			MasterChef(masterChef).leaveStaking(_amount);
+		} else {
+			MasterChef(masterChef).withdraw(pid, _amount);
+		}
 	}
 
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);

@@ -3,9 +3,6 @@ pragma solidity ^0.6.0;
 
 import { MintableToken } from "./MintableToken.sol";
 import { MintableStakeToken } from "./MintableStakeToken.sol";
-import { RewardCompoundingStrategyToken } from "./RewardCompoundingStrategyToken.sol";
-
-import { $ } from "./network/$.sol";
 
 contract WHEAT is MintableToken
 {

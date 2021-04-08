@@ -18,37 +18,37 @@ contract MasterChefAdmin is Ownable, ReentrancyGuard
 		masterChef = _masterChef;
 	}
 
-	function updateCakePerBlock(uint256 _cakePerBlock) external onlyOwner
+	function updateCakePerBlock(uint256 _cakePerBlock) external onlyOwner nonReentrant
 	{
 		CustomMasterChef(masterChef).updateCakePerBlock(_cakePerBlock);
 	}
 
-	function updateMultiplier(uint256 _multiplierNumber) external onlyOwner
+	function updateMultiplier(uint256 _multiplierNumber) external onlyOwner nonReentrant
 	{
 		CustomMasterChef(masterChef).updateMultiplier(_multiplierNumber);
 	}
 
-	function add(uint256 _allocPoint, address _lpToken, bool _withUpdate) external onlyOwner
+	function add(uint256 _allocPoint, address _lpToken, bool _withUpdate) external onlyOwner nonReentrant
 	{
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_lpToken), _withUpdate);
 	}
 
-	function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) external onlyOwner
+	function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) external onlyOwner nonReentrant
 	{
 		CustomMasterChef(masterChef).set(_pid, _allocPoint, _withUpdate);
 	}
 
 	function addRewardCompoundingStrategy(string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken, uint256 _allocPoint,
-		address _buyback, address _exchange, address _dev, address _treasury) external onlyOwner
+		address _buyback, address _exchange, address _dev, address _treasury) external onlyOwner nonReentrant
 	{
 		address _owner = msg.sender;
 		address _collector = new_FeeCollector(_masterChef, _pid, _buyback, _treasury);
 		address _strategy = LibMasterChefAdmin.new_RewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector);
 		RewardCompoundingStrategyToken(_strategy).setExchange(_exchange);
+		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
 		Ownable(_collector).transferOwnership(_owner);
 		Ownable(_strategy).transferOwnership(_owner);
-		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
 	}
 
 	function new_FeeCollector(address _masterChef, uint256 _pid, address _buyback, address _treasury) internal returns (address _address)

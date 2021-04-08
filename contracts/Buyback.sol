@@ -42,6 +42,11 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 		yield = _yield;
 	}
 
+	function pendingBuyback() external view returns (uint256 _buybackAmount)
+	{
+		return _calcPendingBuyback();
+	}
+
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
 		_gulp();
@@ -63,6 +68,7 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 
 	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
 	{
+		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
 		treasury = _newTreasury;
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
@@ -70,6 +76,7 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 
 	function setYield(address _newYield) external onlyOwner nonReentrant
 	{
+		require(_newYield != address(0), "invalid address");
 		address _oldYield = yield;
 		yield = _newYield;
 		emit ChangeYield(_oldYield, _newYield);
@@ -88,6 +95,11 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 		rewardBuyback2Share = _newRewardBuyback2Share;
 		rewardYieldShare = _newRewardYieldShare;
 		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _oldRewardYieldShare, _newRewardBuyback1Share, _newRewardBuyback2Share, _newRewardYieldShare);
+	}
+
+	function _calcPendingBuyback() internal view returns (uint256 _buybackAmount)
+	{
+		return Transfers._getBalance(rewardToken);
 	}
 
 	function _gulp() internal
