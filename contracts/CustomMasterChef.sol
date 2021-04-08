@@ -8,6 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import { MintableToken } from "./MintableToken.sol";
 import { MintableStakeToken } from "./MintableStakeToken.sol";
+import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 // MasterChef is the master of Cake. He can make Cake and he is a fair guy.
 //
@@ -16,7 +17,7 @@ import { MintableStakeToken } from "./MintableStakeToken.sol";
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
-contract CustomMasterChef is Ownable
+contract CustomMasterChef is WhitelistGuard
 {
 	using SafeMath for uint256;
 	using SafeERC20 for IERC20;
@@ -154,7 +155,7 @@ contract CustomMasterChef is Ownable
 	}
 
 	// Update reward variables for all pools. Be careful of gas spending!
-	function massUpdatePools() public
+	function massUpdatePools() public onlyEOAorWhitelist
 	{
 		uint256 length = poolInfo.length;
 		for (uint256 pid = 0; pid < length; ++pid) {
@@ -163,7 +164,7 @@ contract CustomMasterChef is Ownable
 	}
 
 	// Update reward variables of the given pool to be up-to-date.
-	function updatePool(uint256 _pid) public
+	function updatePool(uint256 _pid) public onlyEOAorWhitelist
 	{
 		PoolInfo storage pool = poolInfo[_pid];
 		if (block.number <= pool.lastRewardBlock) {
@@ -182,7 +183,7 @@ contract CustomMasterChef is Ownable
 	}
 
 	// Deposit LP tokens to MasterChef for CAKE allocation.
-	function deposit(uint256 _pid, uint256 _amount) external
+	function deposit(uint256 _pid, uint256 _amount) external onlyEOAorWhitelist
 	{
 		require(_pid != 0, "deposit CAKE by staking");
 		PoolInfo storage pool = poolInfo[_pid];
@@ -203,7 +204,7 @@ contract CustomMasterChef is Ownable
 	}
 
 	// Withdraw LP tokens from MasterChef.
-	function withdraw(uint256 _pid, uint256 _amount) external
+	function withdraw(uint256 _pid, uint256 _amount) external onlyEOAorWhitelist
 	{
 		require(_pid != 0, "withdraw CAKE by unstaking");
 		PoolInfo storage pool = poolInfo[_pid];
@@ -223,7 +224,7 @@ contract CustomMasterChef is Ownable
 	}
 
 	// Stake CAKE tokens to MasterChef
-	function enterStaking(uint256 _amount) external
+	function enterStaking(uint256 _amount) external onlyEOAorWhitelist
 	{
 		PoolInfo storage pool = poolInfo[0];
 		UserInfo storage user = userInfo[0][msg.sender];
@@ -244,7 +245,7 @@ contract CustomMasterChef is Ownable
 	}
 
 	// Withdraw CAKE tokens from STAKING.
-	function leaveStaking(uint256 _amount) external
+	function leaveStaking(uint256 _amount) external onlyEOAorWhitelist
 	{
 		PoolInfo storage pool = poolInfo[0];
 		UserInfo storage user = userInfo[0][msg.sender];
@@ -264,7 +265,7 @@ contract CustomMasterChef is Ownable
 	}
 
 	// Withdraw without caring about rewards. EMERGENCY ONLY.
-	function emergencyWithdraw(uint256 _pid) external
+	function emergencyWithdraw(uint256 _pid) external onlyEOAorWhitelist
 	{
 		PoolInfo storage pool = poolInfo[_pid];
 		UserInfo storage user = userInfo[_pid][msg.sender];

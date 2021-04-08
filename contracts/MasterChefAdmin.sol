@@ -18,6 +18,16 @@ contract MasterChefAdmin is Ownable, ReentrancyGuard
 		masterChef = _masterChef;
 	}
 
+	function addToWhitelist(address _address) external onlyOwner nonReentrant
+	{
+		CustomMasterChef(masterChef).addToWhitelist(_address);
+	}
+
+	function removeFromWhitelist(address _address) external onlyOwner nonReentrant
+	{
+		CustomMasterChef(masterChef).removeFromWhitelist(_address);
+	}
+
 	function updateCakePerBlock(uint256 _cakePerBlock) external onlyOwner nonReentrant
 	{
 		CustomMasterChef(masterChef).updateCakePerBlock(_cakePerBlock);
@@ -47,6 +57,10 @@ contract MasterChefAdmin is Ownable, ReentrancyGuard
 		address _strategy = LibMasterChefAdmin.new_RewardCompoundingStrategyToken(_name, _symbol, _decimals, _masterChef, _pid, _routingToken, _dev, _treasury, _collector);
 		RewardCompoundingStrategyToken(_strategy).setExchange(_exchange);
 		CustomMasterChef(masterChef).add(_allocPoint, IERC20(_strategy), false);
+		if (_masterChef == masterChef) {
+			CustomMasterChef(masterChef).addToWhitelist(_collector);
+			CustomMasterChef(masterChef).addToWhitelist(_strategy);
+		}
 		Ownable(_collector).transferOwnership(_owner);
 		Ownable(_strategy).transferOwnership(_owner);
 	}
