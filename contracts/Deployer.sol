@@ -20,10 +20,10 @@ import { $ } from "./network/$.sol";
 
 contract Deployer is Ownable
 {
-	address constant DEFAULT_ADMIN = 0xBf70B751BB1FC725bFbC4e68C4Ec4825708766c5; // S
-	address constant DEFAULT_TREASURY = 0x2165fa4a32B9c228cD55713f77d2e977297D03e8; // G
+	address constant DEFAULT_ADMIN = 0xAD4E38B274720c1a6c7fB8B735C5FAD112DF9A13;
+	address constant DEFAULT_TREASURY = 0x0d1d68C73b57a53B1DdCD287aCf4e66Ed745B759;
 	address constant DEFAULT_DEV = 0x7674D2a14076e8af53AC4ba9bBCf0c19FeBe8899;
-	address constant DEFAULT_YIELD = 0xBf70B751BB1FC725bFbC4e68C4Ec4825708766c5; // S
+	address constant DEFAULT_YIELD = 0x0d1d68C73b57a53B1DdCD287aCf4e66Ed745B759;
 
 	uint256 public constant INITIAL_WHEAT_PER_BLOCK = 1e18;
 
