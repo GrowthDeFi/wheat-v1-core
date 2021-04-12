@@ -16,7 +16,7 @@ This repository contains the source code for the WHEAT smart contracts
 
 Published at launch:
 
-| WHEAT pid | Token           | Alloc Points | CAKE pid | Routing Token |
+| WHEAT pid | Token                                                                                  | Alloc Points | CAKE pid | Routing Token |
 | ----------| -------------------------------------------------------------------------------------- | -------------|--------- | ------------- |
 | 0         | [WHEAT](https://bscscan.com/address/0x3ab63309F85df5D4c3351ff8EACb87980E05Da4E)        | 15000        | -        | -             |
 | 1         | [BNB/WHEAT](https://bscscan.com/address/0xba2aBFfaF06A83AC2a4beE91bB009409EE0c771D)    | 30000        | -        | -             |
