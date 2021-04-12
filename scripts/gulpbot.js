@@ -262,8 +262,10 @@ async function gulp(privateKey, network, address, nonce) {
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
   const [from] = web3.currentProvider.getAddresses();
+  const estimatedGas = await contract.methods.gulp().estimateGas({ from, nonce });
+  const gas = 2 * estimatedGas;
   let txId = null;
-  await contract.methods.gulp().send({ from, nonce })
+  await contract.methods.gulp().send({ from, nonce, gas })
     .on('transactionHash', (hash) => {
       txId = hash;
     });
