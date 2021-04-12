@@ -44,7 +44,7 @@ contract Deployer is Ownable
 	address public buyback;
 
 	enum Stage {
-		Deploy, Batch1, Batch2, Batch3, Batch4, Done
+		Deploy, Batch1, Batch2, Batch3, Done
 	}
 
 	Stage public stage = Stage.Deploy;
@@ -116,7 +116,7 @@ contract Deployer is Ownable
 		if ($.NETWORK == $.Network.Bscmain) {
 			_addStrategy("staked CAKE", "stkCAKE", 0, $.CAKE, 15000);
 			_addStrategy("staked BNB/CAKE", "stkBNB/CAKE", 1, $.CAKE, 15000);
-			_addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 5000);
+			_addStrategy("staked BNB/BUSD", "stkBNB/BUSD", 2, $.WBNB, 7000);
 			_addStrategy("staked BNB/BTCB", "stkBNB/BTCB", 15, $.WBNB, 3000);
 		}
 		if ($.NETWORK == $.Network.Bsctest) {
@@ -132,9 +132,9 @@ contract Deployer is Ownable
 		require(stage == Stage.Batch2, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
 			_addStrategy("staked BNB/ETH", "stkBNB/ETH", 14, $.WBNB, 3000);
-			_addStrategy("staked BETH/ETH", "stkBETH/ETH", 70, $.ETH, 2000);
 			_addStrategy("staked BNB/LINK", "stkBNB/LINK", 7, $.WBNB, 1000);
 			_addStrategy("staked BNB/UNI", "stkBNB/UNI", 25, $.WBNB, 1000);
+			_addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
 		}
 		stage = Stage.Batch3;
 	}
@@ -143,18 +143,9 @@ contract Deployer is Ownable
 	{
 		require(stage == Stage.Batch3, "unavailable");
 		if ($.NETWORK == $.Network.Bscmain) {
-			_addStrategy("staked BNB/DOT", "stkBNB/DOT", 5, $.WBNB, 1000);
 			_addStrategy("staked BNB/ADA", "stkBNB/ADA", 3, $.WBNB, 1000);
 			_addStrategy("staked BUSD/UST", "stkBUSD/UST", 63, $.BUSD, 1000);
 			_addStrategy("staked BUSD/DAI", "stkBUSD/DAI", 52, $.BUSD, 1000);
-		}
-		stage = Stage.Batch4;
-	}
-
-	function batch4() external onlyOwner
-	{
-		require(stage == Stage.Batch4, "unavailable");
-		if ($.NETWORK == $.Network.Bscmain) {
 			_addStrategy("staked BUSD/USDC", "stkBUSD/USDC", 53, $.BUSD, 1000);
 		}
 
