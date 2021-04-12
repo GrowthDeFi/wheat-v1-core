@@ -25,10 +25,10 @@ contract Deployer is Ownable
 	address constant DEFAULT_DEV = 0x7674D2a14076e8af53AC4ba9bBCf0c19FeBe8899;
 	address constant DEFAULT_YIELD = 0x0d1d68C73b57a53B1DdCD287aCf4e66Ed745B759;
 
-	uint256 public constant INITIAL_WHEAT_PER_BLOCK = 1e18;
+	uint256 public constant INITIAL_WHEAT_PER_BLOCK = 0e18;
 
 	uint256 public constant WHEAT_LIQUIDITY_ALLOCATION = 10000e18; // 10k WHEAT
-	uint256 public constant WBNB_LIQUIDITY_ALLOCATION = 275e18; // ~100k USD at deploy
+	uint256 public constant WBNB_LIQUIDITY_ALLOCATION = 200e18; // ~100k USD at deploy
 
 	address public admin;
 	address public treasury;
