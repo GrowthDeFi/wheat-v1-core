@@ -49,12 +49,13 @@ contract Patcher1 is Ownable
 
 		exchange = $.WHEAT_EXCHANGE_IMPL;
 
+		bridge = LibPatcher1_2.new_NativeBridge($.WBNB);
+
 		buyback = LibPatcher1_2.new_Buyback($.WBNB, $.WBNB, $.WHEAT, $.GRO, treasury, yield);
 		Buyback(buyback).setExchange(exchange);
 
 		stkBnb = LibPatcher1_1.new_stkBNB(dev, treasury, buyback);
-
-		bridge = LibPatcher1_2.new_NativeBridge($.WBNB);
+		stkBNB(stkBnb).addToWhitelist(bridge);
 
 		// this step needs to be done manually
 		// MasterChefAdmin(masterChefAdmin).add(_allocPoint, IERC20(stkBnb), false);
