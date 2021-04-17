@@ -6,6 +6,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Buyback } from "./Buyback.sol";
 import { NativeBridge } from "./NativeBridge.sol";
 import { stkBNB } from "./Tokens.sol";
+import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { $ } from "./network/$.sol";
 
@@ -55,7 +56,7 @@ contract Patcher1 is Ownable
 		Buyback(buyback).setExchange(exchange);
 
 		stkBnb = LibPatcher1_1.new_stkBNB(dev, treasury, buyback);
-		stkBNB(stkBnb).addToWhitelist(bridge);
+		WhitelistGuard(stkBnb).addToWhitelist(bridge);
 
 		// this step needs to be done manually
 		// MasterChefAdmin(masterChefAdmin).add(_allocPoint, IERC20(stkBnb), false);
