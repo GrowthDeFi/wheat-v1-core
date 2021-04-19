@@ -253,15 +253,15 @@ library LibAutoFarmCompoundingStrategy
 		require(_self.exchange != address(0), "exchange not set");
 		uint256 _collectedReward = Transfers._getBalance(_self.rewardToken);
 		uint256 _pendingReward = AutoFarmV2(_self.autoFarm).pendingAUTO(_self.pid, address(this));
-		uint256 _grossTotalReward = _collectedReward.add(_pendingReward);
-		uint256 _feeReward = _grossTotalReward.mul(_self.performanceFee) / 1e18;
-		uint256 _totalReward = _grossTotalReward - _feeReward;
-		uint256 _totalConverted = _totalReward;
+		uint256 _totalReward = _collectedReward.add(_pendingReward);
+		uint256 _feeReward = _totalReward.mul(_self.performanceFee) / 1e18;
+		uint256 _netReward = _totalReward - _feeReward;
+		uint256 _totalConverted = _netReward;
 		if (_self.routingToken != _self.rewardToken) {
-			_totalConverted = IExchange(_self.exchange).calcConversionFromInput(_self.rewardToken, _self.routingToken, _totalReward);
+			_totalConverted = IExchange(_self.exchange).calcConversionFromInput(_self.rewardToken, _self.routingToken, _netReward);
 		}
 		uint256 _totalJoined = _totalConverted;
-		if (_self.routingToken != _self.reserveToken) {
+		if (_self.reserveToken != _self.routingToken) {
 			_totalJoined = UniswapV2LiquidityPoolAbstraction._estimateJoinPool(_self.reserveToken, _self.routingToken, _totalConverted);
 		}
 		return _totalJoined;
@@ -289,16 +289,12 @@ library LibAutoFarmCompoundingStrategy
 	function _gulpPendingReward(Self storage _self) internal
 	{
 		require(_self.exchange != address(0), "exchange not set");
-		uint256 _pendingReward = AutoFarmV2(_self.autoFarm).pendingAUTO(_self.pid, address(this));
-		if (_pendingReward > 0) {
-			_self._withdraw(0);
-		}
 		if (_self.routingToken != _self.rewardToken) {
 			uint256 _totalReward = Transfers._getBalance(_self.rewardToken);
 			Transfers._approveFunds(_self.rewardToken, _self.exchange, _totalReward);
 			IExchange(_self.exchange).convertFundsFromInput(_self.rewardToken, _self.routingToken, _totalReward, 1);
 		}
-		if (_self.routingToken != _self.reserveToken) {
+		if (_self.reserveToken != _self.routingToken) {
 			uint256 _totalConverted = Transfers._getBalance(_self.routingToken);
 			UniswapV2LiquidityPoolAbstraction._joinPool(_self.reserveToken, _self.routingToken, _totalConverted);
 		}
@@ -306,13 +302,15 @@ library LibAutoFarmCompoundingStrategy
 		_self._deposit(_totalJoined);
 	}
 
+	// must be called prior to _gulpPendingReward
 	function _gulpPerformanceFee(Self storage _self, address _to) internal
 	{
-		uint256 _feeReward = _self._calcPerformanceFee();
 		uint256 _pendingReward = AutoFarmV2(_self.autoFarm).pendingAUTO(_self.pid, address(this));
 		if (_pendingReward > 0) {
 			_self._withdraw(0);
 		}
+		uint256 _totalReward = Transfers._getBalance(_self.rewardToken);
+		uint256 _feeReward = _totalReward.mul(_self.performanceFee) / 1e18;
 		Transfers._pushFunds(_self.rewardToken, _to, _feeReward);
 	}
 
