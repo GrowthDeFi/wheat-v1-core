@@ -35,21 +35,22 @@ Published at launch:
 | 14        | [stkBUSD/UST](https://bscscan.com/address/0xd27F9D92cb456603FCCdcF2eBA92Db585140D969)  | 1000         | 63       | BUSD          |
 | 15        | [stkBUSD/DAI](https://bscscan.com/address/0xEe827483fb49a72C8c13C460275e39f7A59fB439)  | 1000         | 52       | BUSD          |
 | 16        | [stkBUSD/USDC](https://bscscan.com/address/0x97527E4033CAdD548eB2Eb5dB3BCdd8BF21f925D) | 1000         | 53       | BUSD          |
+| 17        | [stkBNB](https://bscscan.com/address/0xb71164A849B24Dd474d0B5609FFD29a71dFB79e8)       | 1000         | -        | -             |
 
 Published (or to be published) later:
 
 | WHEAT pid | Token           | Alloc Points | CAKE pid | Routing Token |
 | ----------| --------------- | -------------|--------- | ------------- |
-| 17        | stkBTCB/bBADGER | 1000         | 106      | BTCB          |
-| 18        | stkBNB/BSCX     | 1000         | 51       | BNB           |
-| 19        | stkBNB/BRY      | 1000         | 75       | BNB           |
-| 20        | stkBNB/WATCH    | 1000         | 84       | BNB           |
-| 21        | stkBNB/BTCST    | 1000         | 55       | BNB           |
-| 22        | stkBUSD/IOTX    | 1000         | 81       | BUSD          |
-| 23        | stkBUSD/TPT     | 1000         | 85       | BUSD          |
-| 24        | stkBNB/ZIL      | 1000         | 108      | BNB           |
-| 25        | stkBNB/TWT      | 1000         | 12       | BNB           |
-| 26        | stkBNB/bOPEN    | 1000         | 79       | BNB           |
+| 18        | stkBTCB/bBADGER | 1000         | 106      | BTCB          |
+| 19        | stkBNB/BSCX     | 1000         | 51       | BNB           |
+| 20        | stkBNB/BRY      | 1000         | 75       | BNB           |
+| 21        | stkBNB/WATCH    | 1000         | 84       | BNB           |
+| 22        | stkBNB/BTCST    | 1000         | 55       | BNB           |
+| 23        | stkBUSD/IOTX    | 1000         | 81       | BUSD          |
+| 24        | stkBUSD/TPT     | 1000         | 85       | BUSD          |
+| 25        | stkBNB/ZIL      | 1000         | 108      | BNB           |
+| 26        | stkBNB/TWT      | 1000         | 12       | BNB           |
+| 27        | stkBNB/bOPEN    | 1000         | 79       | BNB           |
 
 ## Repository Organization
 
