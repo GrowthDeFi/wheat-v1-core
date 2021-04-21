@@ -383,10 +383,13 @@ async function safeGulp(privateKey, network, address) {
   const interval = GULP_INTERVAL[address] || DEFAULT_GULP_INTERVAL;
   if (ellapsed < interval) return null;
   const nonce = await getNonce(privateKey, network);
-  const txId = await gulp(privateKey, network, address, nonce);
-  lastGulp[address] = now;
-  writeLastGulp();
-  return txId;
+  try {
+    const txId = await gulp(privateKey, network, address, nonce);
+    return txId;
+  } finally {
+    lastGulp[address] = now;
+    writeLastGulp();
+  }
 }
 
 async function listContracts(privateKey, network) {
