@@ -134,6 +134,14 @@ function getWeb3(privateKey, network, index = 0) {
 
 // telegram
 
+function escapeHTML(message) {
+  return message
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 const telegramBotApiKey = process.env['TELEGRAM_BOT_API_KEY'] || '';
 const telegramBotChatId = process.env['TELEGRAM_BOT_CHAT_ID'] || '';
 
@@ -476,7 +484,7 @@ async function main(args) {
     if (!interrupted) {
       interrupted = true;
       const message = e instanceof Error ? e.message : String(e);
-      await sendTelegramMessage('<i>GulpBot (' + network + ') Interrupted (' + message + ')</i>');
+      await sendTelegramMessage('<i>GulpBot (' + network + ') Interrupted (' + escapeHTML(message) + ')</i>');
       exit();
     }
   });
@@ -499,7 +507,7 @@ async function main(args) {
       lines.push('<a href="' + url + '">' + type + '</a>.gulp() at <a href="' + txUrl + '">' + txPrefix + '</a> for ' + name);
     } catch (e) {
       console.error('error', e);
-      lines.push('<i>GulpBot (' + network + ') Failure (' + e.message + ')</i>');
+      lines.push('<i>GulpBot (' + network + ') Failure (' + escapeHTML(e.message) + ')</i>');
     }
     await sendTelegramMessage(lines.join('\n'));
   }
