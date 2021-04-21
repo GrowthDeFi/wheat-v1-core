@@ -483,7 +483,7 @@ async function main(args) {
   interrupt(async (e) => {
     if (!interrupted) {
       interrupted = true;
-      console.error('error', e, e.stack);
+      console.error('error', e, e instanceof Error ? e.stack : undefined);
       const message = e instanceof Error ? e.message : String(e);
       await sendTelegramMessage('<i>GulpBot (' + network + ') Interrupted (' + escapeHTML(message) + ')</i>');
       exit();
@@ -507,7 +507,7 @@ async function main(args) {
       const txPrefix = tx.substr(0, 6);
       lines.push('<a href="' + url + '">' + type + '</a>.gulp() at <a href="' + txUrl + '">' + txPrefix + '</a> for ' + name);
     } catch (e) {
-      console.error('error', e, e.stack);
+      console.error('error', e, e instanceof Error ? e.stack : undefined);
       const message = e instanceof Error ? e.message : String(e);
       lines.push('<i>GulpBot (' + network + ') Failure (' + escapeHTML(message) + ')</i>');
     }
