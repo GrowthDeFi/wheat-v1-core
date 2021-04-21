@@ -183,15 +183,23 @@ function getDefaultAccount(privateKey, network) {
 async function getNonce(privateKey, network, account = null) {
   const web3 = getWeb3(privateKey, network);
   if (account === null) [account] = web3.currentProvider.getAddresses();
-  const nonce = await web3.eth.getTransactionCount(account);
-  return nonce;
+  try {
+    const nonce = await web3.eth.getTransactionCount(account);
+    return nonce;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function getNativeBalance(privateKey, network, account = null) {
   const web3 = getWeb3(privateKey, network);
   if (account === null) [account] = web3.currentProvider.getAddresses();
-  const amount = await web3.eth.getBalance(account);
-  return amount;
+  try {
+    const amount = await web3.eth.getBalance(account);
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function getTokenBalance(privateKey, network, address, account = null) {
@@ -199,16 +207,24 @@ async function getTokenBalance(privateKey, network, address, account = null) {
   const abi = IERC20_ABI;
   const contract = new web3.eth.Contract(abi, address);
   if (account === null) [account] = web3.currentProvider.getAddresses();
-  const amount = await contract.methods.balanceOf(account).call();
-  return amount;
+  try {
+    const amount = await contract.methods.balanceOf(account).call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function getTokenSymbol(privateKey, network, address) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
-  const symbol = await contract.methods.symbol().call();
-  return symbol;
+  try {
+    const symbol = await contract.methods.symbol().call();
+    return symbol;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function pendingReward(privateKey, network, address, agent = null) {
@@ -216,8 +232,12 @@ async function pendingReward(privateKey, network, address, agent = null) {
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const amount = await contract.methods.pendingReward().call();
-  return amount;
+  try {
+    const amount = await contract.methods.pendingReward().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function pendingPerformanceFee(privateKey, network, address, agent = null) {
@@ -225,8 +245,12 @@ async function pendingPerformanceFee(privateKey, network, address, agent = null)
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const amount = await contract.methods.pendingPerformanceFee().call();
-  return amount;
+  try {
+    const amount = await contract.methods.pendingPerformanceFee().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function getCollector(privateKey, network, address, agent = null) {
@@ -234,8 +258,12 @@ async function getCollector(privateKey, network, address, agent = null) {
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const collector = await contract.methods.collector().call();
-  return collector;
+  try {
+    const collector = await contract.methods.collector().call();
+    return collector;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function pendingDeposit(privateKey, network, address, agent = null) {
@@ -243,8 +271,12 @@ async function pendingDeposit(privateKey, network, address, agent = null) {
   const abi = COLLECTOR_ABI;
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const amount = await contract.methods.pendingDeposit().call();
-  return amount;
+  try {
+    const amount = await contract.methods.pendingDeposit().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function getBuyback(privateKey, network, address, agent = null) {
@@ -252,8 +284,12 @@ async function getBuyback(privateKey, network, address, agent = null) {
   const abi = COLLECTOR_ABI;
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const buyback = await contract.methods.buyback().call();
-  return buyback;
+  try {
+    const buyback = await contract.methods.buyback().call();
+    return buyback;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function pendingBuyback(privateKey, network, address, agent = null) {
@@ -261,8 +297,12 @@ async function pendingBuyback(privateKey, network, address, agent = null) {
   const abi = BUYBACK_ABI;
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const amount = await contract.methods.pendingBuyback().call();
-  return amount;
+  try {
+    const amount = await contract.methods.pendingBuyback().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function gulp(privateKey, network, address, nonce) {
@@ -270,13 +310,17 @@ async function gulp(privateKey, network, address, nonce) {
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
   const [from] = web3.currentProvider.getAddresses();
-  const estimatedGas = await contract.methods.gulp().estimateGas({ from, nonce });
-  const gas = 2 * estimatedGas;
   let txId = null;
-  await contract.methods.gulp().send({ from, nonce, gas })
-    .on('transactionHash', (hash) => {
-      txId = hash;
-    });
+  try {
+    const estimatedGas = await contract.methods.gulp().estimateGas({ from, nonce });
+    const gas = 2 * estimatedGas;
+    await contract.methods.gulp().send({ from, nonce, gas })
+      .on('transactionHash', (hash) => {
+        txId = hash;
+      });
+  } catch (e) {
+    throw new Error(e.message);
+  }
   if (txId === null) throw new Error('Failure reading txId');
   return txId;
 }
@@ -287,8 +331,12 @@ async function poolLength(privateKey, network, agent = null) {
   const address = MASTERCHEF_ADDRESS[network];
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const length = await contract.methods.poolLength().call();
-  return length;
+  try {
+    const length = await contract.methods.poolLength().call();
+    return length;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function poolInfo(privateKey, network, pid, agent = null) {
@@ -297,8 +345,12 @@ async function poolInfo(privateKey, network, pid, agent = null) {
   const address = MASTERCHEF_ADDRESS[network];
   const contract = new web3.eth.Contract(abi, address);
   if (agent === null) [agent] = web3.currentProvider.getAddresses();
-  const { lpToken } = await contract.methods.poolInfo(pid).call();
-  return { lpToken };
+  try {
+    const { lpToken } = await contract.methods.poolInfo(pid).call();
+    return { lpToken };
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 // app
