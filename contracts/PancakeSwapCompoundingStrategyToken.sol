@@ -205,7 +205,7 @@ library LibPancakeSwapCompoundingStrategy
 	using LibPancakeSwapCompoundingStrategy for LibPancakeSwapCompoundingStrategy.Self;
 
 	uint256 constant MAXIMUM_DEPOSIT_FEE = 1e16; // 1%
-	uint256 constant DEFAULT_DEPOSIT_FEE = 1e15; // 0.1%
+	uint256 constant DEFAULT_DEPOSIT_FEE = 0e16; // 0%
 
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
 	uint256 constant DEFAULT_PERFORMANCE_FEE = 10e16; // 10%
