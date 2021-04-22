@@ -9,7 +9,6 @@ import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
-import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
 
 import { MasterChef } from "./interop/MasterChef.sol";
 import { Pair } from "./interop/UniswapV2.sol";
@@ -326,7 +325,7 @@ library LibRewardCompoundingStrategy
 		}
 		uint256 _totalJoined = _totalConverted;
 		if (_self.routingToken != _self.reserveToken) {
-			_totalJoined = UniswapV2LiquidityPoolAbstraction._calcJoinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted);
+			_totalJoined = IExchange(_self.exchange).calcJoinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted);
 		}
 		return _totalJoined;
 	}
@@ -385,7 +384,8 @@ library LibRewardCompoundingStrategy
 		}
 		if (_self.routingToken != _self.reserveToken) {
 			uint256 _totalConverted = Transfers._getBalance(_self.routingToken);
-			UniswapV2LiquidityPoolAbstraction._joinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted, 1);
+			Transfers._approveFunds(_self.routingToken, _self.exchange, _totalConverted);
+			IExchange(_self.exchange).joinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted, 1);
 		}
 		uint256 _totalJoined = Transfers._getBalance(_self.reserveToken);
 		_self._deposit(_totalJoined);

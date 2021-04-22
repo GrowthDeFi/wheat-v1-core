@@ -28,7 +28,7 @@ contract Exchange is IExchange
 
 	function calcJoinPoolFromInput(address _pool, address _token, uint256 _inputAmount) external view override returns (uint256 _outputShares)
 	{
-		return UniswapV2LiquidityPoolAbstraction._calcJoinPoolFromInput(_pool, _token, _inputAmount);
+		return UniswapV2LiquidityPoolAbstraction._calcJoinPoolFromInput(router, _pool, _token, _inputAmount);
 	}
 
 	function convertFundsFromInput(address _from, address _to, uint256 _inputAmount, uint256 _minOutputAmount) external override returns (uint256 _outputAmount)
@@ -54,7 +54,7 @@ contract Exchange is IExchange
 	{
 		address _sender = msg.sender;
 		Transfers._pullFunds(_token, _sender, _inputAmount);
-		_outputShares = UniswapV2LiquidityPoolAbstraction._joinPoolFromInput(_pool, _token, _inputAmount, _minOutputShares);
+		_outputShares = UniswapV2LiquidityPoolAbstraction._joinPoolFromInput(router, _pool, _token, _inputAmount, _minOutputShares);
 		Transfers._pushFunds(_pool, _sender, _outputShares);
 		return _outputShares;
 	}
