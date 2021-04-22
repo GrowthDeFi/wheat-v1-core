@@ -18,7 +18,7 @@ library UniswapV2LiquidityPoolAbstraction
 {
 	using SafeMath for uint256;
 
-	function _estimateJoinPool(address _pair, address _token, uint256 _amount) internal view returns (uint256 _shares)
+	function _calcJoinPoolFromInput(address _pair, address _token, uint256 _amount) internal view returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;
@@ -37,7 +37,7 @@ library UniswapV2LiquidityPoolAbstraction
 		return _shares;
 	}
 
-	function _estimateExitPool(address _pair, address _token, uint256 _shares) internal view returns (uint256 _amount)
+	function _calcExitPoolFromInput(address _pair, address _token, uint256 _shares) internal view returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;
@@ -55,7 +55,7 @@ library UniswapV2LiquidityPoolAbstraction
 		return _amount;
 	}
 
-	function _joinPool(address _pair, address _token, uint256 _amount) internal returns (uint256 _shares)
+	function _joinPoolFromInput(address _pair, address _token, uint256 _amount, uint256 _minShares) internal returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;
@@ -74,11 +74,11 @@ library UniswapV2LiquidityPoolAbstraction
 		uint256 _otherAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
 		Transfers._approveFunds(_otherToken, _router, _otherAmount);
 		(,,_shares) = Router02(_router).addLiquidity(_token, _otherToken, _leftAmount, _otherAmount, 1, 1, address(this), uint256(-1));
-		// slippage must be checked by caller
+		require(_shares >= _minShares, "high slippage");
 		return _shares;
 	}
 
-	function _exitPool(address _pair, address _token, uint256 _shares) internal returns (uint256 _amount)
+	function _exitPoolFromInput(address _pair, address _token, uint256 _shares, uint256 _minAmount) internal returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
 		address _router = $.UniswapV2_Compatible_ROUTER02;
@@ -94,7 +94,7 @@ library UniswapV2LiquidityPoolAbstraction
 		_path[1] = _token;
 		uint256 _additionalAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
 		_amount = _baseAmount.add(_additionalAmount);
-		// slippage must be checked by caller
+		require(_amount >= _minAmount, "high slippage");
 		return _amount;
 	}
 

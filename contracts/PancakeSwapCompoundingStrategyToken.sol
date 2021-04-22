@@ -318,7 +318,7 @@ library LibPancakeSwapCompoundingStrategy
 		}
 		uint256 _totalJoined = _totalConverted;
 		if (_self.routingToken != _self.reserveToken) {
-			_totalJoined = UniswapV2LiquidityPoolAbstraction._estimateJoinPool(_self.reserveToken, _self.routingToken, _totalConverted);
+			_totalJoined = UniswapV2LiquidityPoolAbstraction._calcJoinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted);
 		}
 		return _totalJoined;
 	}
@@ -360,7 +360,7 @@ library LibPancakeSwapCompoundingStrategy
 		}
 		if (_self.routingToken != _self.reserveToken) {
 			uint256 _totalConverted = Transfers._getBalance(_self.routingToken);
-			UniswapV2LiquidityPoolAbstraction._joinPool(_self.reserveToken, _self.routingToken, _totalConverted);
+			UniswapV2LiquidityPoolAbstraction._joinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted, 1);
 		}
 		uint256 _totalJoined = Transfers._getBalance(_self.reserveToken);
 		_self._deposit(_totalJoined);
