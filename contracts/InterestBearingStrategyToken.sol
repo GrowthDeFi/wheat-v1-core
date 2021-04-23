@@ -60,8 +60,7 @@ contract InterestBearingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 
 	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
 	{
-		(_amount) = _calcUnderlyingAmountFromUnderlyingShares(_calcUnderlyingSharesFromUnderlyingAmount(_calcAmountFromShares(_shares)));
-		return _amount;
+		return _calcUnderlyingAmountFromUnderlyingShares(_calcUnderlyingSharesFromUnderlyingAmount(_calcAmountFromShares(_shares)));
 	}
 
 	function deposit(uint256 _amount) external onlyEOAorWhitelist nonReentrant
@@ -80,7 +79,7 @@ contract InterestBearingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 	{
 		address _from = msg.sender;
 		uint256 _underlyingShares = _calcUnderlyingSharesFromUnderlyingAmount(_calcAmountFromShares(_shares));
-		(uint256 _amount) = _calcUnderlyingAmountFromUnderlyingShares(_underlyingShares);
+		uint256 _amount = _calcUnderlyingAmountFromUnderlyingShares(_underlyingShares);
 		_burn(_from, _shares);
 		Bank(interestToken).withdraw(_underlyingShares);
 		Wrapping._wrap(reserveToken, _amount);
@@ -90,6 +89,7 @@ contract InterestBearingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 	{
 		require(_token != interestToken, "invalid token");
+		Wrapping._wrap(reserveToken, address(this).balance);
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
@@ -126,11 +126,6 @@ contract InterestBearingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 		emit ChangeDepositFee(_oldDepositFee, _newDepositFee);
 	}
 
-	function _calcAmountFromShares(uint256 _shares) internal view returns (uint256 _amount)
-	{
-		return _shares.mul(totalReserve()) / totalSupply();
-	}
-
 	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _devAmount, uint256 _buybackAmount, uint256 _netAmount, uint256 _shares)
 	{
 		uint256 _feeAmount = _amount.mul(depositFee) / 1e18;
@@ -141,14 +136,19 @@ contract InterestBearingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 		return (_devAmount, _buybackAmount, _netAmount, _shares);
 	}
 
-	function _calcUnderlyingAmountFromUnderlyingShares(uint256 _underlyingShares) internal view returns (uint256 _underlyingAmount)
+	function _calcAmountFromShares(uint256 _shares) internal view returns (uint256 _amount)
 	{
-		return _underlyingShares.mul(Bank(interestToken).totalBNB()) / Bank(interestToken).totalSupply();
+		return _shares.mul(totalReserve()) / totalSupply();
 	}
 
 	function _calcUnderlyingSharesFromUnderlyingAmount(uint256 _underlyingAmount) internal view returns (uint256 _underlyingShares)
 	{
 		return _underlyingAmount.mul(Bank(interestToken).totalSupply()) / Bank(interestToken).totalBNB();
+	}
+
+	function _calcUnderlyingAmountFromUnderlyingShares(uint256 _underlyingShares) internal view returns (uint256 _underlyingAmount)
+	{
+		return _underlyingShares.mul(Bank(interestToken).totalBNB()) / Bank(interestToken).totalSupply();
 	}
 
 	receive() external payable
