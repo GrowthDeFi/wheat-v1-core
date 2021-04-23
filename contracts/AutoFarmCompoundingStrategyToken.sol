@@ -46,9 +46,9 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
 		autoFarm = _autoFarm;
 		pid = _pid;
-		reserveToken = _reserveToken;
-		routingToken = _routingToken;
 		rewardToken = _rewardToken;
+		routingToken = _routingToken;
+		reserveToken = _reserveToken;
 		treasury = _treasury;
 		collector = _collector;
 		exchange = _exchange;
@@ -137,6 +137,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
+			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
