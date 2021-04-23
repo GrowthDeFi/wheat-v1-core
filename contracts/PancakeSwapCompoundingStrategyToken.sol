@@ -47,10 +47,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
-		uint256 _poolLength = MasterChef(_masterChef).poolLength();
-		require(_pid < _poolLength, "invalid pid");
-		(address _reserveToken,,,) = MasterChef(_masterChef).poolInfo(_pid);
-		address _rewardToken = MasterChef(_masterChef).cake();
+		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
 		require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
 		masterChef = _masterChef;
 		pid = _pid;
@@ -200,16 +197,16 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	function setDepositFee(uint256 _newDepositFee) external onlyOwner nonReentrant
 	{
-		uint256 _oldDepositFee = depositFee;
 		require(_newDepositFee <= MAXIMUM_DEPOSIT_FEE, "invalid rate");
+		uint256 _oldDepositFee = depositFee;
 		depositFee = _newDepositFee;
 		emit ChangeDepositFee(_oldDepositFee, _newDepositFee);
 	}
 
 	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner nonReentrant
 	{
-		uint256 _oldPerformanceFee = performanceFee;
 		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
+		uint256 _oldPerformanceFee = performanceFee;
 		performanceFee = _newPerformanceFee;
 		emit ChangePerformanceFee(_oldPerformanceFee, _newPerformanceFee);
 	}
@@ -225,6 +222,15 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	function _calcAmountFromShares(uint256 _shares) internal view returns (uint256 _amount)
 	{
 		return _shares.mul(totalReserve()) / totalSupply();
+	}
+
+	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
+	{
+		uint256 _poolLength = MasterChef(_masterChef).poolLength();
+		require(_pid < _poolLength, "invalid pid");
+		(_reserveToken,,,) = MasterChef(_masterChef).poolInfo(_pid);
+		_rewardToken = MasterChef(_masterChef).cake();
+		return (_reserveToken, _rewardToken);
 	}
 
 	function _getPendingReward() internal view returns (uint256 _pendingReward)
