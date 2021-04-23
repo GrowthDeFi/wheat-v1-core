@@ -9,7 +9,6 @@ import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
-import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
 
 import { AutoFarmV2 } from "./interop/AutoFarmV2.sol";
 import { Pair } from "./interop/UniswapV2.sol";
@@ -262,7 +261,7 @@ library LibAutoFarmCompoundingStrategy
 		}
 		uint256 _totalJoined = _totalConverted;
 		if (_self.reserveToken != _self.routingToken) {
-			_totalJoined = UniswapV2LiquidityPoolAbstraction._estimateJoinPool(_self.reserveToken, _self.routingToken, _totalConverted);
+			_totalJoined = IExchange(_self.exchange).calcJoinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted);
 		}
 		return _totalJoined;
 	}
@@ -296,7 +295,8 @@ library LibAutoFarmCompoundingStrategy
 		}
 		if (_self.reserveToken != _self.routingToken) {
 			uint256 _totalConverted = Transfers._getBalance(_self.routingToken);
-			UniswapV2LiquidityPoolAbstraction._joinPool(_self.reserveToken, _self.routingToken, _totalConverted);
+			Transfers._approveFunds(_self.routingToken, _self.exchange, _totalConverted);
+			IExchange(_self.exchange).joinPoolFromInput(_self.reserveToken, _self.routingToken, _totalConverted, 1);
 		}
 		uint256 _totalJoined = Transfers._getBalance(_self.reserveToken);
 		_self._deposit(_totalJoined);
