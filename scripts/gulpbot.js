@@ -467,7 +467,7 @@ async function gulpAll(privateKey, network) {
   const length = await poolLength(privateKey, network);
 
   for (let pid = FIRST_PID; pid < length; pid++) {
-    if (pid === 17) continue; // skips ibBNB strategy
+    if (pid !== 5) continue; // skips all but stkCAKE strategy
     const strategy = await readStrategy(privateKey, network, pid);
     const [reward, fee] = await Promise.all([
       pendingReward(privateKey, network, strategy),
@@ -483,7 +483,7 @@ async function gulpAll(privateKey, network) {
   }
 
   for (let pid = FIRST_PID; pid < length; pid++) {
-    if (pid === 17) continue; // skips ibBNB strategy
+    if (pid !== 5) continue; // skips all but stkCAKE strategy
     const strategy = await readStrategy(privateKey, network, pid);
     const collector = await readCollector(privateKey, network, strategy);
     const [deposit, reward] = await Promise.all([
@@ -500,7 +500,7 @@ async function gulpAll(privateKey, network) {
   }
 
   for (let pid = FIRST_PID; pid < length; pid++) {
-    if (pid === 17) continue; // skips ibBNB strategy
+    if (pid !== 5) continue; // skips all but stkCAKE strategy
     const strategy = await readStrategy(privateKey, network, pid);
     const collector = await readCollector(privateKey, network, strategy);
     const buyback = await readBuyback(privateKey, network, collector);
