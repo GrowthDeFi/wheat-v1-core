@@ -355,46 +355,36 @@ async function poolInfo(privateKey, network, pid, agent = null) {
 
 // app
 
-const FIRST_PID = 5;
+const ACTIVE_PIDS = [5, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28];
 const MONITORING_INTERVAL = 15; // 15 seconds
 const DEFAULT_GULP_INTERVAL = 12 * 60 * 60; // 12 hours
 const GULP_INTERVAL = {
   // 5 - stkCAKE
   '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 2 * 60 * 60, // 2 hours
+  // 18 - stkBNB/CAKE
+  '0x4291474e88E2fEE6eC5B8c28F4Ed2075cEf5B803': 2 * 60 * 60, // 2 hours
+  // 19 - stkBNB/BUSD
+  '0xdC4D358B34619e4fE7feb28bE301B2FBe4F3aFf9': 4 * 60 * 60, // 4 hours
+  // 20 - stkBNB/BTCB
+  '0xA561fa603bf0B43Cb0d0911EeccC8B6777d3401B': 6 * 60 * 60, // 6 hours
+  // 21 - stkBNB/ETH
+  '0x28e6aa3DD98372Da0959Abe9d0efeB4455d4dFe1': 6 * 60 * 60, // 6 hours
+  // 22 - stkBNB/LINK
+  '0x3B88a64D0B9fA485B71c98B00D799aa8D1aEe9E3': 12 * 60 * 60, // 12 hours
+  // 23 - stkBNB/UNI
+  '0x515785CE5D5e94f93fe41Ed3fd83779Fb3Aff8A4': 12 * 60 * 60, // 12 hours
+  // 24 - stkBNB/DOT
+  '0x53073f685474341cdc765F97E7CFB2F427BD9db9': 12 * 60 * 60, // 12 hours
+  // 25 - stkBNB/ADA
+  '0xf5aFfe3459813AB193329E53f17098806709046A': 12 * 60 * 60, // 12 hours
+  // 26 - stkBUSD/UST
+  '0x5141da4ab5b3e13ceE7B10980aE6bB848FdB59Cd': 12 * 60 * 60, // 12 hours
+  // 27 - stkBUSD/DAI
+  '0x691e486b5F7E39e90d37485164fAbDDd93aE43cD': 12 * 60 * 60, // 12 hours
+  // 28 - stkBUSD/USDC
+  '0xae35A19F1DAc62AD3794773D5f0983f05073D0f2': 12 * 60 * 60, // 12 hours
+  // collector
   '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36': 2 * 60 * 60, // 2 hours
-  // 6 - stkBNB/CAKE
-  '0xb290b079d7386C8e6F7a01F2f83c760aD807752C': 2 * 60 * 60, // 2 hours
-  '0x84283A5eC825a68EFB0eb29C239dA2f4Fce6fdB0': 2 * 60 * 60, // 2 hours
-  // 7 - stkBNB/BUSD
-  '0x5cce1C68Db563586e10bc0B8Ef7b65265971cD91': 4 * 60 * 60, // 4 hours
-  '0x250a57492741bC46FA33bE6d7EB816c3dE241008': 4 * 60 * 60, // 4 hours
-  // 8 - stkBNB/BTCB
-  '0x61f6Fa43D16890382E38E32Fd02C7601A271f133': 6 * 60 * 60, // 6 hours
-  '0xC9E4479de5790C543F4d4D5CB9aF894454090c4a': 6 * 60 * 60, // 6 hours
-  // 9 - stkBNB/ETH
-  '0xc9e459BF16C10A40bc7daa4a2366ac685cEe784F': 6 * 60 * 60, // 6 hours
-  '0x7B76FE59F0C438b8f43aD5D9B7C1d2033185e850': 6 * 60 * 60, // 6 hours
-  // 10 - stkBNB/LINK
-  '0xB2a97CC57AC2229a4017227cf71a28271a89f569': 12 * 60 * 60, // 12 hours
-  '0x0e518bd0fa700a13C4aD4786CA355a770fd6391E': 12 * 60 * 60, // 12 hours
-  // 11 - stkBNB/UNI
-  '0x12821BE81Ee152DF53bEa1b9ad0B45A6d95B1ad5': 12 * 60 * 60, // 12 hours
-  '0x610FB1D3738B068a6d032db2Bc32024AA3a3A827': 12 * 60 * 60, // 12 hours
-  // 12 - stkBNB/DOT
-  '0x9Be3593e1784E6Dc8A0b77760aA9e917Ed579676': 12 * 60 * 60, // 12 hours
-  '0xFE92d2579c610d614e34fe975ebEF3812C525D36': 12 * 60 * 60, // 12 hours
-  // 13 - stkBNB/ADA
-  '0x13342abC6FD747dE2F11c58cB32f7326BE331183': 12 * 60 * 60, // 12 hours
-  '0x833f43A57f9B785b4915af71Bc1144e2B043F602': 12 * 60 * 60, // 12 hours
-  // 14 - stkBUSD/UST
-  '0xd27F9D92cb456603FCCdcF2eBA92Db585140D969': 12 * 60 * 60, // 12 hours
-  '0x35F23dd30f1F667C807732Be0De63dDFA4402478': 12 * 60 * 60, // 12 hours
-  // 15 - stkBUSD/DAI
-  '0xEe827483fb49a72C8c13C460275e39f7A59fB439': 12 * 60 * 60, // 12 hours
-  '0x114EB5da8B4b5F8D7E37238CEF718eDb0C36a2Df': 12 * 60 * 60, // 12 hours
-  // 16 - stkBUSD/USDC
-  '0x97527E4033CAdD548eB2Eb5dB3BCdd8BF21f925D': 12 * 60 * 60, // 12 hours
-  '0x9592F684C154B3Aa5F886453518f8739Fc1f8D5E': 12 * 60 * 60, // 12 hours
   // buyback
   '0xC351706C3212D45fc24F6B89e686f07fAb048b16': 6 * 60 * 60, // 12 hours
 };
@@ -455,7 +445,8 @@ async function safeGulp(privateKey, network, address) {
 async function listContracts(privateKey, network) {
   const length = await poolLength(privateKey, network);
   console.log('pid', 'strategy', 'collector', 'buyback');
-  for (let pid = FIRST_PID; pid < length; pid++) {
+  for (let pid = 0; pid < length; pid++) {
+    if (!ACTIVE_PIDS.includes(pid)) continue;
     const strategy = await readStrategy(privateKey, network, pid);
     const collector = await readCollector(privateKey, network, strategy);
     const buyback = await readBuyback(privateKey, network, collector);
@@ -466,8 +457,8 @@ async function listContracts(privateKey, network) {
 async function gulpAll(privateKey, network) {
   const length = await poolLength(privateKey, network);
 
-  for (let pid = FIRST_PID; pid < length; pid++) {
-    if (pid !== 5) continue; // skips all but stkCAKE strategy
+  for (let pid = 0; pid < length; pid++) {
+    if (!ACTIVE_PIDS.includes(pid)) continue;
     const strategy = await readStrategy(privateKey, network, pid);
     const [reward, fee] = await Promise.all([
       pendingReward(privateKey, network, strategy),
@@ -482,8 +473,8 @@ async function gulpAll(privateKey, network) {
     }
   }
 
-  for (let pid = FIRST_PID; pid < length; pid++) {
-    if (pid !== 5) continue; // skips all but stkCAKE strategy
+  for (let pid = 0; pid < length; pid++) {
+    if (!ACTIVE_PIDS.includes(pid)) continue;
     const strategy = await readStrategy(privateKey, network, pid);
     const collector = await readCollector(privateKey, network, strategy);
     const [deposit, reward] = await Promise.all([
@@ -499,8 +490,8 @@ async function gulpAll(privateKey, network) {
     }
   }
 
-  for (let pid = FIRST_PID; pid < length; pid++) {
-    if (pid !== 5) continue; // skips all but stkCAKE strategy
+  for (let pid = 0; pid < length; pid++) {
+    if (!ACTIVE_PIDS.includes(pid)) continue;
     const strategy = await readStrategy(privateKey, network, pid);
     const collector = await readCollector(privateKey, network, strategy);
     const buyback = await readBuyback(privateKey, network, collector);
