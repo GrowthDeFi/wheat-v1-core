@@ -47,15 +47,15 @@ Already published:
 | 26        | [stkBUSD/USTv2](https://bscscan.com/address/0x5141da4ab5b3e13ceE7B10980aE6bB848FdB59Cd)  | 293      | BUSD          |
 | 27        | [stkBUSD/DAIv2](https://bscscan.com/address/0x691e486b5F7E39e90d37485164fAbDDd93aE43cD)  | 282      | BUSD          |
 | 28        | [stkBUSD/USDCv2](https://bscscan.com/address/0xae35A19F1DAc62AD3794773D5f0983f05073D0f2) | 283      | BUSD          |
+| 29        | [BNB/WHEAT](https://bscscan.com/address/0xD58F6FC430BFd33e07566541D91b80143d1D3BB5)      | -        | -             |
+| 30        | [BNB/GRO](https://bscscan.com/address/0x2e9AC5cFCD34E98d5edD9b31A48922f8c664b673)        | -        | -             |
+| 31        | [GRO/gROOT](https://bscscan.com/address/0x6Fc18618a58e2A5ff0877E0561B8724d135DFC00)      | -        | -             |
+| 32        | [BNB/gROOT](https://bscscan.com/address/0x0d5B76B7120736000D20A5E33bFF2185DCA79e9a)      | -        | -             |
 
 Pending publication after PancakeSwap V2 migration:
 
 | WHEAT pid | Token                                                                                    | CAKE pid | Routing Token |
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
-| -         | [BNB/WHEAT](https://bscscan.com/address/0xD58F6FC430BFd33e07566541D91b80143d1D3BB5)      | -        | -             |
-| -         | [BNB/GRO](https://bscscan.com/address/0x2e9AC5cFCD34E98d5edD9b31A48922f8c664b673)        | -        | -             |
-| -         | [GRO/gROOT](https://bscscan.com/address/0x6Fc18618a58e2A5ff0877E0561B8724d135DFC00)      | -        | -             |
-| -         | [BNB/gROOT](https://bscscan.com/address/0x0d5B76B7120736000D20A5E33bFF2185DCA79e9a)      | -        | -             |
 | -         | stkCAKEv2                                                                                | 0        | CAKE          |
 
 To be published later:
