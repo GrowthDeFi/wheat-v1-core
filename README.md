@@ -58,7 +58,7 @@ Pending publication after PancakeSwap V2 migration:
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
 | -         | stkCAKEv2                                                                                | 0        | CAKE          |
 
-To be published later:
+To be published later (CAKE based):
 
 | WHEAT pid | Token                                                                                    | CAKE pid | Routing Token |
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
@@ -72,6 +72,12 @@ To be published later:
 | -         | stkBNB/ZIL                                                                               | 334      | BNB           |
 | -         | stkBNB/TWT                                                                               | 259      | BNB           |
 | -         | stkBNB/bOPEN                                                                             | 307      | BNB           |
+
+To be published later (AUTO based):
+
+| WHEAT pid | Token                                                                                    | AUTO pid | Routing Token |
+| ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
+| -         | stkBNB/AUTO                                                                              | 6        | BNB           |
 
 ## Repository Organization
 
