@@ -8,8 +8,6 @@ import { Transfers } from "./Transfers.sol";
 
 import { Pair, Router02 } from "../interop/UniswapV2.sol";
 
-import { $ } from "../network/$.sol";
-
 /**
  * @dev This library provides functionality to facilitate adding/removing
  * single-asset liquidity to/from a Uniswap V2 pool.
@@ -18,10 +16,9 @@ library UniswapV2LiquidityPoolAbstraction
 {
 	using SafeMath for uint256;
 
-	function _estimateJoinPool(address _pair, address _token, uint256 _amount) internal view returns (uint256 _shares)
+	function _calcJoinPoolFromInput(address _router, address _pair, address _token, uint256 _amount) internal view returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
-		address _router = $.UniswapV2_Compatible_ROUTER02;
 		address _token0 = Pair(_pair).token0();
 		address _token1 = Pair(_pair).token1();
 		require(_token == _token0 || _token == _token1, "invalid token");
@@ -37,10 +34,9 @@ library UniswapV2LiquidityPoolAbstraction
 		return _shares;
 	}
 
-	function _estimateExitPool(address _pair, address _token, uint256 _shares) internal view returns (uint256 _amount)
+	function _calcExitPoolFromInput(address _router, address _pair, address _token, uint256 _shares) internal view returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
-		address _router = $.UniswapV2_Compatible_ROUTER02;
 		address _token0 = Pair(_pair).token0();
 		address _token1 = Pair(_pair).token1();
 		require(_token == _token0 || _token == _token1, "invalid token");
@@ -55,10 +51,9 @@ library UniswapV2LiquidityPoolAbstraction
 		return _amount;
 	}
 
-	function _joinPool(address _pair, address _token, uint256 _amount) internal returns (uint256 _shares)
+	function _joinPoolFromInput(address _router, address _pair, address _token, uint256 _amount, uint256 _minShares) internal returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
-		address _router = $.UniswapV2_Compatible_ROUTER02;
 		address _token0 = Pair(_pair).token0();
 		address _token1 = Pair(_pair).token1();
 		require(_token == _token0 || _token == _token1, "invalid token");
@@ -68,20 +63,22 @@ library UniswapV2LiquidityPoolAbstraction
 		if (_swapAmount == 0) _swapAmount = _amount / 2;
 		uint256 _leftAmount = _amount.sub(_swapAmount);
 		Transfers._approveFunds(_token, _router, _amount);
-		address[] memory _path = new address[](2);
-		_path[0] = _token;
-		_path[1] = _otherToken;
-		uint256 _otherAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
+		uint256 _otherAmount;
+		{
+			address[] memory _path = new address[](2);
+			_path[0] = _token;
+			_path[1] = _otherToken;
+			_otherAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
+		}
 		Transfers._approveFunds(_otherToken, _router, _otherAmount);
 		(,,_shares) = Router02(_router).addLiquidity(_token, _otherToken, _leftAmount, _otherAmount, 1, 1, address(this), uint256(-1));
-		// slippage must be checked by caller
+		require(_shares >= _minShares, "high slippage");
 		return _shares;
 	}
 
-	function _exitPool(address _pair, address _token, uint256 _shares) internal returns (uint256 _amount)
+	function _exitPoolFromInput(address _router, address _pair, address _token, uint256 _shares, uint256 _minAmount) internal returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
-		address _router = $.UniswapV2_Compatible_ROUTER02;
 		address _token0 = Pair(_pair).token0();
 		address _token1 = Pair(_pair).token1();
 		require(_token == _token0 || _token == _token1, "invalid token");
@@ -89,12 +86,15 @@ library UniswapV2LiquidityPoolAbstraction
 		Transfers._approveFunds(_pair, _router, _shares);
 		(uint256 _baseAmount, uint256 _swapAmount) = Router02(_router).removeLiquidity(_token, _otherToken, _shares, 1, 1, address(this), uint256(-1));
 		Transfers._approveFunds(_otherToken, _router, _swapAmount);
-		address[] memory _path = new address[](2);
-		_path[0] = _otherToken;
-		_path[1] = _token;
-		uint256 _additionalAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
+		uint256 _additionalAmount;
+		{
+			address[] memory _path = new address[](2);
+			_path[0] = _otherToken;
+			_path[1] = _token;
+			_additionalAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
+		}
 		_amount = _baseAmount.add(_additionalAmount);
-		// slippage must be checked by caller
+		require(_amount >= _minAmount, "high slippage");
 		return _amount;
 	}
 
