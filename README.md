@@ -77,7 +77,7 @@ To be published later (AUTO based):
 
 | WHEAT pid | Token                                                                                    | AUTO pid | Routing Token |
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
-| -         | stkBNB/AUTO                                                                              | 6        | BNB           |
+| -         | stkBNB/AUTO                                                                              | 6        | AUTO          |
 
 ## Repository Organization
 
