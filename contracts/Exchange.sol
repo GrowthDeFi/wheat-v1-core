@@ -1,19 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
 import { IExchange } from "./IExchange.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 import { UniswapV2ExchangeAbstraction } from "./modules/UniswapV2ExchangeAbstraction.sol";
 import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
 
-contract Exchange is IExchange
+contract Exchange is IExchange, Ownable
 {
-	address public immutable router;
+	address public router;
+	address public treasury;
 
-	constructor (address _router) public
+	constructor (address _router, address _treasury) public
 	{
 		router = _router;
+		treasury = _treasury;
 	}
 
 	function calcConversionFromInput(address _from, address _to, uint256 _inputAmount) external view override returns (uint256 _outputAmount)
@@ -58,4 +62,29 @@ contract Exchange is IExchange
 		Transfers._pushFunds(_pool, _sender, _outputShares);
 		return _outputShares;
 	}
+
+	function recoverLostFunds(address _token) external onlyOwner
+	{
+		uint256 _balance = Transfers._getBalance(_token);
+		Transfers._pushFunds(_token, treasury, _balance);
+	}
+
+	function setRouter(address _newRouter) external onlyOwner
+	{
+		require(_newRouter != address(0), "invalid address");
+		address _oldRouter = router;
+		router = _newRouter;
+		emit ChangeRouter(_oldRouter, _newRouter);
+	}
+
+	function setTreasury(address _newTreasury) external onlyOwner
+	{
+		require(_newTreasury != address(0), "invalid address");
+		address _oldTreasury = treasury;
+		treasury = _newTreasury;
+		emit ChangeTreasury(_oldTreasury, _newTreasury);
+	}
+
+	event ChangeRouter(address _oldRouter, address _newRouter);
+	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 }
