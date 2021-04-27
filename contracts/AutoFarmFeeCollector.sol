@@ -19,45 +19,75 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 	address private immutable autoFarm;
 	uint256 private immutable pid;
 
-	address public immutable reserveToken;
 	address public immutable rewardToken;
+	address public immutable routingToken;
+	address public immutable reserveToken;
+
+	address public treasury;
+	address public buyback;
 
 	address public exchange;
 
-	address public buyback;
-	address public treasury;
+	uint256 public lastGulpTime;
 
 	uint256 public migrationTimestamp;
 	address public migrationRecipient;
 
-	constructor (address _autoFarm, uint256 _pid, address _buyback, address _treasury) public
+	constructor (address _autoFarm, uint256 _pid, address _routingToken,
+		address _treasury, address _buyback, address _exchange) public
 	{
-		uint256 _poolLength = AutoFarmV2(_autoFarm).poolLength();
-		require(_pid < _poolLength, "invalid pid");
-		address _rewardToken = AutoFarmV2(_autoFarm).AUTOv2();
-		(address _reserveToken,,,,) = AutoFarmV2(_autoFarm).poolInfo(_pid);
-		require(_rewardToken == _reserveToken || _rewardToken == Pair(_reserveToken).token0() || _rewardToken == Pair(_reserveToken).token1(), "invalid token");
+		(address _reserveToken, address _rewardToken) = _getTokens(_autoFarm, _pid);
+		require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
 		autoFarm = _autoFarm;
 		pid = _pid;
-		reserveToken = _reserveToken;
 		rewardToken = _rewardToken;
-		buyback = _buyback;
+		routingToken = _routingToken;
+		reserveToken = _reserveToken;
 		treasury = _treasury;
+		buyback = _buyback;
+		exchange = _exchange;
 	}
 
 	function pendingDeposit() external view returns (uint256 _depositAmount)
 	{
-		return _calcPendingDeposit();
+		uint256 _totalReward = Transfers._getBalance(rewardToken);
+		uint256 _totalRouting = _totalReward;
+		if (rewardToken != routingToken) {
+			require(exchange != address(0), "exchange not set");
+			_totalRouting = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _totalReward);
+		}
+		uint256 _totalBalance = _totalRouting;
+		if (routingToken != reserveToken) {
+			require(exchange != address(0), "exchange not set");
+			_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
+		}
+		return _totalBalance;
 	}
 
-	function pendingReward() external view returns (uint256 _rewardAmount)
+	function pendingReward() external view returns (uint256 _pendingReward)
 	{
-		return _calcPendingReward();
+		return _getPendingReward();
 	}
 
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
-		_gulp();
+		if (rewardToken != routingToken) {
+			require(exchange != address(0), "exchange not set");
+			uint256 _totalReward = Transfers._getBalance(rewardToken);
+			Transfers._approveFunds(rewardToken, exchange, _totalReward);
+			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
+		}
+		if (routingToken != reserveToken) {
+			require(exchange != address(0), "exchange not set");
+			uint256 _totalRouting = Transfers._getBalance(routingToken);
+			Transfers._approveFunds(routingToken, exchange, _totalRouting);
+			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
+		}
+		uint256 _totalBalance = Transfers._getBalance(reserveToken);
+		_deposit(_totalBalance);
+		uint256 _totalReward = Transfers._getBalance(rewardToken);
+		Transfers._pushFunds(rewardToken, buyback, _totalReward);
+		lastGulpTime = now;
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
@@ -66,13 +96,6 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 		require(_token != rewardToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
-	}
-
-	function setExchange(address _newExchange) external onlyOwner nonReentrant
-	{
-		address _oldExchange = exchange;
-		exchange = _newExchange;
-		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
 	function setBuyback(address _newBuyback) external onlyOwner nonReentrant
@@ -89,6 +112,13 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 		address _oldTreasury = treasury;
 		treasury = _newTreasury;
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
+	}
+
+	function setExchange(address _newExchange) external onlyOwner nonReentrant
+	{
+		address _oldExchange = exchange;
+		exchange = _newExchange;
+		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
 	function announceMigration(address _migrationRecipient) external onlyOwner nonReentrant
@@ -124,55 +154,42 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 		emit Migrate(_migrationRecipient, _migrationTimestamp);
 	}
 
-	function _calcPendingDeposit() internal view returns (uint256 _depositAmount)
+	function _migrate(bool _emergency) internal
 	{
-		return Transfers._getBalance(rewardToken);
+		if (_emergency) {
+			_emergencyWithdraw();
+		} else {
+			uint256 _totalReserve = _getReserveAmount();
+			if (_totalReserve > 0) {
+				_withdraw(_totalReserve);
+			}
+			uint256 _totalReward = Transfers._getBalance(rewardToken);
+			if (reserveToken == rewardToken) {
+				_totalReward -= _totalReserve;
+			}
+			Transfers._pushFunds(rewardToken, buyback, _totalReward);
+		}
+		uint256 _totalBalance = Transfers._getBalance(reserveToken);
+		Transfers._pushFunds(reserveToken, migrationRecipient, _totalBalance);
 	}
 
-	function _calcPendingReward() internal view returns (uint256 _rewardAmount)
+	function _getTokens(address _autoFarm, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
+	{
+		uint256 _poolLength = AutoFarmV2(_autoFarm).poolLength();
+		require(_pid < _poolLength, "invalid pid");
+		(_reserveToken,,,,) = AutoFarmV2(_autoFarm).poolInfo(_pid);
+		_rewardToken = AutoFarmV2(_autoFarm).AUTOv2();
+		return (_reserveToken, _rewardToken);
+	}
+
+	function _getPendingReward() internal view returns (uint256 _pendingReward)
 	{
 		return AutoFarmV2(autoFarm).pendingAUTO(pid, address(this));
 	}
 
-	function _gulp() internal
+	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
 	{
-		if (reserveToken != rewardToken) {
-			uint256 _depositBalance = Transfers._getBalance(rewardToken);
-			if (_depositBalance > 0) {
-				Transfers._approveFunds(rewardToken, exchange, _depositBalance);
-				IExchange(exchange).joinPoolFromInput(reserveToken, rewardToken, _depositBalance, 1);
-			}
-		}
-		uint256 _reserveBalance = Transfers._getBalance(reserveToken);
-		if (_reserveBalance > 0) {
-			_deposit(_reserveBalance);
-		} else {
-			uint256 _pendingReward = AutoFarmV2(autoFarm).pendingAUTO(pid, address(this));
-			if (_pendingReward > 0) {
-				_withdraw(0);
-			}
-		}
-		uint256 _rewardBalance = Transfers._getBalance(rewardToken);
-		Transfers._pushFunds(rewardToken, buyback, _rewardBalance);
-	}
-
-	function _migrate(bool _emergency) internal
-	{
-		if (_emergency) {
-			AutoFarmV2(autoFarm).emergencyWithdraw(pid);
-		} else {
-			uint256 _amount = AutoFarmV2(autoFarm).stakedWantTokens(pid, address(this));
-			if (_amount > 0) {
-				_withdraw(_amount);
-			}
-			uint256 _rewardBalance = Transfers._getBalance(rewardToken);
-			if (reserveToken == rewardToken) {
-				_rewardBalance -= _amount;
-			}
-			Transfers._pushFunds(rewardToken, buyback, _rewardBalance);
-		}
-		uint256 _reserveBalance = Transfers._getBalance(reserveToken);
-		Transfers._pushFunds(reserveToken, migrationRecipient, _reserveBalance);
+		return AutoFarmV2(autoFarm).stakedWantTokens(pid, address(this));
 	}
 
 	function _deposit(uint256 _amount) internal
@@ -186,9 +203,14 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 		AutoFarmV2(autoFarm).withdraw(pid, _amount);
 	}
 
-	event ChangeExchange(address _oldExchange, address _newExchange);
+	function _emergencyWithdraw() internal
+	{
+		AutoFarmV2(autoFarm).emergencyWithdraw(pid);
+	}
+
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
+	event ChangeExchange(address _oldExchange, address _newExchange);
 	event AnnounceMigration(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
 	event CancelMigration(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
 	event Migrate(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
