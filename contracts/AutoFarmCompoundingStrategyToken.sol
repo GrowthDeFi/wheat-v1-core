@@ -18,7 +18,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	using SafeMath for uint256;
 
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 20e16; // 20%
+	uint256 constant DEFAULT_PERFORMANCE_FEE = 10e16; // 20%
 
 	address private immutable autoFarm;
 	uint256 private immutable pid;

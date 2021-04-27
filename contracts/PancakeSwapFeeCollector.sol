@@ -8,15 +8,15 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
-import { AutoFarmV2 } from "./interop/AutoFarmV2.sol";
+import { MasterChef } from "./interop/MasterChef.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
-contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
+contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 {
 	uint256 constant MIGRATION_WAIT_INTERVAL = 1 days;
 	uint256 constant MIGRATION_OPEN_INTERVAL = 1 days;
 
-	address private immutable autoFarm;
+	address private immutable masterChef;
 	uint256 private immutable pid;
 
 	address public immutable rewardToken;
@@ -33,12 +33,12 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 	uint256 public migrationTimestamp;
 	address public migrationRecipient;
 
-	constructor (address _autoFarm, uint256 _pid, address _routingToken,
+	constructor (address _masterChef, uint256 _pid, address _routingToken,
 		address _treasury, address _buyback, address _exchange) public
 	{
-		(address _reserveToken, address _rewardToken) = _getTokens(_autoFarm, _pid);
+		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
 		require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
-		autoFarm = _autoFarm;
+		masterChef = _masterChef;
 		pid = _pid;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
@@ -174,39 +174,40 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 		Transfers._pushFunds(reserveToken, migrationRecipient, _totalBalance);
 	}
 
-	function _getTokens(address _autoFarm, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
+	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
 	{
-		uint256 _poolLength = AutoFarmV2(_autoFarm).poolLength();
+		uint256 _poolLength = MasterChef(_masterChef).poolLength();
 		require(_pid < _poolLength, "invalid pid");
-		(_reserveToken,,,,) = AutoFarmV2(_autoFarm).poolInfo(_pid);
-		_rewardToken = AutoFarmV2(_autoFarm).AUTOv2();
+		(_reserveToken,,,) = MasterChef(_masterChef).poolInfo(_pid);
+		_rewardToken = MasterChef(_masterChef).cake();
 		return (_reserveToken, _rewardToken);
 	}
 
 	function _getPendingReward() internal view returns (uint256 _pendingReward)
 	{
-		return AutoFarmV2(autoFarm).pendingAUTO(pid, address(this));
+		return MasterChef(masterChef).pendingCake(pid, address(this));
 	}
 
 	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
 	{
-		return AutoFarmV2(autoFarm).stakedWantTokens(pid, address(this));
+		(_reserveAmount,) = MasterChef(masterChef).userInfo(pid, address(this));
+		return _reserveAmount;
 	}
 
 	function _deposit(uint256 _amount) internal
 	{
-		Transfers._approveFunds(reserveToken, autoFarm, _amount);
-		AutoFarmV2(autoFarm).deposit(pid, _amount);
+		Transfers._approveFunds(reserveToken, masterChef, _amount);
+		MasterChef(masterChef).deposit(pid, _amount);
 	}
 
 	function _withdraw(uint256 _amount) internal
 	{
-		AutoFarmV2(autoFarm).withdraw(pid, _amount);
+		MasterChef(masterChef).withdraw(pid, _amount);
 	}
 
 	function _emergencyWithdraw() internal
 	{
-		AutoFarmV2(autoFarm).emergencyWithdraw(pid);
+		MasterChef(masterChef).emergencyWithdraw(pid);
 	}
 
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
