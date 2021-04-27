@@ -3,10 +3,10 @@ pragma solidity ^0.6.0;
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
-import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
 
 import { AutoFarmV2 } from "./interop/AutoFarmV2.sol";
 import { Pair } from "./interop/UniswapV2.sol";
@@ -139,7 +139,8 @@ contract AutoFarmFeeCollector is ReentrancyGuard, WhitelistGuard
 		if (reserveToken != rewardToken) {
 			uint256 _depositBalance = Transfers._getBalance(rewardToken);
 			if (_depositBalance > 0) {
-				UniswapV2LiquidityPoolAbstraction._joinPool(reserveToken, rewardToken, _depositBalance);
+				Transfers._approveFunds(rewardToken, exchange, _depositBalance);
+				IExchange(exchange).joinPoolFromInput(reserveToken, rewardToken, _depositBalance, 1);
 			}
 		}
 		uint256 _reserveBalance = Transfers._getBalance(reserveToken);
