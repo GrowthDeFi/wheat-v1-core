@@ -130,7 +130,7 @@ async function main(args) {
   console.log('Pools ' + length);
 
   for (let pid = 0; pid < length; pid++) {
-    const { lpToken } = await masterChef.methods.poolInfo(pid).call();
+    const { lpToken, allocPoint } = await masterChef.methods.poolInfo(pid).call();
     const pair = new web3.eth.Contract(PAIR_ABI, lpToken);
 
     let factory = null;
@@ -160,7 +160,7 @@ async function main(args) {
       try { symbol = await contract.methods.symbol().call(); } catch (e) { }
     }
 
-    console.log('pid=' + pid + ' token=' + lpToken + ' factory=' + factory + ' ' + symbol);
+    console.log('pid=' + pid + ' token=' + lpToken + ' points=' + allocPoint + ' factory=' + factory + ' ' + symbol);
   }
 }
 
