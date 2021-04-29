@@ -77,7 +77,8 @@ To be published later (AUTO based):
 
 | WHEAT pid | Token                                                                                    | AUTO pid | Routing Token |
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
-| -         | stkBNB/AUTO                                                                              | 6        | AUTO          |
+| -         | [stkBNB/AUTOv1](https://bscscan.com/address/0x30cD3DF94b0FA799F946efB3CcB9E9902069aAEB)  | 6        | AUTO          |
+| -         | [stkBNB/CAKE](https://bscscan.com/address/0x77A0b791F01454b15f402618B41aA34ec165b98f)    | 243      | BNB           |
 
 ## Repository Organization
 
