@@ -35,6 +35,10 @@ function entrypoint(main) {
   (async () => { try { await main(args); } catch (e) { abort(e); } exit(); })();
 }
 
+function randomInt(limit) {
+  return Math.floor(Math.random() * limit)
+}
+
 // web3
 
 const privateKey = process.env['PRIVATE_KEY'] || '';
@@ -97,9 +101,10 @@ const HTTP_PROVIDER_URLS = {
 
 const web3Cache = {};
 
-function getWeb3(privateKey, network, index = 0) {
+function getWeb3(privateKey, network) {
   let web3 = web3Cache[network];
   if (!web3) {
+    const index = randomInt(HTTP_PROVIDER_URLS[network].length);
     const url = HTTP_PROVIDER_URLS[network][index];
     const options = { transactionConfirmationBlocks: 0 };
     web3 = new Web3(new HDWalletProvider(privateKey, url), null, options);
