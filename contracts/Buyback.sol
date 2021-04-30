@@ -105,9 +105,12 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 	function _gulp() internal
 	{
 		require(exchange != address(0), "exchange not set");
-		uint256 _balance = Transfers._getBalance(rewardToken);
-		Transfers._approveFunds(rewardToken, exchange, _balance);
-		uint256 _total = IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _balance, 1);
+		if (routingToken != rewardToken) {
+			uint256 _balance = Transfers._getBalance(rewardToken);
+			Transfers._approveFunds(rewardToken, exchange, _balance);
+			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _balance, 1);
+		}
+		uint256 _total = Transfers._getBalance(routingToken);
 		uint256 _amount1 = _total.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _total.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
 		uint256 _burning = _amount1 + _amount2;
