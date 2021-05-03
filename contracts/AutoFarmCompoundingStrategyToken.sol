@@ -10,15 +10,15 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
-import { AutoFarmV2 } from "./interop/AutoFarmV2.sol";
+import { AutoFarmV2, AutoFarmV2Strategy } from "./interop/AutoFarmV2.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
 
-	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 10e16; // 20%
+	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
+	uint256 constant DEFAULT_PERFORMANCE_FEE = 50e16; // 50%
 
 	address private immutable autoFarm;
 	uint256 private immutable pid;
@@ -62,14 +62,16 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		return _totalReserve + 1; // avoids division by zero
 	}
 
-	function calcSharesFromAmount(uint256 _amount) public view returns (uint256 _shares)
+	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
-		return _amount.mul(totalSupply()) / totalReserve();
+		(_shares,) = _calcSharesFromAmount(_amount);
+		return _shares;
 	}
 
-	function calcAmountFromShares(uint256 _shares) public view returns (uint256 _amount)
+	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
 	{
-		return _shares.mul(totalReserve()) / totalSupply();
+		(,_amount) = _calcAmountFromShares(_shares);
+		return _amount;
 	}
 
 	function pendingPerformanceFee() external view returns (uint256 _feeReward)
@@ -104,7 +106,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	function deposit(uint256 _amount) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
-		uint256 _shares = calcSharesFromAmount(_amount);
+		(uint256 _shares,) = _calcSharesFromAmount(_amount);
 		Transfers._pullFunds(reserveToken, _from, _amount);
 		_deposit(_amount);
 		_mint(_from, _shares);
@@ -113,10 +115,10 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	function withdraw(uint256 _shares) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
-		uint256 _amount = calcAmountFromShares(_shares);
+		(uint256 _amount, uint256 _netAmount) = _calcAmountFromShares(_shares);
 		_burn(_from, _shares);
 		_withdraw(_amount);
-		Transfers._pushFunds(reserveToken, _from, _amount);
+		Transfers._pushFunds(reserveToken, _from, _netAmount);
 	}
 
 	function gulp() external onlyEOAorWhitelist nonReentrant
@@ -187,6 +189,20 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		emit ChangePerformanceFee(_oldPerformanceFee, _newPerformanceFee);
 	}
 
+	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _shares, uint256 _netAmount)
+	{
+		_netAmount = _calcNetDepositAmount(_amount);
+		_shares = _netAmount.mul(totalSupply()) / totalReserve();
+		return (_shares, _netAmount);
+	}
+
+	function _calcAmountFromShares(uint256 _shares) internal view returns (uint256 _amount, uint256 _netAmount)
+	{
+		_amount = _shares.mul(totalReserve()) / totalSupply();
+		_netAmount = _calcNetWithdrawalAmount(_amount);
+		return (_amount, _netAmount);
+	}
+
 	function _getTokens(address _autoFarm, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
 	{
 		uint256 _poolLength = AutoFarmV2(_autoFarm).poolLength();
@@ -204,6 +220,22 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
 	{
 		return AutoFarmV2(autoFarm).stakedWantTokens(pid, address(this));
+	}
+
+	function _calcNetDepositAmount(uint256 _amount) internal view returns (uint256 _netAmount)
+	{
+		(,,,,address _strategy) = AutoFarmV2(autoFarm).poolInfo(pid);
+		uint256 _fee = AutoFarmV2Strategy(_strategy).entranceFeeFactor();
+		uint256 _feeMax = AutoFarmV2Strategy(_strategy).entranceFeeFactorMax();
+		return _amount.mul(_fee) / _feeMax;
+	}
+
+	function _calcNetWithdrawalAmount(uint256 _amount) internal view returns (uint256 _netAmount)
+	{
+		(,,,,address _strategy) = AutoFarmV2(autoFarm).poolInfo(pid);
+		uint256 _fee = AutoFarmV2Strategy(_strategy).withdrawFeeFactor();
+		uint256 _feeMax = AutoFarmV2Strategy(_strategy).withdrawFeeFactorMax();
+		return _amount.mul(_fee) / _feeMax;
 	}
 
 	function _deposit(uint256 _amount) internal

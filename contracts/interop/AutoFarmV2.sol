@@ -14,3 +14,11 @@ interface AutoFarmV2
 	function withdraw(uint256 _pid, uint256 _amount) external;
 	function emergencyWithdraw(uint256 _pid) external;
 }
+
+interface AutoFarmV2Strategy
+{
+	function entranceFeeFactor() external view returns (uint256 _entranceFeeFactor);
+	function entranceFeeFactorMax() external view returns (uint256 _entranceFeeFactorMax);
+	function withdrawFeeFactor() external view returns (uint256 _withdrawFeeFactor);
+	function withdrawFeeFactorMax() external view returns (uint256 _withdrawFeeFactorMax);
+}
