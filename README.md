@@ -52,6 +52,20 @@ Already published:
 | 31        | [GRO/gROOTv2](https://bscscan.com/address/0x6Fc18618a58e2A5ff0877E0561B8724d135DFC00)    | -               | -             |
 | 32        | [BNB/gROOTv2](https://bscscan.com/address/0x0d5B76B7120736000D20A5E33bFF2185DCA79e9a)    | -               | -             |
 | 33        | [stkBNB/CAKEv2](https://bscscan.com/address/0x86c15Efe94320Cd139eA4875b7ceF336e1F91f16)  | AutoFarm 243    | BNB           |
+| 34        | [stkBNB/BUSDv2](https://bscscan.com/address/0xd5ffd8318b1c82FDE321f7BC1a553462A13A2E14)  | AutoFarm 244    | BNB           |
+| 35        | [stkBNB/USDTv2](https://bscscan.com/address/0x7259CeBc6D8f84afdce4B81a3a33D53A526521F8)  | AutoFarm 245    | BNB           |
+| 36        | [stkBNB/BTCBv2](https://bscscan.com/address/0x074fD0f3289cF3F5E0E80c969F62B21cB38Ad3b5)  | AutoFarm 246    | BNB           |
+| 37        | [stkBNB/ETHv2](https://bscscan.com/address/0x15B310c8D9d0Ac9aefB94BF492e7eAbC43B4f93e)   | AutoFarm 247    | BNB           |
+| 38        | [stkBUSD/USDTv2](https://bscscan.com/address/0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f) | AutoFarm 248    | BUSD          |
+| 39        | [stkBUSD/VAIv2](https://bscscan.com/address/0xC8daDd57BD9342b7ba9449B952DBE11B4f3D1648)  | AutoFarm 249    | BUSD          |
+| 40        | [stkBNB/DOTv2](https://bscscan.com/address/0x5C96941B28B824c3E9d01E5cb2D77B3f7801560e)   | AutoFarm 250    | BNB           |
+| 41        | [stkBNB/LINKv2](https://bscscan.com/address/0x501382584a3DBF1471918Cd4ee0fd3bE23FfDF29)  | AutoFarm 251    | BNB           |
+| 42        | [stkBNB/UNIv2](https://bscscan.com/address/0x0900a05910E7d4811f9FC17843120D6412df2968)   | AutoFarm 252    | BNB           |
+| 43        | [stkBNB/DODOv2](https://bscscan.com/address/0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875)  | AutoFarm 253    | BNB           |
+| 44        | [stkBNB/ALPHAv2](https://bscscan.com/address/0x6C6d105066462EE9b5Cfc7628e2edB1000e887F1) | AutoFarm 256    | BNB           |
+| 45        | [stkBNB/ADAv2](https://bscscan.com/address/0x73099318dfBB1C59e473322F29C215132A14Ab86)   | AutoFarm 258    | BNB           |
+| 46        | [stkBUSD/USTv2](https://bscscan.com/address/0xB2b5dba919Da2E06d6cDd15dF17bA4b99D3eB1bD)  | AutoFarm 265    | BUSD          |
+| 47        | [stkBUSD/BTCBv2](https://bscscan.com/address/0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352) | AutoFarm 354    | BUSD          |
 
 # Pending publication after PancakeSwap V2 migration:
 
