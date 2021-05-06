@@ -11,6 +11,7 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { Transfers } from "./modules/Transfers.sol";
 
 import { AutoFarmV2, AutoFarmV2Strategy } from "./interop/AutoFarmV2.sol";
+import { BeltStrategyToken } from "./interop/Belt.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
@@ -22,6 +23,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 
 	address private immutable autoFarm;
 	uint256 private immutable pid;
+	bool private immutable useBelt;
 
 	address public immutable rewardToken;
 	address public immutable routingToken;
@@ -37,15 +39,20 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	uint256 public lastGulpTime;
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
-		address _autoFarm, uint256 _pid, address _routingToken,
+		address _autoFarm, uint256 _pid, address _routingToken, bool _useBelt,
 		address _treasury, address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
 		(address _reserveToken, address _rewardToken) = _getTokens(_autoFarm, _pid);
-		require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
+		if (_useBelt) {
+			require(_routingToken == BeltStrategyToken(_reserveToken).token(), "invalid token");
+		} else {
+			require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
+		}
 		autoFarm = _autoFarm;
 		pid = _pid;
+		useBelt = _useBelt;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
@@ -97,8 +104,12 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		}
 		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
-			require(exchange != address(0), "exchange not set");
-			_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
+			if (useBelt) {
+				_totalBalance = BeltStrategyToken(reserveToken).amountToShares(_totalRouting);
+			} else {
+				require(exchange != address(0), "exchange not set");
+				_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
+			}
 		}
 		return _totalBalance;
 	}
@@ -139,10 +150,15 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
-			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
-			Transfers._approveFunds(routingToken, exchange, _totalRouting);
-			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
+			if (useBelt) {
+				Transfers._approveFunds(routingToken, reserveToken, _totalRouting);
+				BeltStrategyToken(reserveToken).deposit(_totalRouting, 1);
+			} else {
+				require(exchange != address(0), "exchange not set");
+				Transfers._approveFunds(routingToken, exchange, _totalRouting);
+				IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
+			}
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		_deposit(_totalBalance);
