@@ -14,8 +14,6 @@ This repository contains the source code for the WHEAT smart contracts
 
 ## MasterChef Configuration
 
-Already published:
-
 | WHEAT pid | Token                                                                                    | Underlying pid  | Routing Token |
 | ----------| ---------------------------------------------------------------------------------------- | --------------- | ------------- |
 | 0         | [WHEAT](https://bscscan.com/address/0x3ab63309F85df5D4c3351ff8EACb87980E05Da4E)          | -               | -             |
