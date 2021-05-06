@@ -451,10 +451,10 @@ const GULP_INTERVAL = {
   '0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352': 24 * 60 * 60, // 24 hours
   // CAKE collector
   '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36': 6 * 60 * 60, // 6 hours
-  // CAKE buyback
-  '0xC351706C3212D45fc24F6B89e686f07fAb048b16': 24 * 60 * 60, // 24 hours
   // AUTO/CAKE collector adapter
   '0x626E98ef225A6f79523C9004E8731B793dfd0F68': 12 * 60 * 60, // 12 hours
+  // CAKE buyback
+  '0xC351706C3212D45fc24F6B89e686f07fAb048b16': 24 * 60 * 60, // 24 hours
 };
 
 const strategyCache = {};
@@ -552,10 +552,14 @@ async function gulpAll(privateKey, network) {
         pendingReward(privateKey, network, collector),
       ]);
     } catch {
-      [deposit, reward] = await Promise.all([
-        pendingSource(privateKey, network, collector),
-        pendingTarget(privateKey, network, collector),
-      ]);
+      try {
+        [deposit, reward] = await Promise.all([
+          pendingSource(privateKey, network, collector),
+          pendingTarget(privateKey, network, collector),
+        ]);
+      } catch {
+        [deposit, reward] = [1, 1];
+      }
     }
     if (BigInt(deposit) > 0n || BigInt(reward) > 0n) {
       const tx = await safeGulp(privateKey, network, collector);
