@@ -171,6 +171,7 @@ async function sendTelegramMessage(message, key = '') {
 const IERC20_ABI = require('../build/contracts/IERC20.json').abi;
 const MASTERCHEF_ABI = require('../build/contracts/CustomMasterChef.json').abi;
 const STRATEGY_ABI = require('../build/contracts/RewardCompoundingStrategyToken.json').abi;
+const COLLECTOR_ADAPTER_ABI = require('../build/contracts/FeeCollectorAdapter.json').abi;
 const COLLECTOR_ABI = require('../build/contracts/FeeCollector.json').abi;
 const BUYBACK_ABI = require('../build/contracts/Buyback.json').abi;
 
@@ -310,6 +311,32 @@ async function pendingBuyback(privateKey, network, address, agent = null) {
   }
 }
 
+async function pendingSource(privateKey, network, address, agent = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = COLLECTOR_ADAPTER_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (agent === null) [agent] = web3.currentProvider.getAddresses();
+  try {
+    const amount = await contract.methods.pendingSource().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function pendingTarget(privateKey, network, address, agent = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = COLLECTOR_ADAPTER_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (agent === null) [agent] = web3.currentProvider.getAddresses();
+  try {
+    const amount = await contract.methods.pendingTarget().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
 async function gulp(privateKey, network, address, nonce) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
@@ -360,38 +387,74 @@ async function poolInfo(privateKey, network, pid, agent = null) {
 
 // app
 
-const ACTIVE_PIDS = [5, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28];
+const ACTIVE_PIDS = [
+  5,
+  18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+  33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+];
 const MONITORING_INTERVAL = 15; // 15 seconds
 const DEFAULT_GULP_INTERVAL = 12 * 60 * 60; // 12 hours
 const GULP_INTERVAL = {
   // 5 - stkCAKE
-  '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 2 * 60 * 60, // 2 hours
+  '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 6 * 60 * 60, // 6 hours
   // 18 - stkBNB/CAKE
-  '0x4291474e88E2fEE6eC5B8c28F4Ed2075cEf5B803': 2 * 60 * 60, // 2 hours
+  '0x4291474e88E2fEE6eC5B8c28F4Ed2075cEf5B803': 12 * 60 * 60, // 12 hours
   // 19 - stkBNB/BUSD
-  '0xdC4D358B34619e4fE7feb28bE301B2FBe4F3aFf9': 4 * 60 * 60, // 4 hours
+  '0xdC4D358B34619e4fE7feb28bE301B2FBe4F3aFf9': 24 * 60 * 60, // 24 hours
   // 20 - stkBNB/BTCB
-  '0xA561fa603bf0B43Cb0d0911EeccC8B6777d3401B': 6 * 60 * 60, // 6 hours
+  '0xA561fa603bf0B43Cb0d0911EeccC8B6777d3401B': 24 * 60 * 60, // 24 hours
   // 21 - stkBNB/ETH
-  '0x28e6aa3DD98372Da0959Abe9d0efeB4455d4dFe1': 6 * 60 * 60, // 6 hours
+  '0x28e6aa3DD98372Da0959Abe9d0efeB4455d4dFe1': 24 * 60 * 60, // 24 hours
   // 22 - stkBNB/LINK
-  '0x3B88a64D0B9fA485B71c98B00D799aa8D1aEe9E3': 12 * 60 * 60, // 12 hours
+  '0x3B88a64D0B9fA485B71c98B00D799aa8D1aEe9E3': 24 * 60 * 60, // 24 hours
   // 23 - stkBNB/UNI
-  '0x515785CE5D5e94f93fe41Ed3fd83779Fb3Aff8A4': 12 * 60 * 60, // 12 hours
+  '0x515785CE5D5e94f93fe41Ed3fd83779Fb3Aff8A4': 24 * 60 * 60, // 24 hours
   // 24 - stkBNB/DOT
-  '0x53073f685474341cdc765F97E7CFB2F427BD9db9': 12 * 60 * 60, // 12 hours
+  '0x53073f685474341cdc765F97E7CFB2F427BD9db9': 24 * 60 * 60, // 24 hours
   // 25 - stkBNB/ADA
-  '0xf5aFfe3459813AB193329E53f17098806709046A': 12 * 60 * 60, // 12 hours
+  '0xf5aFfe3459813AB193329E53f17098806709046A': 24 * 60 * 60, // 24 hours
   // 26 - stkBUSD/UST
-  '0x5141da4ab5b3e13ceE7B10980aE6bB848FdB59Cd': 12 * 60 * 60, // 12 hours
+  '0x5141da4ab5b3e13ceE7B10980aE6bB848FdB59Cd': 24 * 60 * 60, // 24 hours
   // 27 - stkBUSD/DAI
-  '0x691e486b5F7E39e90d37485164fAbDDd93aE43cD': 12 * 60 * 60, // 12 hours
+  '0x691e486b5F7E39e90d37485164fAbDDd93aE43cD': 24 * 60 * 60, // 24 hours
   // 28 - stkBUSD/USDC
-  '0xae35A19F1DAc62AD3794773D5f0983f05073D0f2': 12 * 60 * 60, // 12 hours
-  // collector
-  '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36': 2 * 60 * 60, // 2 hours
-  // buyback
-  '0xC351706C3212D45fc24F6B89e686f07fAb048b16': 6 * 60 * 60, // 12 hours
+  '0xae35A19F1DAc62AD3794773D5f0983f05073D0f2': 24 * 60 * 60, // 24 hours
+  // 33 - stkBNB/CAKEv2
+  '0x86c15Efe94320Cd139eA4875b7ceF336e1F91f16': 12 * 60 * 60, // 12 hours
+  // 34 - stkBNB/BUSDv2
+  '0xd5ffd8318b1c82FDE321f7BC1a553462A13A2E14': 12 * 60 * 60, // 12 hours
+  // 35 - stkBNB/USDTv2
+  '0x7259CeBc6D8f84afdce4B81a3a33D53A526521F8': 24 * 60 * 60, // 24 hours
+  // 36 - stkBNB/BTCBv2
+  '0x074fD0f3289cF3F5E0E80c969F62B21cB38Ad3b5': 24 * 60 * 60, // 24 hours
+  // 37 - stkBNB/ETHv2
+  '0x15B310c8D9d0Ac9aefB94BF492e7eAbC43B4f93e': 24 * 60 * 60, // 24 hours
+  // 38 - stkBUSD/USDTv2
+  '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f': 24 * 60 * 60, // 24 hours
+  // 39 - stkBUSD/VAIv2
+  '0xC8daDd57BD9342b7ba9449B952DBE11B4f3D1648': 24 * 60 * 60, // 24 hours
+  // 40 - stkBNB/DOTv2
+  '0x5C96941B28B824c3E9d01E5cb2D77B3f7801560e': 24 * 60 * 60, // 24 hours
+  // 41 - stkBNB/LINKv2
+  '0x501382584a3DBF1471918Cd4ee0fd3bE23FfDF29': 24 * 60 * 60, // 24 hours
+  // 42 - stkBNB/UNIv2
+  '0x0900a05910E7d4811f9FC17843120D6412df2968': 24 * 60 * 60, // 24 hours
+  // 43 - stkBNB/DODOv2
+  '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875': 24 * 60 * 60, // 24 hours
+  // 44 - stkBNB/ALPHAv2
+  '0x6C6d105066462EE9b5Cfc7628e2edB1000e887F1': 24 * 60 * 60, // 24 hours
+  // 45 - stkBNB/ADAv2
+  '0x73099318dfBB1C59e473322F29C215132A14Ab86': 24 * 60 * 60, // 24 hours
+  // 46 - stkBUSD/USTv2
+  '0xB2b5dba919Da2E06d6cDd15dF17bA4b99D3eB1bD': 24 * 60 * 60, // 24 hours
+  // 47 - stkBUSD/BTCBv2
+  '0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352': 24 * 60 * 60, // 24 hours
+  // CAKE collector
+  '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36': 6 * 60 * 60, // 6 hours
+  // CAKE buyback
+  '0xC351706C3212D45fc24F6B89e686f07fAb048b16': 24 * 60 * 60, // 24 hours
+  // AUTO/CAKE collector adapter
+  '0x626E98ef225A6f79523C9004E8731B793dfd0F68': 12 * 60 * 60, // 12 hours
 };
 
 const strategyCache = {};
@@ -482,10 +545,18 @@ async function gulpAll(privateKey, network) {
     if (!ACTIVE_PIDS.includes(pid)) continue;
     const strategy = await readStrategy(privateKey, network, pid);
     const collector = await readCollector(privateKey, network, strategy);
-    const [deposit, reward] = await Promise.all([
-      pendingDeposit(privateKey, network, collector),
-      pendingReward(privateKey, network, collector),
-    ]);
+    let deposit, reward;
+    try {
+      [deposit, reward] = await Promise.all([
+        pendingDeposit(privateKey, network, collector),
+        pendingReward(privateKey, network, collector),
+      ]);
+    } catch {
+      [deposit, reward] = await Promise.all([
+        pendingSource(privateKey, network, collector),
+        pendingTarget(privateKey, network, collector),
+      ]);
+    }
     if (BigInt(deposit) > 0n || BigInt(reward) > 0n) {
       const tx = await safeGulp(privateKey, network, collector);
       if (tx !== null) {
