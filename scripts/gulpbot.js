@@ -570,7 +570,12 @@ async function gulpAll(privateKey, network) {
     if (!ACTIVE_PIDS.includes(pid)) continue;
     const strategy = await readStrategy(privateKey, network, pid);
     const collector = await readCollector(privateKey, network, strategy);
-    const buyback = await readBuyback(privateKey, network, collector);
+    let buyback;
+    try {
+      buyback = await readBuyback(privateKey, network, collector);
+    } catch {
+      continue;
+    }
     const [reward] = await Promise.all([
       pendingBuyback(privateKey, network, buyback),
     ]);
