@@ -67,36 +67,40 @@ Already published:
 | 46        | [stkBUSD/USTv2](https://bscscan.com/address/0xB2b5dba919Da2E06d6cDd15dF17bA4b99D3eB1bD)  | AutoFarm 265    | BUSD          |
 | 47        | [stkBUSD/BTCBv2](https://bscscan.com/address/0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352) | AutoFarm 354    | BUSD          |
 
-[comment]: # Pending publication after PancakeSwap V2 migration:
+<!---
 
-[comment]: # | WHEAT pid | Token                                                                                    | CAKE pid | Routing Token |
-[comment]: # | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
-[comment]: # | -         | stkCAKEv2                                                                                | 0        | CAKE          |
+Pending publication after PancakeSwap V2 migration:
 
-[comment]: # To be published later (CAKE based):
+| WHEAT pid | Token                                                                                    | CAKE pid | Routing Token |
+| ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
+| -         | stkCAKEv2                                                                                | 0        | CAKE          |
 
-[comment]: # | WHEAT pid | Token                                                                                    | CAKE pid | Routing Token |
-[comment]: # | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
-[comment]: # | -         | stkBTCB/bBADGER                                                                          | 332      | BTCB          |
-[comment]: # | -         | stkBNB/BSCX                                                                              | 281      | BNB           |
-[comment]: # | -         | stkBNB/BRY                                                                               | 303      | BNB           |
-[comment]: # | -         | stkBNB/WATCH                                                                             | 312      | BNB           |
-[comment]: # | -         | stkBNB/BTCST                                                                             | 285      | BNB           |
-[comment]: # | -         | stkBUSD/IOTX                                                                             | 309      | BUSD          |
-[comment]: # | -         | stkBUSD/TPT                                                                              | 313      | BUSD          |
-[comment]: # | -         | stkBNB/ZIL                                                                               | 334      | BNB           |
-[comment]: # | -         | stkBNB/TWT                                                                               | 259      | BNB           |
-[comment]: # | -         | stkBNB/bOPEN                                                                             | 307      | BNB           |
+To be published later (CAKE based):
 
-[comment]: # To be published later (AUTO based):
+| WHEAT pid | Token                                                                                    | CAKE pid | Routing Token |
+| ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
+| -         | stkBTCB/bBADGER                                                                          | 332      | BTCB          |
+| -         | stkBNB/BSCX                                                                              | 281      | BNB           |
+| -         | stkBNB/BRY                                                                               | 303      | BNB           |
+| -         | stkBNB/WATCH                                                                             | 312      | BNB           |
+| -         | stkBNB/BTCST                                                                             | 285      | BNB           |
+| -         | stkBUSD/IOTX                                                                             | 309      | BUSD          |
+| -         | stkBUSD/TPT                                                                              | 313      | BUSD          |
+| -         | stkBNB/ZIL                                                                               | 334      | BNB           |
+| -         | stkBNB/TWT                                                                               | 259      | BNB           |
+| -         | stkBNB/bOPEN                                                                             | 307      | BNB           |
 
-[comment]: # | WHEAT pid | Token                                                                                    | AUTO pid | Routing Token |
-[comment]: # | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
-[comment]: # | -         | [stkBNB/AUTOv1](https://bscscan.com/address/0x30cD3DF94b0FA799F946efB3CcB9E9902069aAEB)  | 6        | AUTO          |
-[comment]: # | -         | [stkbeltBNB](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 338      | BNB           |
-[comment]: # | -         | [stkbeltBTC](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 339      | BTC           |
-[comment]: # | -         | [stkbeltETH](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 340      | ETH           |
-[comment]: # | -         | [stk4Belt](https://bscscan.com/address/0x0000000000000000000000000000000000000000)       | 341      | ?             |
+To be published later (AUTO based):
+
+| WHEAT pid | Token                                                                                    | AUTO pid | Routing Token |
+| ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
+| -         | [stkBNB/AUTOv1](https://bscscan.com/address/0x30cD3DF94b0FA799F946efB3CcB9E9902069aAEB)  | 6        | AUTO          |
+| -         | [stkbeltBNB](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 338      | BNB           |
+| -         | [stkbeltBTC](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 339      | BTC           |
+| -         | [stkbeltETH](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 340      | ETH           |
+| -         | [stk4Belt](https://bscscan.com/address/0x0000000000000000000000000000000000000000)       | 341      | ?             |
+
+-->
 
 ## Repository Organization
 
