@@ -11,7 +11,7 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { Transfers } from "./modules/Transfers.sol";
 
 import { AutoFarmV2, AutoFarmV2Strategy } from "./interop/AutoFarmV2.sol";
-import { BeltStrategyToken } from "./interop/Belt.sol";
+import { BeltStrategyToken, BeltStrategyPool } from "./interop/Belt.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
@@ -23,7 +23,11 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 
 	address private immutable autoFarm;
 	uint256 private immutable pid;
+
 	bool private immutable useBelt;
+	address private immutable beltToken;
+	address private immutable beltPool;
+	uint256 private immutable beltPoolIndex;
 
 	address public immutable rewardToken;
 	address public immutable routingToken;
@@ -39,20 +43,34 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	uint256 public lastGulpTime;
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
-		address _autoFarm, uint256 _pid, address _routingToken, bool _useBelt,
+		address _autoFarm, uint256 _pid, address _routingToken,
+		bool _useBelt, address _beltPool, uint256 _beltPoolIndex,
 		address _treasury, address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
 		(address _reserveToken, address _rewardToken) = _getTokens(_autoFarm, _pid);
+		address _beltToken = address(0);
 		if (_useBelt) {
-			require(_routingToken == BeltStrategyToken(_reserveToken).token(), "invalid token");
+			if (_beltPool == address(0)) {
+				_beltToken = _reserveToken;
+			} else {
+				require(_beltPoolIndex < 4, "invalid index");
+				int128 _index = int128(_beltPoolIndex);
+				require(_reserveToken == BeltStrategyPool(_beltPool).pool_token(), "invalid pool");
+				require(_routingToken == BeltStrategyPool(_beltPool).underlying_coins(_index), "invalid pool");
+				_beltToken = BeltStrategyPool(_beltPool).coins(_index);
+			}
+			require(_routingToken == BeltStrategyToken(_beltToken).token(), "invalid token");
 		} else {
 			require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
 		}
 		autoFarm = _autoFarm;
 		pid = _pid;
 		useBelt = _useBelt;
+		beltToken = _beltToken;
+		beltPool = _beltPool;
+		beltPoolIndex = _beltPoolIndex;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
@@ -105,7 +123,13 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
 			if (useBelt) {
-				_totalBalance = BeltStrategyToken(reserveToken).amountToShares(_totalRouting);
+				uint256 _totalDepositing = BeltStrategyToken(beltToken).amountToShares(_totalRouting);
+				_totalBalance = _totalDepositing;
+				if (beltPool != address(0)) {
+					uint256[4] memory _amounts;
+					_amounts[beltPoolIndex] = _totalDepositing;
+					_totalBalance = BeltStrategyPool(beltPool).calc_token_amount(_amounts, true);
+				}
 			} else {
 				require(exchange != address(0), "exchange not set");
 				_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
@@ -152,8 +176,15 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		if (routingToken != reserveToken) {
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
 			if (useBelt) {
-				Transfers._approveFunds(routingToken, reserveToken, _totalRouting);
-				BeltStrategyToken(reserveToken).deposit(_totalRouting, 1);
+				Transfers._approveFunds(routingToken, beltToken, _totalRouting);
+				BeltStrategyToken(beltToken).deposit(_totalRouting, 1);
+				if (beltPool != address(0)) {
+					uint256 _totalDepositing = Transfers._getBalance(beltToken);
+					Transfers._approveFunds(beltToken, beltPool, _totalDepositing);
+					uint256[4] memory _amounts;
+					_amounts[beltPoolIndex] = _totalDepositing;
+					BeltStrategyPool(beltPool).add_liquidity(_amounts, 1);
+				}
 			} else {
 				require(exchange != address(0), "exchange not set");
 				Transfers._approveFunds(routingToken, exchange, _totalRouting);
@@ -167,6 +198,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 	{
+		require(_token != beltToken, "invalid token");
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
 		require(_token != rewardToken, "invalid token");
