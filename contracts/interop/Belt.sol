@@ -8,3 +8,13 @@ interface BeltStrategyToken
 
 	function deposit(uint256 _amount, uint256 _minShares) external;
 }
+
+interface BeltStrategyPool
+{
+	function calc_token_amount(uint256[4] calldata _amounts, bool _deposit) external view returns (uint256 _tokenAmount);
+	function coins(int128 _index) external view returns (address _coin);
+	function pool_token() external view returns (address _token);
+	function underlying_coins(int128 _index) external view returns (address _coin);
+
+	function add_liquidity(uint256[4] calldata _amounts, uint256 _minTokenAmount) external;
+}

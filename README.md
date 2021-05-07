@@ -93,10 +93,10 @@ To be published later (AUTO based):
 | WHEAT pid | Token                                                                                    | AUTO pid | Routing Token |
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
 | -         | [stkBNB/AUTOv1](https://bscscan.com/address/0x30cD3DF94b0FA799F946efB3CcB9E9902069aAEB)  | 6        | AUTO          |
-| -         | [stkbeltBNB](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 338      | BNB           |
-| -         | [stkbeltBTC](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 339      | BTC           |
-| -         | [stkbeltETH](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 340      | ETH           |
-| -         | [stk4Belt](https://bscscan.com/address/0x0000000000000000000000000000000000000000)       | 341      | ?             |
+| -         | [stkbeltBNBv2](https://bscscan.com/address/0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A)   | 338      | BNB           |
+| -         | [stkbeltBTCv2](https://bscscan.com/address/0x0000000000000000000000000000000000000000)   | 339      | BTCB          |
+| -         | [stkbeltETHv2](https://bscscan.com/address/0x0000000000000000000000000000000000000000)   | 340      | ETH           |
+| -         | [stk4BELTv2](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 341      | BUSD          |
 
 -->
 
