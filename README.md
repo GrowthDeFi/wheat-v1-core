@@ -94,9 +94,9 @@ To be published later (AUTO based):
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
 | -         | [stkBNB/AUTOv1](https://bscscan.com/address/0x30cD3DF94b0FA799F946efB3CcB9E9902069aAEB)  | 6        | AUTO          |
 | -         | [stkbeltBNBv2](https://bscscan.com/address/0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A)   | 338      | BNB           |
-| -         | [stkbeltBTCv2](https://bscscan.com/address/0x0000000000000000000000000000000000000000)   | 339      | BTCB          |
-| -         | [stkbeltETHv2](https://bscscan.com/address/0x0000000000000000000000000000000000000000)   | 340      | ETH           |
-| -         | [stk4BELTv2](https://bscscan.com/address/0x0000000000000000000000000000000000000000)     | 341      | BUSD          |
+| -         | [stkbeltBTCv2](https://bscscan.com/address/0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62)   | 339      | BTCB          |
+| -         | [stkbeltETHv2](https://bscscan.com/address/0xE70aA236f2c2dABC346e193F606986Bb843bA3d9)   | 340      | ETH           |
+| -         | [stk4BELTv2](https://bscscan.com/address/0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB)     | 341      | BUSD          |
 
 -->
 
