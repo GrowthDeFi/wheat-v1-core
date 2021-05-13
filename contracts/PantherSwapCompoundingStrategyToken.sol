@@ -10,7 +10,7 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
-import { PantherMasterChef } from "./interop/PantherSwap.sol";
+import { PantherToken, PantherMasterChef } from "./interop/PantherSwap.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
@@ -29,7 +29,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	address public dev;
 	address public treasury;
-	address public collector;
+	address public buyback;
 
 	address public exchange;
 
@@ -39,7 +39,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
-		address _dev, address _treasury, address _collector, address _exchange)
+		address _dev, address _treasury, address _buyback, address _exchange)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
@@ -52,7 +52,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		reserveToken = _reserveToken;
 		dev = _dev;
 		treasury = _treasury;
-		collector = _collector;
+		buyback = _buyback;
 		exchange = _exchange;
 		_mint(address(1), 1); // avoids division by zero
 	}
@@ -64,15 +64,16 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		return _totalReserve + 1; // avoids division by zero
 	}
 
-	function calcSharesFromAmount(uint256 _amount) public view returns (uint256 _shares)
+	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
-		uint256 _netAmount = _calcNetDepositAmount(_amount);
-		return _netAmount.mul(totalSupply()) / totalReserve();
+		(_shares,,) = _calcSharesFromAmount(_amount);
+		return _shares;
 	}
 
-	function calcAmountFromShares(uint256 _shares) public view returns (uint256 _amount)
+	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
 	{
-		return _shares.mul(totalReserve()) / totalSupply();
+		(,,_amount) = _calcAmountFromShares(_shares);
+		return _amount;
 	}
 
 	function pendingPerformanceFee() external view returns (uint256 _feeReward)
@@ -107,48 +108,69 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	function deposit(uint256 _amount) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
-		uint256 _shares = calcSharesFromAmount(_amount);
-		// TODO take into account transfer fee and transfer limit
+		(uint256 _shares, uint256 _depositAmount,) = _calcSharesFromAmount(_amount);
 		Transfers._pullFunds(reserveToken, _from, _amount);
-		_deposit(_amount);
+		_deposit(_depositAmount);
 		_mint(_from, _shares);
 	}
 
 	function withdraw(uint256 _shares) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
-		uint256 _amount = calcAmountFromShares(_shares);
+		(uint256 _amount, uint256 _withdrawalAmount,) = _calcAmountFromShares(_shares);
 		_burn(_from, _shares);
 		_withdraw(_amount);
-		// TODO take into account transfer fee and transfer limit
-		Transfers._pushFunds(reserveToken, _from, _amount);
+		Transfers._pushFunds(reserveToken, _from, _withdrawalAmount);
 	}
 
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
+		uint256 _limitReward = _calcMaxRewardTransferAmount();
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
 			_withdraw(0);
 		}
+		uint256 _retainedReward = 0;
 		{
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
 			uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
-			// TODO take into account transfer fee and transfer limit
-			Transfers._pushFunds(rewardToken, collector, _feeReward);
+			if (_feeReward > _limitReward) {
+				_feeReward = _limitReward;
+				_retainedReward = _feeReward.sub(_limitReward);
+			}
+			Transfers._pushFunds(rewardToken, buyback, _feeReward);
 		}
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
+			if (rewardToken == rewardToken) { // left for readability
+				_totalReward = _totalReward.sub(_retainedReward);
+				if (_totalReward > _limitReward) {
+					_totalReward = _limitReward;
+				}
+			}
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
+			if (routingToken == rewardToken) {
+				_totalRouting = _totalRouting.sub(_retainedReward);
+				if (_totalRouting > _limitReward) {
+					_totalRouting = _limitReward;
+				}
+			}
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
+		if (reserveToken == rewardToken) {
+			_totalBalance = _totalBalance.sub(_retainedReward);
+			if (_totalBalance > _limitReward) {
+				_totalBalance = _limitReward;
+			}
+		}
 		_deposit(_totalBalance);
 		lastGulpTime = now;
 	}
@@ -178,12 +200,12 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
-	function setCollector(address _newCollector) external onlyOwner nonReentrant
+	function setBuyback(address _newBuyback) external onlyOwner nonReentrant
 	{
-		require(_newCollector != address(0), "invalid address");
-		address _oldCollector = collector;
-		collector = _newCollector;
-		emit ChangeCollector(_oldCollector, _newCollector);
+		require(_newBuyback != address(0), "invalid address");
+		address _oldBuyback = buyback;
+		buyback = _newBuyback;
+		emit ChangeBuyback(_oldBuyback, _newBuyback);
 	}
 
 	function setExchange(address _newExchange) external onlyOwner nonReentrant
@@ -199,6 +221,32 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _oldPerformanceFee = performanceFee;
 		performanceFee = _newPerformanceFee;
 		emit ChangePerformanceFee(_oldPerformanceFee, _newPerformanceFee);
+	}
+
+	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _shares, uint256 _depositAmount, uint256 _netAmount)
+	{
+		if (reserveToken == rewardToken) {
+			_depositAmount = _calcTaxFreeRewardAmount(_amount);
+			_netAmount = _calcNetDepositAmount(_calcTaxFreeRewardAmount(_depositAmount));
+		} else {
+			_depositAmount = _amount;
+			_netAmount = _calcNetDepositAmount(_depositAmount);
+		}
+		_shares = _netAmount.mul(totalSupply()) / totalReserve();
+		return (_shares, _depositAmount, _netAmount);
+	}
+
+	function _calcAmountFromShares(uint256 _shares) internal view returns (uint256 _amount, uint256 _withdrawalAmount, uint256 _netAmount)
+	{
+		_amount = _shares.mul(totalReserve()) / totalSupply();
+		if (reserveToken == rewardToken) {
+			_withdrawalAmount = _calcTaxFreeRewardAmount(_amount);
+			_netAmount = _calcTaxFreeRewardAmount(_withdrawalAmount);
+		} else {
+			_withdrawalAmount = _amount;
+			_netAmount = _withdrawalAmount;
+		}
+		return (_amount, _withdrawalAmount, _netAmount);
 	}
 
 	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
@@ -230,6 +278,19 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		return _netAmount;
 	}
 
+	function _calcMaxRewardTransferAmount() internal view returns (uint256 _maxRewardTransferAmount)
+	{
+		return PantherToken(rewardToken).maxTransferAmount();
+	}
+
+	function _calcTaxFreeRewardAmount(uint256 _amount) internal view returns (uint256 _netAmount)
+	{
+		uint16 _rate = PantherToken(rewardToken).transferTaxRate();
+		uint256 _transferTax = _amount.mul(_rate).div(10000);
+		_netAmount = _amount.sub(_transferTax);
+		return _netAmount;
+	}
+
 	function _deposit(uint256 _amount) internal
 	{
 		Transfers._approveFunds(reserveToken, masterChef, _amount);
@@ -243,7 +304,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	event ChangeDev(address _oldDev, address _newDev);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
-	event ChangeCollector(address _oldCollector, address _newCollector);
+	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }

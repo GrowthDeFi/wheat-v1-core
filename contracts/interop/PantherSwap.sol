@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface PantherToken is IERC20
+{
+	function maxTransferAmount() external view returns (uint256 _maxTransferAmount);
+	function transferTaxRate() external view returns (uint16 _transferTaxRate);
+}
+
 interface PantherMasterChef
 {
 	function panther() external view returns (address _panther);
