@@ -32,6 +32,8 @@ contract PancakeSwapBuyback is ReentrancyGuard, WhitelistGuard
 	uint256 public rewardBuyback2Share = DEFAULT_REWARD_BUYBACK2_SHARE;
 	uint256 public rewardYieldShare = DEFAULT_REWARD_YIELD_SHARE;
 
+	uint256 public lastGulpTime;
+
 	constructor (address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2, address _treasury, address _yield) public
 	{
 		rewardToken = _rewardToken;
@@ -47,7 +49,22 @@ contract PancakeSwapBuyback is ReentrancyGuard, WhitelistGuard
 		return Transfers._getBalance(rewardToken);
 	}
 
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function pendingBurning() external view returns (uint256 _burning1, uint256 _burning2)
+	{
+		require(exchange != address(0), "exchange not set");
+		uint256 _balance = Transfers._getBalance(rewardToken);
+		if (routingToken != rewardToken) {
+			_balance = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _balance);
+		}
+		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
+		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		_burning1 = IExchange(exchange).calcConversionFromInput(routingToken, buybackToken1, _amount1);
+		uint256 _amount3 = IExchange(exchange).calcConversionFromInput(routingToken, buybackToken2, _amount2);
+		_burning2 = _amount3 / 2;
+		return (_burning1, _burning2);
+	}
+
+	function gulp(uint256 _minBurning1, uint256 _minBurning2) external onlyEOAorWhitelist nonReentrant
 	{
 		require(exchange != address(0), "exchange not set");
 		if (routingToken != rewardToken) {
@@ -55,20 +72,25 @@ contract PancakeSwapBuyback is ReentrancyGuard, WhitelistGuard
 			Transfers._approveFunds(rewardToken, exchange, _balance);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _balance, 1);
 		}
-		uint256 _total = Transfers._getBalance(routingToken);
-		uint256 _amount1 = _total.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
-		uint256 _amount2 = _total.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _balance = Transfers._getBalance(routingToken);
+		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
+		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
 		uint256 _burning = _amount1 + _amount2;
-		uint256 _sending = _total - _burning;
+		uint256 _sending = _balance - _burning;
 		Transfers._approveFunds(routingToken, exchange, _burning);
-		uint256 _burning1 = IExchange(exchange).convertFundsFromInput(routingToken, buybackToken1, _amount1, 1);
-		uint256 _amount3 = IExchange(exchange).convertFundsFromInput(routingToken, buybackToken2, _amount2, 1);
+		IExchange(exchange).convertFundsFromInput(routingToken, buybackToken1, _amount1, 1);
+		IExchange(exchange).convertFundsFromInput(routingToken, buybackToken2, _amount2, 1);
+		uint256 _burning1 = Transfers._getBalance(buybackToken1);
+		uint256 _amount3 = Transfers._getBalance(buybackToken2);
 		uint256 _burning2 = _amount3 / 2;
 		uint256 _sending2 = _amount3 - _burning2;
+		require(_burning1 >= _minBurning1, "high slippage");
+		require(_burning2 >= _minBurning2, "high slippage");
 		_burn(buybackToken1, _burning1);
 		_burn(buybackToken2, _burning2);
 		_send(buybackToken2, treasury, _sending2);
 		_send(routingToken, yield, _sending);
+		lastGulpTime = now;
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
