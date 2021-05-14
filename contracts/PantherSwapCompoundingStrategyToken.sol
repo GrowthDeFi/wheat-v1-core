@@ -90,18 +90,21 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _pendingReward = _getPendingReward();
 		uint256 _balanceReward = Transfers._getBalance(rewardToken);
 		uint256 _totalReward = _pendingReward.add(_balanceReward);
-		uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
+		(uint256 _feeReward, uint256 _retainedReward) = _capFeeRewardAmount(_totalReward.mul(performanceFee) / 1e18);
 		uint256 _netReward = _totalReward - _feeReward;
 		uint256 _totalRouting = _netReward;
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
+			_netReward = _capTransferRewardAmount(rewardToken, _netReward, _retainedReward);
 			_totalRouting = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _netReward);
 		}
 		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
+			_totalRouting = _capTransferRewardAmount(routingToken, _totalRouting, _retainedReward);
 			_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
 		}
+		_totalBalance = _capTransferRewardAmount(reserveToken, _totalBalance, _retainedReward);
 		return _totalBalance;
 	}
 
@@ -125,52 +128,29 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
 	{
-		uint256 _limitReward = _calcMaxRewardTransferAmount();
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
 			_withdraw(0);
 		}
-		uint256 _retainedReward = 0;
-		{
-			uint256 _totalReward = Transfers._getBalance(rewardToken);
-			uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
-			if (_feeReward > _limitReward) {
-				_feeReward = _limitReward;
-				_retainedReward = _feeReward.sub(_limitReward);
-			}
-			Transfers._pushFunds(rewardToken, buyback, _feeReward);
-		}
+		uint256 __totalReward = Transfers._getBalance(rewardToken);
+		(uint256 _feeReward, uint256 _retainedReward) = _capFeeRewardAmount(__totalReward.mul(performanceFee) / 1e18);
+		Transfers._pushFunds(rewardToken, buyback, _feeReward);
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
-			if (rewardToken == rewardToken) { // left for readability
-				_totalReward = _totalReward.sub(_retainedReward);
-				if (_totalReward > _limitReward) {
-					_totalReward = _limitReward;
-				}
-			}
+			_totalReward = _capTransferRewardAmount(rewardToken, _totalReward, _retainedReward);
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
-			if (routingToken == rewardToken) {
-				_totalRouting = _totalRouting.sub(_retainedReward);
-				if (_totalRouting > _limitReward) {
-					_totalRouting = _limitReward;
-				}
-			}
+			_totalRouting = _capTransferRewardAmount(routingToken, _totalRouting, _retainedReward);
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
-		if (reserveToken == rewardToken) {
-			_totalBalance = _totalBalance.sub(_retainedReward);
-			if (_totalBalance > _limitReward) {
-				_totalBalance = _limitReward;
-			}
-		}
+		_totalBalance = _capTransferRewardAmount(reserveToken, _totalBalance, _retainedReward);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 		lastGulpTime = now;
@@ -248,6 +228,29 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 			_netAmount = _withdrawalAmount;
 		}
 		return (_amount, _withdrawalAmount, _netAmount);
+	}
+
+	function _capFeeRewardAmount(uint256 _amount) internal view returns (uint256 _capped, uint256 _retained)
+	{
+		_retained = 0;
+		uint256 _limit = _calcMaxRewardTransferAmount();
+		if (_amount > _limit) {
+			_amount = _limit;
+			_retained = _amount.sub(_limit);
+		}
+		return (_amount, _retained);
+	}
+
+	function _capTransferRewardAmount(address _token, uint256 _amount, uint256 _retained) internal view returns (uint256 _capped)
+	{
+		if (_token == rewardToken) {
+			_amount = _amount.sub(_retained);
+			uint256 _limit = _calcMaxRewardTransferAmount();
+			if (_amount > _limit) {
+				_amount = _limit;
+			}
+		}
+		return _amount;
 	}
 
 	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
