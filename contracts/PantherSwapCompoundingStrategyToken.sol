@@ -18,7 +18,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	using SafeMath for uint256;
 
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 50e16; // 50%
+	uint256 constant DEFAULT_PERFORMANCE_FEE = 5e16; // 5%
 
 	address private immutable masterChef;
 	uint256 private immutable pid;
