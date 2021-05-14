@@ -98,6 +98,19 @@ To be published later (AUTO based):
 | -         | [stkbeltETHv2](https://bscscan.com/address/0xE70aA236f2c2dABC346e193F606986Bb843bA3d9)   | 340      | ETH           |
 | -         | [stk4BELTv2](https://bscscan.com/address/0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB)     | 341      | BUSD          |
 
+To be published later (PANTHER based):
+
+| WHEAT pid | Token                                                                                    | PANTHER pid | Routing Token |
+| ----------| ---------------------------------------------------------------------------------------- | ----------- | ------------- |
+| -         | [stkBNB/BUSD](https://bscscan.com/address/)                                              | 18          | BNB           |
+| -         | [stkBNB/BTCB](https://bscscan.com/address/)                                              | 19          | BNB           |
+| -         | [stkBNB/ETH](https://bscscan.com/address/)                                               | 20          | BNB           |
+| -         | [stkBNB/CAKE](https://bscscan.com/address/)                                              | 23          | BNB           |
+| -         | [stkBUSD/USDC](https://bscscan.com/address/)                                             | 24          | BNB           |
+| -         | [stkPANTHER](https://bscscan.com/address/)                                               | 9           | PANTHER       |
+| -         | [stkBNB/PANTHER](https://bscscan.com/address/)                                           | 17          | PANTHER       |
+| -         | [stkBUSD/PANTHER](https://bscscan.com/address/)                                          | 16          | PANTHER       |
+
 -->
 
 ## Repository Organization
