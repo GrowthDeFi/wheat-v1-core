@@ -64,6 +64,10 @@ This repository contains the source code for the WHEAT smart contracts
 | 45        | [stkBNB/ADAv2](https://bscscan.com/address/0x73099318dfBB1C59e473322F29C215132A14Ab86)   | AutoFarm 258    | BNB           |
 | 46        | [stkBUSD/USTv2](https://bscscan.com/address/0xB2b5dba919Da2E06d6cDd15dF17bA4b99D3eB1bD)  | AutoFarm 265    | BUSD          |
 | 47        | [stkBUSD/BTCBv2](https://bscscan.com/address/0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352) | AutoFarm 354    | BUSD          |
+| 48        | [stkbeltBNBv2](https://bscscan.com/address/0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A)   | AutoFarm 338    | BNB           |
+| 49        | [stkbeltBTCv2](https://bscscan.com/address/0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62)   | AutoFarm 339    | BTCB          |
+| 50        | [stkbeltETHv2](https://bscscan.com/address/0xE70aA236f2c2dABC346e193F606986Bb843bA3d9)   | AutoFarm 340    | ETH           |
+| 51        | [stk4BELTv2](https://bscscan.com/address/0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB)     | AutoFarm 341    | BUSD          |
 
 <!---
 
@@ -93,10 +97,6 @@ To be published later (AUTO based):
 | WHEAT pid | Token                                                                                    | AUTO pid | Routing Token |
 | ----------| ---------------------------------------------------------------------------------------- | -------- | ------------- |
 | -         | [stkBNB/AUTOv1](https://bscscan.com/address/0x30cD3DF94b0FA799F946efB3CcB9E9902069aAEB)  | 6        | AUTO          |
-| -         | [stkbeltBNBv2](https://bscscan.com/address/0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A)   | 338      | BNB           |
-| -         | [stkbeltBTCv2](https://bscscan.com/address/0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62)   | 339      | BTCB          |
-| -         | [stkbeltETHv2](https://bscscan.com/address/0xE70aA236f2c2dABC346e193F606986Bb843bA3d9)   | 340      | ETH           |
-| -         | [stk4BELTv2](https://bscscan.com/address/0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB)     | 341      | BUSD          |
 
 -->
 
