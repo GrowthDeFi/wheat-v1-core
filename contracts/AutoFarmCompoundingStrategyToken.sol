@@ -156,7 +156,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		Transfers._pushFunds(reserveToken, _from, _netAmount);
 	}
 
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -192,6 +192,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 			}
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
+		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 		lastGulpTime = now;
 	}

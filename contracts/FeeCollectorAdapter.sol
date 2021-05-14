@@ -44,13 +44,14 @@ contract FeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 		return _totalTarget;
 	}
 
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp(uint256 _minTotalTarget) external onlyEOAorWhitelist nonReentrant
 	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _totalSource = Transfers._getBalance(sourceToken);
 		Transfers._approveFunds(sourceToken, exchange, _totalSource);
 		IExchange(exchange).convertFundsFromInput(sourceToken, targetToken, _totalSource, 1);
 		uint256 _totalTarget = Transfers._getBalance(targetToken);
+		require(_totalTarget >= _minTotalTarget, "high slippage");
 		Transfers._pushFunds(targetToken, collector, _totalTarget);
 		lastGulpTime = now;
 	}
