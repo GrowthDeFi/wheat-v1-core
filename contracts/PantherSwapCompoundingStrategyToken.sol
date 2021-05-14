@@ -123,7 +123,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		Transfers._pushFunds(reserveToken, _from, _withdrawalAmount);
 	}
 
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
 	{
 		uint256 _limitReward = _calcMaxRewardTransferAmount();
 		uint256 _pendingReward = _getPendingReward();
@@ -171,6 +171,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 				_totalBalance = _limitReward;
 			}
 		}
+		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 		lastGulpTime = now;
 	}
