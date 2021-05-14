@@ -5,6 +5,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 import { IExchange } from "./IExchange.sol";
 
+import { Math } from "./modules/Math.sol";
 import { Transfers } from "./modules/Transfers.sol";
 import { UniswapV2ExchangeAbstraction } from "./modules/UniswapV2ExchangeAbstraction.sol";
 import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
@@ -39,7 +40,9 @@ contract Exchange is IExchange, Ownable
 	{
 		address _sender = msg.sender;
 		Transfers._pullFunds(_from, _sender, _inputAmount);
+		_inputAmount = Math._min(_inputAmount, Transfers._getBalance(_from));
 		_outputAmount = UniswapV2ExchangeAbstraction._convertFundsFromInput(router, _from, _to, _inputAmount, _minOutputAmount);
+		_outputAmount = Math._min(_outputAmount, Transfers._getBalance(_to));
 		Transfers._pushFunds(_to, _sender, _outputAmount);
 		return _outputAmount;
 	}
@@ -48,8 +51,12 @@ contract Exchange is IExchange, Ownable
 	{
 		address _sender = msg.sender;
 		Transfers._pullFunds(_from, _sender, _maxInputAmount);
+		_maxInputAmount = Math._min(_maxInputAmount, Transfers._getBalance(_from));
 		_inputAmount = UniswapV2ExchangeAbstraction._convertFundsFromOutput(router, _from, _to, _outputAmount, _maxInputAmount);
-		Transfers._pushFunds(_from, _sender, _maxInputAmount - _inputAmount);
+		uint256 _refundAmount = _maxInputAmount - _inputAmount;
+		_refundAmount = Math._min(_refundAmount, Transfers._getBalance(_from));
+		Transfers._pushFunds(_from, _sender, _refundAmount);
+		_outputAmount = Math._min(_outputAmount, Transfers._getBalance(_to));
 		Transfers._pushFunds(_to, _sender, _outputAmount);
 		return _inputAmount;
 	}
@@ -58,7 +65,9 @@ contract Exchange is IExchange, Ownable
 	{
 		address _sender = msg.sender;
 		Transfers._pullFunds(_token, _sender, _inputAmount);
+		_inputAmount = Math._min(_inputAmount, Transfers._getBalance(_token));
 		_outputShares = UniswapV2LiquidityPoolAbstraction._joinPoolFromInput(router, _pool, _token, _inputAmount, _minOutputShares);
+		_outputShares = Math._min(_outputShares, Transfers._getBalance(_pool));
 		Transfers._pushFunds(_pool, _sender, _outputShares);
 		return _outputShares;
 	}
