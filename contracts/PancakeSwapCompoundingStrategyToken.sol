@@ -127,7 +127,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		Transfers._pushFunds(reserveToken, _from, _amount);
 	}
 
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -151,6 +151,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
+		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 		lastGulpTime = now;
 	}
