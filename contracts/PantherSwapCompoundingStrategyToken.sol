@@ -90,21 +90,21 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _pendingReward = _getPendingReward();
 		uint256 _balanceReward = Transfers._getBalance(rewardToken);
 		uint256 _totalReward = _pendingReward.add(_balanceReward);
-		(uint256 _feeReward, uint256 _retainedReward) = _capFeeRewardAmount(_totalReward.mul(performanceFee) / 1e18);
+		(uint256 _feeReward, uint256 _retainedReward) = _capFeeAmount(_totalReward.mul(performanceFee) / 1e18);
 		uint256 _netReward = _totalReward - _feeReward;
 		uint256 _totalRouting = _netReward;
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
-			_netReward = _capTransferRewardAmount(rewardToken, _netReward, _retainedReward);
+			_netReward = _capTransferAmount(rewardToken, _netReward, _retainedReward);
 			_totalRouting = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _netReward);
 		}
 		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
-			_totalRouting = _capTransferRewardAmount(routingToken, _totalRouting, _retainedReward);
+			_totalRouting = _capTransferAmount(routingToken, _totalRouting, _retainedReward);
 			_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
 		}
-		_totalBalance = _capTransferRewardAmount(reserveToken, _totalBalance, _retainedReward);
+		_totalBalance = _capTransferAmount(reserveToken, _totalBalance, _retainedReward);
 		return _totalBalance;
 	}
 
@@ -133,24 +133,24 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 			_withdraw(0);
 		}
 		uint256 __totalReward = Transfers._getBalance(rewardToken);
-		(uint256 _feeReward, uint256 _retainedReward) = _capFeeRewardAmount(__totalReward.mul(performanceFee) / 1e18);
+		(uint256 _feeReward, uint256 _retainedReward) = _capFeeAmount(__totalReward.mul(performanceFee) / 1e18);
 		Transfers._pushFunds(rewardToken, buyback, _feeReward);
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
-			_totalReward = _capTransferRewardAmount(rewardToken, _totalReward, _retainedReward);
+			_totalReward = _capTransferAmount(rewardToken, _totalReward, _retainedReward);
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
-			_totalRouting = _capTransferRewardAmount(routingToken, _totalRouting, _retainedReward);
+			_totalRouting = _capTransferAmount(routingToken, _totalRouting, _retainedReward);
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
-		_totalBalance = _capTransferRewardAmount(reserveToken, _totalBalance, _retainedReward);
+		_totalBalance = _capTransferAmount(reserveToken, _totalBalance, _retainedReward);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 		lastGulpTime = now;
@@ -230,7 +230,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		return (_amount, _withdrawalAmount, _netAmount);
 	}
 
-	function _capFeeRewardAmount(uint256 _amount) internal view returns (uint256 _capped, uint256 _retained)
+	function _capFeeAmount(uint256 _amount) internal view returns (uint256 _capped, uint256 _retained)
 	{
 		_retained = 0;
 		uint256 _limit = _calcMaxRewardTransferAmount();
@@ -241,7 +241,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		return (_amount, _retained);
 	}
 
-	function _capTransferRewardAmount(address _token, uint256 _amount, uint256 _retained) internal view returns (uint256 _capped)
+	function _capTransferAmount(address _token, uint256 _amount, uint256 _retained) internal view returns (uint256 _capped)
 	{
 		if (_token == rewardToken) {
 			_amount = _amount.sub(_retained);
