@@ -69,7 +69,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 		return _getPendingReward();
 	}
 
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp(uint256 _minDepositAmount) external onlyEOAorWhitelist nonReentrant
 	{
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
@@ -84,6 +84,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
+		require(_totalBalance >= _minDepositAmount, "high slippage");
 		_deposit(_totalBalance);
 		uint256 _totalReward = Transfers._getBalance(rewardToken);
 		Transfers._pushFunds(rewardToken, buyback, _totalReward);

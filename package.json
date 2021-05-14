@@ -23,7 +23,7 @@
     "deploy:bsctest": "npm run set:bsctest && truffle migrate --network bsctest",
     "set:bscmain": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Bscmain/g' contracts/network/$.sol",
     "set:bsctest": "sed -i 's/NETWORK = Network[^;]*/NETWORK = Network.Bsctest/g' contracts/network/$.sol",
-    "source": "truffle-flattener contracts/Deployer.sol | sed '/^.*SPDX-License-Identifier:.*$/d' | sed '1s/^/\\/\\/ SPDX-License-Identifier: GPL-3.0-only\\n\\n/' > WHEAT.sol",
+    "source": "truffle-flattener contracts/Deployer.sol | sed '/^.*SPDX-License-Identifier:.*$/d' | sed '1s/^/\\/\\/ SPDX-License-Identifier: GPL-3.0-only\\n\\n/' > Contracts.sol",
     "test": "truffle test",
     "test:bscmain": "GAS_LIMIT=30000000 npm run set:bscmain && truffle test",
     "test:bsctest": "GAS_LIMIT=30000000 npm run set:bsctest && truffle test"
