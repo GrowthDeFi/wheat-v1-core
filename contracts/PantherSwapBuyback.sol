@@ -28,6 +28,8 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 	uint256 public rewardBuyback1Share = DEFAULT_REWARD_BUYBACK1_SHARE;
 	uint256 public rewardBuyback2Share = DEFAULT_REWARD_BUYBACK2_SHARE;
 
+	uint256 public lastGulpTime;
+
 	constructor (address _rewardToken, address _buybackToken1, address _buybackToken2, address _treasury) public
 	{
 		rewardToken = _rewardToken;
@@ -67,6 +69,7 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 		require(_burning2 >= _minBurning2, "high slippage");
 		_burn(buybackToken1, _burning1);
 		_burn(buybackToken2, _burning2);
+		lastGulpTime = now;
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
