@@ -27,9 +27,10 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	address public immutable routingToken;
 	address public immutable reserveToken;
 
-	address public dev;
+	// dev/buyback made private to fit contract size
+	address private dev;
 	address public treasury;
-	address public buyback;
+	address private buyback;
 
 	address public exchange;
 
