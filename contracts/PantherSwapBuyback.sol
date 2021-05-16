@@ -9,6 +9,8 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
+import { PantherToken } from "./interop/PantherSwap.sol";
+
 contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
@@ -49,6 +51,7 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		(_amount1, _amount2) = _capSplitAmount(_amount1, _amount2);
 		_burning1 = IExchange(exchange).calcConversionFromInput(rewardToken, buybackToken1, _amount1);
 		_burning2 = IExchange(exchange).calcConversionFromInput(rewardToken, buybackToken2, _amount2);
 		return (_burning1, _burning2);
@@ -60,6 +63,7 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		(_amount1, _amount2) = _capSplitAmount(_amount1, _amount2);
 		Transfers._approveFunds(rewardToken, exchange, _amount1 + _amount2);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
@@ -106,6 +110,23 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _newRewardBuyback1Share, _newRewardBuyback2Share);
 	}
 
+	function _capSplitAmount(uint256 _amount1, uint256 _amount2) internal view returns (uint256 _capped1, uint256 _capped2)
+	{
+		uint256 _limit = _calcMaxRewardTransferAmount();
+		if (_amount1 > _amount2) {
+			if (_amount1 > _limit) {
+				_amount2 = _amount2.mul(_limit) / _amount1;
+				_amount1 = _limit;
+			}
+		} else {
+			if (_amount2 > _limit) {
+				_amount1 = _amount1.mul(_limit) / _amount2;
+				_amount2 = _limit;
+			}
+		}
+		return (_amount1, _amount2);
+	}
+
 	function _burn(address _token, uint256 _amount) internal
 	{
 		Transfers._pushFunds(_token, FURNACE, _amount);
@@ -114,6 +135,11 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 	function _send(address _token, address _to, uint256 _amount) internal
 	{
 		Transfers._pushFunds(_token, _to, _amount);
+	}
+
+	function _calcMaxRewardTransferAmount() internal view returns (uint256 _maxRewardTransferAmount)
+	{
+		return PantherToken(rewardToken).maxTransferAmount();
 	}
 
 	event ChangeExchange(address _oldExchange, address _newExchange);
