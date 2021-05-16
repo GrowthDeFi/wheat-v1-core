@@ -34,7 +34,8 @@ contract PancakeSwapBuyback is ReentrancyGuard, WhitelistGuard
 
 	uint256 public lastGulpTime;
 
-	constructor (address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2, address _treasury, address _yield) public
+	constructor (address _rewardToken, address _routingToken, address _buybackToken1, address _buybackToken2,
+		address _treasury, address _yield, address _exchange) public
 	{
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
@@ -42,6 +43,7 @@ contract PancakeSwapBuyback is ReentrancyGuard, WhitelistGuard
 		buybackToken2 = _buybackToken2;
 		treasury = _treasury;
 		yield = _yield;
+		exchange = _exchange;
 	}
 
 	function pendingBuyback() external view returns (uint256 _buybackAmount)
