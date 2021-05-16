@@ -32,12 +32,13 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 
 	uint256 public lastGulpTime;
 
-	constructor (address _rewardToken, address _buybackToken1, address _buybackToken2, address _treasury) public
+	constructor (address _rewardToken, address _buybackToken1, address _buybackToken2, address _treasury, address _exchange) public
 	{
 		rewardToken = _rewardToken;
 		buybackToken1 = _buybackToken1;
 		buybackToken2 = _buybackToken2;
 		treasury = _treasury;
+		exchange = _exchange;
 	}
 
 	function pendingBuyback() external view returns (uint256 _buybackAmount)
