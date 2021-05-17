@@ -8,7 +8,7 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
-contract FeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
+contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 {
 	address public immutable sourceToken;
 	address public immutable targetToken;
