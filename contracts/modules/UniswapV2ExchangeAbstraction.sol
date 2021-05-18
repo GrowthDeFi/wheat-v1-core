@@ -26,7 +26,11 @@ library UniswapV2ExchangeAbstraction
 		address _WBNB = Router02(_router).WETH();
 		address[] memory _path = _buildPath(_from, _WBNB, _to);
 		Transfers._approveFunds(_from, _router, _inputAmount);
-		return Router02(_router).swapExactTokensForTokens(_inputAmount, _minOutputAmount, _path, address(this), uint256(-1))[_path.length - 1];
+		uint256 _oldBalance = Transfers._getBalance(_path[_path.length - 1]);
+		Router02(_router).swapExactTokensForTokensSupportingFeeOnTransferTokens(_inputAmount, _minOutputAmount, _path, address(this), uint256(-1));
+		uint256 _newBalance = Transfers._getBalance(_path[_path.length - 1]);
+		assert(_newBalance >= _oldBalance);
+		return _newBalance - _oldBalance;
 	}
 
 	function _convertFundsFromOutput(address _router, address _from, address _to, uint256 _outputAmount, uint256 _maxInputAmount) internal returns (uint256 _inputAmount)
