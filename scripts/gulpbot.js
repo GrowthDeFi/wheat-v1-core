@@ -391,7 +391,7 @@ const ACTIVE_PIDS = [
   5,
   // 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
   33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-  // 48, 49, 50, 51
+  48, 49, 50, 51
 ];
 const MONITORING_INTERVAL = 15; // 15 seconds
 const DEFAULT_GULP_INTERVAL = 12 * 60 * 60; // 12 hours
@@ -451,13 +451,13 @@ const GULP_INTERVAL = {
   // 47 - stkBUSD/BTCBv2
   '0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352': 24 * 60 * 60, // 24 hours
   // 48 - stkbeltBNBv2
-  '0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A': 24 * 60 * 60, // 24 hours
+  '0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A': 48 * 60 * 60, // 48 hours
   // 49 - stkbeltBTCv2
-  '0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62': 24 * 60 * 60, // 24 hours
+  '0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62': 48 * 60 * 60, // 48 hours
   // 50 - stkbeltETHv2
-  '0xE70aA236f2c2dABC346e193F606986Bb843bA3d9': 24 * 60 * 60, // 24 hours
+  '0xE70aA236f2c2dABC346e193F606986Bb843bA3d9': 48 * 60 * 60, // 48 hours
   // 51 - stk4BELTv2
-  '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB': 24 * 60 * 60, // 24 hours
+  '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB': 48 * 60 * 60, // 48 hours
   // CAKE collector
   '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36': 6 * 60 * 60, // 6 hours
   // AUTO/CAKE collector adapter
