@@ -100,16 +100,16 @@ To be published later (AUTO based):
 
 To be published later (PANTHER based):
 
-| WHEAT pid | Token                                                                                    | PANTHER pid | Routing Token |
-| ----------| ---------------------------------------------------------------------------------------- | ----------- | ------------- |
-| -         | [stkBNB/BUSDv2](https://bscscan.com/address/0x4046492479a5bA18c2a947A1db75f4f1ef227BF1)  | 18          | BNB           |
-| -         | [stkBNB/BTCBv2](https://bscscan.com/address/)                                            | 19          | BNB           |
-| -         | [stkBNB/ETHv2](https://bscscan.com/address/)                                             | 20          | BNB           |
-| -         | [stkBNB/CAKEv2](https://bscscan.com/address/)                                            | 23          | BNB           |
-| -         | [stkBUSD/USDCv2](https://bscscan.com/address/)                                           | 24          | BNB           |
-| -         | [stkPANTHERv2](https://bscscan.com/address/)                                             | 9           | PANTHER       |
-| -         | [stkBNB/PANTHERv2](https://bscscan.com/address/)                                         | 17          | PANTHER       |
-| -         | [stkBUSD/PANTHERv2](https://bscscan.com/address/)                                        | 16          | PANTHER       |
+| WHEAT pid | Token                                                                                      | PANTHER pid | Routing Token |
+| ----------| ------------------------------------------------------------------------------------------ | ----------- | ------------- |
+| -         | [stkBNB/BUSDv2](https://bscscan.com/address/0x4046492479a5bA18c2a947A1db75f4f1ef227BF1)    | 18          | BNB           |
+| -         | [stkBNB/BTCBv2](https://bscscan.com/address/)                                              | 19          | BNB           |
+| -         | [stkBNB/ETHv2](https://bscscan.com/address/)                                               | 20          | BNB           |
+| -         | [stkBNB/CAKEv2](https://bscscan.com/address/)                                              | 23          | BNB           |
+| -         | [stkBUSD/USDCv2](https://bscscan.com/address/)                                             | 24          | BNB           |
+| -         | [stkPANTHERv2](https://bscscan.com/address/0x0C790e0A7e7FDbcF0Bcc15563243149513231b70)     | 9           | PANTHER       |
+| -         | [stkBNB/PANTHERv2](https://bscscan.com/address/0x358582CEeeB0F008495C06206973F5F6e495accd) | 17          | PANTHER       |
+| -         | [stkBUSD/PANTHERv2](https://bscscan.com/address/)                                          | 16          | PANTHER       |
 
 -->
 
