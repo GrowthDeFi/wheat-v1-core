@@ -174,6 +174,7 @@ const STRATEGY_ABI = require('../build/contracts/RewardCompoundingStrategyToken.
 const COLLECTOR_ADAPTER_ABI = require('../build/contracts/AutoFarmFeeCollectorAdapter.json').abi;
 const COLLECTOR_ABI = require('../build/contracts/FeeCollector.json').abi;
 const BUYBACK_ABI = require('../build/contracts/Buyback.json').abi;
+const UNIVERSAL_BUYBACK_ABI = require('../build/contracts/UniversalBuyback.json').abi;
 
 const MASTERCHEF_ADDRESS = {
   'bscmain': '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448',
@@ -337,6 +338,19 @@ async function pendingTarget(privateKey, network, address, agent = null) {
   }
 }
 
+async function pendingBurning(privateKey, network, address, agent = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = UNIVERSAL_BUYBACK_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (agent === null) [agent] = web3.currentProvider.getAddresses();
+  try {
+    const { _burning1, _burning2 } = await contract.methods.pendingBurning().call();
+    return [_burning1, _burning2];
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
 async function gulp0(privateKey, network, address, nonce) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
@@ -367,6 +381,26 @@ async function gulp1(privateKey, network, address, nonce) {
     const estimatedGas = await contract.methods.gulp('1').estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
     await contract.methods.gulp('1').send({ from, nonce, gas })
+      .on('transactionHash', (hash) => {
+        txId = hash;
+      });
+  } catch (e) {
+    throw new Error(e.message);
+  }
+  if (txId === null) throw new Error('Failure reading txId');
+  return txId;
+}
+
+async function gulp2(privateKey, network, address, nonce) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = UNIVERSAL_BUYBACK_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  const [from] = web3.currentProvider.getAddresses();
+  let txId = null;
+  try {
+    const estimatedGas = await contract.methods.gulp('1', '1').estimateGas({ from, nonce });
+    const gas = 2 * estimatedGas;
+    await contract.methods.gulp('1', '1').send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
       });
@@ -507,7 +541,7 @@ const GULP_INTERVAL = {
 
   // PANTHER buyback adapter
   '0x495089390569d47807F1Db83F14e053002DB25b4': 48 * 60 * 60, // 48 hours
-  // Universal
+  // Universal buyback
   '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE': 48 * 60 * 60, // 48 hours
 };
 
@@ -557,7 +591,8 @@ async function safeGulp(privateKey, network, address) {
   const nonce = await getNonce(privateKey, network);
   try {
     try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch { }
-    const txId = await gulp1(privateKey, network, address, nonce);
+    try { const txId = await gulp1(privateKey, network, address, nonce); return txId; } catch { }
+    const txId = await gulp2(privateKey, network, address, nonce);
     return txId;
   } finally {
     lastGulp[address] = now;
@@ -578,13 +613,171 @@ async function listContracts(privateKey, network) {
 }
 
 async function gulpAll(privateKey, network) {
-  for (const address of Object.keys(GULP_INTERVAL)) {
-    const tx = await safeGulp(privateKey, network, address);
-    if (tx !== null) {
-      const name = await getTokenSymbol(privateKey, network, address);
-      return { name, type: 'Contract', address, tx };
+
+  {
+    // 5 - stkCAKE
+    const address = '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C';
+    const amount = await pendingReward(privateKey, network, address);
+    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
+      const tx = await safeGulp(privateKey, network, address);
+      if (tx !== null) {
+        const name = await getTokenSymbol(privateKey, network, address);
+        return { name, type: 'PancakeStrategy', address, tx };
+      }
     }
   }
+
+  {
+    // AUTO strategies
+    const addresses = [
+      // 33 - stkBNB/CAKEv2
+      '0x86c15Efe94320Cd139eA4875b7ceF336e1F91f16',
+      // 34 - stkBNB/BUSDv2
+      '0xd5ffd8318b1c82FDE321f7BC1a553462A13A2E14',
+      // 35 - stkBNB/USDTv2
+      '0x7259CeBc6D8f84afdce4B81a3a33D53A526521F8',
+      // 36 - stkBNB/BTCBv2
+      '0x074fD0f3289cF3F5E0E80c969F62B21cB38Ad3b5',
+      // 37 - stkBNB/ETHv2
+      '0x15B310c8D9d0Ac9aefB94BF492e7eAbC43B4f93e',
+      // 38 - stkBUSD/USDTv2
+      '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f',
+      // 39 - stkBUSD/VAIv2
+      '0xC8daDd57BD9342b7ba9449B952DBE11B4f3D1648',
+      // 40 - stkBNB/DOTv2
+      '0x5C96941B28B824c3E9d01E5cb2D77B3f7801560e',
+      // 41 - stkBNB/LINKv2
+      '0x501382584a3DBF1471918Cd4ee0fd3bE23FfDF29',
+      // 42 - stkBNB/UNIv2
+      '0x0900a05910E7d4811f9FC17843120D6412df2968',
+      // 43 - stkBNB/DODOv2
+      '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875',
+      // 44 - stkBNB/ALPHAv2
+      '0x6C6d105066462EE9b5Cfc7628e2edB1000e887F1',
+      // 45 - stkBNB/ADAv2
+      '0x73099318dfBB1C59e473322F29C215132A14Ab86',
+      // 46 - stkBUSD/USTv2
+      '0xB2b5dba919Da2E06d6cDd15dF17bA4b99D3eB1bD',
+      // 47 - stkBUSD/BTCBv2
+      '0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352',
+      // 48 - stkbeltBNBv2
+      '0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A',
+      // 49 - stkbeltBTCv2
+      '0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62',
+      // 50 - stkbeltETHv2
+      '0xE70aA236f2c2dABC346e193F606986Bb843bA3d9',
+      // 51 - stk4BELTv2
+      '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB',
+    ];
+    for (const address of addresses) {
+      const amount = await pendingPerformanceFee(privateKey, network, address);
+      if (BigInt(amount) > 0n) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          const name = await getTokenSymbol(privateKey, network, address);
+          return { name, type: 'AutoFarmStrategy', address, tx };
+        }
+      }
+    }
+  }
+
+  {
+    // PANTHER strategies
+    const addresses = [
+      // - stkBNB/BUSDv2
+      // '0x4046492479a5bA18c2a947A1db75f4f1ef227BF1',
+      // - stkBNB/BTCBv2
+      // '0xc1d3F1dB60DE17afD7770464BAb05c58129d7Ee0',
+      // - stkBNB/ETHv2
+      '0x9C009595F330CA8070e78b889183e7b8a96cB962',
+      // - stkBNB/CAKEv2
+      // '0x1f48dCbCE7fC91180492a7b083472924b4e8a44b',
+      // - stkBUSD/USDCv2
+      // '0xd802621F65Bd96D76e84E49EecdED49C5acb105d',
+      // - stkBNB/USDTv2
+      // '0xE0327dA3f94Efe600569Ca68Aa02e6921FD89Bfa',
+      // - stkBNB/PANTHERv2
+      '0x358582CEeeB0F008495C06206973F5F6e495accd',
+      // - stkBUSD/PANTHERv2
+      '0x1A51686Fb42861AA7E38c1CF8868877F43F82aA4',
+    ];
+    for (const address of addresses) {
+      const amount = await pendingPerformanceFee(privateKey, network, address);
+      if (BigInt(amount) > 0n) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          const name = await getTokenSymbol(privateKey, network, address);
+          return { name, type: 'PantherStrategy', address, tx };
+        }
+      }
+    }
+  }
+
+  {
+    // CAKE collector
+    const address = '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36';
+    const amount = await pendingReward(privateKey, network, address);
+    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
+      const tx = await safeGulp(privateKey, network, address);
+      if (tx !== null) {
+        const name = await getTokenSymbol(privateKey, network, address);
+        return { name, type: 'PancakeCollector', address, tx };
+      }
+    }
+  }
+
+  {
+    // AUTO/CAKE collector adapter
+    const address = '0x626E98ef225A6f79523C9004E8731B793dfd0F68';
+    const amount = await pendingSource(privateKey, network, address);
+    if (BigInt(amount) > 100000000000000000n) { // 0.1 AUTO
+      const tx = await safeGulp(privateKey, network, address);
+      if (tx !== null) {
+        const name = await getTokenSymbol(privateKey, network, address);
+        return { name, type: 'AutoFarmCollectorAdapter', address, tx };
+      }
+    }
+  }
+
+  {
+    // CAKE buyback
+    const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
+    const amount = await pendingBuyback(privateKey, network, address);
+    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
+      const tx = await safeGulp(privateKey, network, address);
+      if (tx !== null) {
+        const name = await getTokenSymbol(privateKey, network, address);
+        return { name, type: 'PancakeBuyback', address, tx };
+      }
+    }
+  }
+
+  {
+    // PANTHER buyback adapter
+    const address = '0x495089390569d47807F1Db83F14e053002DB25b4';
+    const amount = await pendingSource(privateKey, network, address);
+    if (BigInt(amount) > 400000000000000000000n) { // 400 PANTHER
+      const tx = await safeGulp(privateKey, network, address);
+      if (tx !== null) {
+        const name = await getTokenSymbol(privateKey, network, address);
+        return { name, type: 'PantherBuybackAdapter', address, tx };
+      }
+    }
+  }
+
+  {
+    // universal buyback
+    const address = '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE';
+    const [amount1, amount2] = await pendingBurning(privateKey, network, address);
+    if (BigInt(amount1) > 0n && BigInt(amount2) > 0n) {
+      const tx = await safeGulp(privateKey, network, address);
+      if (tx !== null) {
+        const name = await getTokenSymbol(privateKey, network, address);
+        return { name, type: 'UniversalBuyback', address, tx };
+      }
+    }
+  }
+
   return false;
 
 /*
