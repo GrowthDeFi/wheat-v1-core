@@ -364,9 +364,9 @@ async function gulp1(privateKey, network, address, nonce) {
   const [from] = web3.currentProvider.getAddresses();
   let txId = null;
   try {
-    const estimatedGas = await contract.methods.gulp('0').estimateGas({ from, nonce });
+    const estimatedGas = await contract.methods.gulp('1').estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
-    await contract.methods.gulp('0').send({ from, nonce, gas })
+    await contract.methods.gulp('1').send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
       });
