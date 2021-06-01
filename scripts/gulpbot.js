@@ -171,7 +171,7 @@ async function sendTelegramMessage(message, key = '') {
 const IERC20_ABI = require('../build/contracts/IERC20.json').abi;
 const MASTERCHEF_ABI = require('../build/contracts/CustomMasterChef.json').abi;
 const STRATEGY_ABI = require('../build/contracts/RewardCompoundingStrategyToken.json').abi;
-const COLLECTOR_ADAPTER_ABI = require('../build/contracts/FeeCollectorAdapter.json').abi;
+const COLLECTOR_ADAPTER_ABI = require('../build/contracts/AutoFarmFeeCollectorAdapter.json').abi;
 const COLLECTOR_ABI = require('../build/contracts/FeeCollector.json').abi;
 const BUYBACK_ABI = require('../build/contracts/Buyback.json').abi;
 
@@ -337,7 +337,7 @@ async function pendingTarget(privateKey, network, address, agent = null) {
   }
 }
 
-async function gulp(privateKey, network, address, nonce) {
+async function gulp0(privateKey, network, address, nonce) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
@@ -347,6 +347,26 @@ async function gulp(privateKey, network, address, nonce) {
     const estimatedGas = await contract.methods.gulp().estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
     await contract.methods.gulp().send({ from, nonce, gas })
+      .on('transactionHash', (hash) => {
+        txId = hash;
+      });
+  } catch (e) {
+    throw new Error(e.message);
+  }
+  if (txId === null) throw new Error('Failure reading txId');
+  return txId;
+}
+
+async function gulp1(privateKey, network, address, nonce) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = COLLECTOR_ADAPTER_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  const [from] = web3.currentProvider.getAddresses();
+  let txId = null;
+  try {
+    const estimatedGas = await contract.methods.gulp('0').estimateGas({ from, nonce });
+    const gas = 2 * estimatedGas;
+    await contract.methods.gulp('0').send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
       });
@@ -398,6 +418,7 @@ const DEFAULT_GULP_INTERVAL = 12 * 60 * 60; // 12 hours
 const GULP_INTERVAL = {
   // 5 - stkCAKE
   '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 24 * 60 * 60, // 24 hours
+
   // 18 - stkBNB/CAKE
   // '0x4291474e88E2fEE6eC5B8c28F4Ed2075cEf5B803': 12 * 60 * 60, // 12 hours
   // 19 - stkBNB/BUSD
@@ -420,6 +441,7 @@ const GULP_INTERVAL = {
   // '0x691e486b5F7E39e90d37485164fAbDDd93aE43cD': 24 * 60 * 60, // 24 hours
   // 28 - stkBUSD/USDC
   // '0xae35A19F1DAc62AD3794773D5f0983f05073D0f2': 24 * 60 * 60, // 24 hours
+
   // 33 - stkBNB/CAKEv2
   '0x86c15Efe94320Cd139eA4875b7ceF336e1F91f16': 36 * 60 * 60, // 36 hours
   // 34 - stkBNB/BUSDv2
@@ -458,12 +480,35 @@ const GULP_INTERVAL = {
   '0xE70aA236f2c2dABC346e193F606986Bb843bA3d9': 48 * 60 * 60, // 48 hours
   // 51 - stk4BELTv2
   '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB': 48 * 60 * 60, // 48 hours
+
+  // - stkBNB/BUSDv2
+  '0x4046492479a5bA18c2a947A1db75f4f1ef227BF1': 48 * 60 * 60, // 48 hours
+  // - stkBNB/BTCBv2
+  '0xc1d3F1dB60DE17afD7770464BAb05c58129d7Ee0': 48 * 60 * 60, // 48 hours
+  // - stkBNB/ETHv2
+  '0x9C009595F330CA8070e78b889183e7b8a96cB962': 48 * 60 * 60, // 48 hours
+  // - stkBNB/CAKEv2
+  '0x1f48dCbCE7fC91180492a7b083472924b4e8a44b': 48 * 60 * 60, // 48 hours
+  // - stkBUSD/USDCv2
+  '0xd802621F65Bd96D76e84E49EecdED49C5acb105d': 48 * 60 * 60, // 48 hours
+  // - stkBNB/USDTv2
+  '0xE0327dA3f94Efe600569Ca68Aa02e6921FD89Bfa': 48 * 60 * 60, // 48 hours
+  // - stkBNB/PANTHERv2
+  '0x358582CEeeB0F008495C06206973F5F6e495accd': 48 * 60 * 60, // 48 hours
+  // - stkBUSD/PANTHERv2
+  '0x1A51686Fb42861AA7E38c1CF8868877F43F82aA4': 48 * 60 * 60, // 48 hours
+
   // CAKE collector
   '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36': 24 * 60 * 60, // 24 hours
   // AUTO/CAKE collector adapter
   '0x626E98ef225A6f79523C9004E8731B793dfd0F68': 48 * 60 * 60, // 48 hours
   // CAKE buyback
   '0xC351706C3212D45fc24F6B89e686f07fAb048b16': 24 * 60 * 60, // 24 hours
+
+  // PANTHER buyback adapter
+  '0x495089390569d47807F1Db83F14e053002DB25b4': 48 * 60 * 60, // 48 hours
+  // Universal
+  '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE': 48 * 60 * 60, // 48 hours
 };
 
 const strategyCache = {};
@@ -511,7 +556,8 @@ async function safeGulp(privateKey, network, address) {
   if (ellapsed < interval) return null;
   const nonce = await getNonce(privateKey, network);
   try {
-    const txId = await gulp(privateKey, network, address, nonce);
+    try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch { }
+    const txId = await gulp1(privateKey, network, address, nonce);
     return txId;
   } finally {
     lastGulp[address] = now;
@@ -532,6 +578,16 @@ async function listContracts(privateKey, network) {
 }
 
 async function gulpAll(privateKey, network) {
+  for (const address of Object.keys(GULP_INTERVAL)) {
+    const tx = await safeGulp(privateKey, network, strategy);
+    if (tx !== null) {
+      const name = await getTokenSymbol(privateKey, network, strategy);
+      return { name, type: 'Contract', address, tx };
+    }
+  }
+  return false;
+
+/*
   const length = await poolLength(privateKey, network);
 
   for (let pid = 0; pid < length; pid++) {
@@ -602,6 +658,7 @@ async function gulpAll(privateKey, network) {
   }
 
   return false;
+*/
 }
 
 async function main(args) {
