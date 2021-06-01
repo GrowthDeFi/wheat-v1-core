@@ -579,9 +579,9 @@ async function listContracts(privateKey, network) {
 
 async function gulpAll(privateKey, network) {
   for (const address of Object.keys(GULP_INTERVAL)) {
-    const tx = await safeGulp(privateKey, network, strategy);
+    const tx = await safeGulp(privateKey, network, address);
     if (tx !== null) {
-      const name = await getTokenSymbol(privateKey, network, strategy);
+      const name = await getTokenSymbol(privateKey, network, address);
       return { name, type: 'Contract', address, tx };
     }
   }
