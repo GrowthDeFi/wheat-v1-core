@@ -364,10 +364,10 @@ async function gulp0(privateKey, network, address, nonce) {
       .on('transactionHash', (hash) => {
         txId = hash;
       });
-    if (txId === null) throw new Error('Failure reading txId');
   } catch (e) {
-    throw new Error(e.message + ' [' + address + ']');
+    throw new Error(e.message);
   }
+  if (txId === null) throw new Error('Failure reading txId');
   return txId;
 }
 
@@ -384,10 +384,10 @@ async function gulp1(privateKey, network, address, amount, nonce) {
       .on('transactionHash', (hash) => {
         txId = hash;
       });
-    if (txId === null) throw new Error('Failure reading txId');
   } catch (e) {
-    throw new Error(e.message + ' [' + address + ']');
+    throw new Error(e.message);
   }
+  if (txId === null) throw new Error('Failure reading txId');
   return txId;
 }
 
@@ -404,10 +404,10 @@ async function gulp2(privateKey, network, address, amount1, amount2, nonce) {
       .on('transactionHash', (hash) => {
         txId = hash;
       });
-    if (txId === null) throw new Error('Failure reading txId');
   } catch (e) {
-    throw new Error(e.message + ' [' + address + ']');
+    throw new Error(e.message);
   }
+  if (txId === null) throw new Error('Failure reading txId');
   return txId;
 }
 
@@ -590,9 +590,11 @@ async function safeGulp(privateKey, network, address) {
   if (ellapsed < interval) return null;
   const nonce = await getNonce(privateKey, network);
   try {
-    try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch { }
-    try { const txId = await gulp1(privateKey, network, address, '1', nonce); return txId; } catch { }
-    const txId = await gulp2(privateKey, network, address, '1', '1', nonce); return txId;
+    let messages = [];
+    try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await gulp1(privateKey, network, address, '0', nonce); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await gulp2(privateKey, network, address, '0', '0', nonce); return txId; } catch (e) { messages.push(e.message); }
+    throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
     writeLastGulp();
