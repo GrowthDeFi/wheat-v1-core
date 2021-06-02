@@ -364,50 +364,50 @@ async function gulp0(privateKey, network, address, nonce) {
       .on('transactionHash', (hash) => {
         txId = hash;
       });
+    if (txId === null) throw new Error('Failure reading txId');
   } catch (e) {
-    throw new Error(e.message);
+    throw new Error(e.message + ' [' + address + ']');
   }
-  if (txId === null) throw new Error('Failure reading txId');
   return txId;
 }
 
-async function gulp1(privateKey, network, address, nonce) {
+async function gulp1(privateKey, network, address, amount, nonce) {
   const web3 = getWeb3(privateKey, network);
   const abi = COLLECTOR_ADAPTER_ABI;
   const contract = new web3.eth.Contract(abi, address);
   const [from] = web3.currentProvider.getAddresses();
   let txId = null;
   try {
-    const estimatedGas = await contract.methods.gulp('1').estimateGas({ from, nonce });
+    const estimatedGas = await contract.methods.gulp(amount).estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
-    await contract.methods.gulp('1').send({ from, nonce, gas })
+    await contract.methods.gulp(amount).send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
       });
+    if (txId === null) throw new Error('Failure reading txId');
   } catch (e) {
-    throw new Error(e.message);
+    throw new Error(e.message + ' [' + address + ']');
   }
-  if (txId === null) throw new Error('Failure reading txId');
   return txId;
 }
 
-async function gulp2(privateKey, network, address, nonce) {
+async function gulp2(privateKey, network, address, amount1, amount2, nonce) {
   const web3 = getWeb3(privateKey, network);
   const abi = UNIVERSAL_BUYBACK_ABI;
   const contract = new web3.eth.Contract(abi, address);
   const [from] = web3.currentProvider.getAddresses();
   let txId = null;
   try {
-    const estimatedGas = await contract.methods.gulp('1', '1').estimateGas({ from, nonce });
+    const estimatedGas = await contract.methods.gulp(amount1, amount2).estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
-    await contract.methods.gulp('1', '1').send({ from, nonce, gas })
+    await contract.methods.gulp(amount1, amount2).send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
       });
+    if (txId === null) throw new Error('Failure reading txId');
   } catch (e) {
-    throw new Error(e.message);
+    throw new Error(e.message + ' [' + address + ']');
   }
-  if (txId === null) throw new Error('Failure reading txId');
   return txId;
 }
 
@@ -591,9 +591,8 @@ async function safeGulp(privateKey, network, address) {
   const nonce = await getNonce(privateKey, network);
   try {
     try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch { }
-    try { const txId = await gulp1(privateKey, network, address, nonce); return txId; } catch { }
-    const txId = await gulp2(privateKey, network, address, nonce);
-    return txId;
+    try { const txId = await gulp1(privateKey, network, address, '1', nonce); return txId; } catch { }
+    const txId = await gulp2(privateKey, network, address, '1', '1', nonce); return txId;
   } finally {
     lastGulp[address] = now;
     writeLastGulp();
