@@ -721,8 +721,7 @@ async function gulpAll(privateKey, network) {
     if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
-        const name = await getTokenSymbol(privateKey, network, address);
-        return { name, type: 'PancakeCollector', address, tx };
+        return { name: 'CAKE', type: 'PancakeCollector', address, tx };
       }
     }
   }
@@ -734,8 +733,7 @@ async function gulpAll(privateKey, network) {
     if (BigInt(amount) > 100000000000000000n) { // 0.1 AUTO
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
-        const name = await getTokenSymbol(privateKey, network, address);
-        return { name, type: 'AutoFarmCollectorAdapter', address, tx };
+        return { name: 'AUTO/CAKE', type: 'AutoFarmCollectorAdapter', address, tx };
       }
     }
   }
@@ -747,8 +745,7 @@ async function gulpAll(privateKey, network) {
     if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
-        const name = await getTokenSymbol(privateKey, network, address);
-        return { name, type: 'PancakeBuyback', address, tx };
+        return { name: 'CAKE', type: 'PancakeBuyback', address, tx };
       }
     }
   }
@@ -760,8 +757,7 @@ async function gulpAll(privateKey, network) {
     if (BigInt(amount) > 400000000000000000000n) { // 400 PANTHER
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
-        const name = await getTokenSymbol(privateKey, network, address);
-        return { name, type: 'PantherBuybackAdapter', address, tx };
+        return { name: 'PANTHER/BNB', type: 'PantherBuybackAdapter', address, tx };
       }
     }
   }
@@ -773,8 +769,7 @@ async function gulpAll(privateKey, network) {
     if (BigInt(amount1) > 0n && BigInt(amount2) > 0n) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
-        const name = await getTokenSymbol(privateKey, network, address);
-        return { name, type: 'UniversalBuyback', address, tx };
+        return { name: 'BNB', type: 'UniversalBuyback', address, tx };
       }
     }
   }
