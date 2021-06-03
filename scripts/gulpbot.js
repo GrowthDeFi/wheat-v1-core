@@ -792,7 +792,7 @@ async function gulpAll(privateKey, network) {
     // universal buyback
     const address = '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE';
     const amount = await pendingBuyback(privateKey, network, address);
-    const MINIMUM_AMOUNT = 500000000000000000n; // 0.5 BNB
+    const MINIMUM_AMOUNT = 1000000000000000000n; // 1 BNB
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
