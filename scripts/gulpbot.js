@@ -247,6 +247,19 @@ async function pendingReward(privateKey, network, address, agent = null) {
   }
 }
 
+async function performanceFee(privateKey, network, address, agent = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = STRATEGY_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (agent === null) [agent] = web3.currentProvider.getAddresses();
+  try {
+    const amount = await contract.methods.performanceFee().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
 async function pendingPerformanceFee(privateKey, network, address, agent = null) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
@@ -448,6 +461,7 @@ const ACTIVE_PIDS = [
   48, 49, 50, 51
 ];
 const MONITORING_INTERVAL = 15; // 15 seconds
+/*
 const DEFAULT_GULP_INTERVAL = 12 * 60 * 60; // 12 hours
 const GULP_INTERVAL = {
   // 5 - stkCAKE
@@ -544,6 +558,7 @@ const GULP_INTERVAL = {
   // Universal buyback
   '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE': 48 * 60 * 60, // 48 hours
 };
+*/
 
 const strategyCache = {};
 
@@ -584,10 +599,12 @@ function writeLastGulp() {
 
 async function safeGulp(privateKey, network, address) {
   const now = Date.now();
+/*
   const timestamp = lastGulp[address] || 0;
   const ellapsed = (now - timestamp) / 1000;
   const interval = GULP_INTERVAL[address] || DEFAULT_GULP_INTERVAL;
   if (ellapsed < interval) return null;
+*/
   const nonce = await getNonce(privateKey, network);
   try {
     let messages = [];
@@ -619,7 +636,8 @@ async function gulpAll(privateKey, network) {
     // 5 - stkCAKE
     const address = '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C';
     const amount = await pendingReward(privateKey, network, address);
-    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
+    const MINIMUM_AMOUNT = 20000000000000000000n; // 20 CAKE
+    if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
         const name = await getTokenSymbol(privateKey, network, address);
@@ -671,8 +689,10 @@ async function gulpAll(privateKey, network) {
       '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB',
     ];
     for (const address of addresses) {
-      const amount = await pendingPerformanceFee(privateKey, network, address);
-      if (BigInt(amount) > 0n) {
+      const fee = await performanceFee(privateKey, network, address);
+      const feeAmount = await pendingPerformanceFee(privateKey, network, address);
+      const MINIMUM_AMOUNT = 100000000000000000n; // 0.1 AUTO
+      if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
           const name = await getTokenSymbol(privateKey, network, address);
@@ -686,25 +706,27 @@ async function gulpAll(privateKey, network) {
     // PANTHER strategies
     const addresses = [
       // - stkBNB/BUSDv2
-      // '0x4046492479a5bA18c2a947A1db75f4f1ef227BF1',
+      '0x4046492479a5bA18c2a947A1db75f4f1ef227BF1',
       // - stkBNB/BTCBv2
-      // '0xc1d3F1dB60DE17afD7770464BAb05c58129d7Ee0',
+      '0xc1d3F1dB60DE17afD7770464BAb05c58129d7Ee0',
       // - stkBNB/ETHv2
       '0x9C009595F330CA8070e78b889183e7b8a96cB962',
       // - stkBNB/CAKEv2
-      // '0x1f48dCbCE7fC91180492a7b083472924b4e8a44b',
+      '0x1f48dCbCE7fC91180492a7b083472924b4e8a44b',
       // - stkBUSD/USDCv2
-      // '0xd802621F65Bd96D76e84E49EecdED49C5acb105d',
+      '0xd802621F65Bd96D76e84E49EecdED49C5acb105d',
       // - stkBNB/USDTv2
-      // '0xE0327dA3f94Efe600569Ca68Aa02e6921FD89Bfa',
+      '0xE0327dA3f94Efe600569Ca68Aa02e6921FD89Bfa',
       // - stkBNB/PANTHERv2
       '0x358582CEeeB0F008495C06206973F5F6e495accd',
       // - stkBUSD/PANTHERv2
       '0x1A51686Fb42861AA7E38c1CF8868877F43F82aA4',
     ];
     for (const address of addresses) {
-      const amount = await pendingPerformanceFee(privateKey, network, address);
-      if (BigInt(amount) > 0n) {
+      const fee = await performanceFee(privateKey, network, address);
+      const feeAmount = await pendingPerformanceFee(privateKey, network, address);
+      const MINIMUM_AMOUNT = 400000000000000000000n; // 400 PANTHER
+      if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
           const name = await getTokenSymbol(privateKey, network, address);
@@ -718,7 +740,8 @@ async function gulpAll(privateKey, network) {
     // CAKE collector
     const address = '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36';
     const amount = await pendingReward(privateKey, network, address);
-    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
+    const MINIMUM_AMOUNT = 20000000000000000000n; // 20 CAKE
+    if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
         return { name: 'CAKE', type: 'PancakeCollector', address, tx };
@@ -730,7 +753,8 @@ async function gulpAll(privateKey, network) {
     // AUTO/CAKE collector adapter
     const address = '0x626E98ef225A6f79523C9004E8731B793dfd0F68';
     const amount = await pendingSource(privateKey, network, address);
-    if (BigInt(amount) > 100000000000000000n) { // 0.1 AUTO
+    const MINIMUM_AMOUNT = 100000000000000000n; // 0.1 AUTO
+    if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
         return { name: 'AUTO/CAKE', type: 'AutoFarmCollectorAdapter', address, tx };
@@ -742,7 +766,8 @@ async function gulpAll(privateKey, network) {
     // PANTHER buyback adapter
     const address = '0x495089390569d47807F1Db83F14e053002DB25b4';
     const amount = await pendingSource(privateKey, network, address);
-    if (BigInt(amount) > 400000000000000000000n) { // 400 PANTHER
+    const MINIMUM_AMOUNT = 400000000000000000000n; // 400 PANTHER
+    if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
         return { name: 'PANTHER/BNB', type: 'PantherBuybackAdapter', address, tx };
@@ -754,7 +779,8 @@ async function gulpAll(privateKey, network) {
     // CAKE buyback
     const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
     const amount = await pendingBuyback(privateKey, network, address);
-    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
+    const MINIMUM_AMOUNT = 20000000000000000000n; // 20 CAKE
+    if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
         return { name: 'CAKE', type: 'PancakeBuyback', address, tx };
@@ -766,7 +792,8 @@ async function gulpAll(privateKey, network) {
     // universal buyback
     const address = '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE';
     const amount = await pendingBuyback(privateKey, network, address);
-    if (BigInt(amount) > 500000000000000000n) { // 0.5 BNB
+    const MINIMUM_AMOUNT = 500000000000000000n; // 0.5 BNB
+    if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
         return { name: 'BNB', type: 'UniversalBuyback', address, tx };
