@@ -607,7 +607,7 @@ async function safeGulp(privateKey, network, address) {
 */
   const nonce = await getNonce(privateKey, network);
   try {
-    let messages = [];
+    let messages = [address];
     try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch (e) { messages.push(e.message); }
     try { const txId = await gulp1(privateKey, network, address, '0', nonce); return txId; } catch (e) { messages.push(e.message); }
     try { const txId = await gulp2(privateKey, network, address, '0', '0', nonce); return txId; } catch (e) { messages.push(e.message); }
