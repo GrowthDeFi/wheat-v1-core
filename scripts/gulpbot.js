@@ -739,18 +739,6 @@ async function gulpAll(privateKey, network) {
   }
 
   {
-    // CAKE buyback
-    const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
-    const amount = await pendingBuyback(privateKey, network, address);
-    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'CAKE', type: 'PancakeBuyback', address, tx };
-      }
-    }
-  }
-
-  {
     // PANTHER buyback adapter
     const address = '0x495089390569d47807F1Db83F14e053002DB25b4';
     const amount = await pendingSource(privateKey, network, address);
@@ -763,10 +751,22 @@ async function gulpAll(privateKey, network) {
   }
 
   {
+    // CAKE buyback
+    const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
+    const amount = await pendingBuyback(privateKey, network, address);
+    if (BigInt(amount) > 20000000000000000000n) { // 20 CAKE
+      const tx = await safeGulp(privateKey, network, address);
+      if (tx !== null) {
+        return { name: 'CAKE', type: 'PancakeBuyback', address, tx };
+      }
+    }
+  }
+
+  {
     // universal buyback
     const address = '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE';
-    const [amount1, amount2] = await pendingBurning(privateKey, network, address);
-    if (BigInt(amount1) > 0n && BigInt(amount2) > 0n) {
+    const amount = await pendingBuyback(privateKey, network, address);
+    if (BigInt(amount) > 500000000000000000n) { // 0.5 BNB
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
         return { name: 'BNB', type: 'UniversalBuyback', address, tx };
