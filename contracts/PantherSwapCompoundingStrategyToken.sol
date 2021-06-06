@@ -13,6 +13,17 @@ import { Transfers } from "./modules/Transfers.sol";
 import { PantherToken, PantherMasterChef } from "./interop/PantherSwap.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
+/**
+ * @notice This contract implements a compounding strategy for PantherSwap MasterChef.
+ *         It basically deposits and withdraws funds from MasterChef and collects the
+ *         reward token (PANTHER). The compounding happens by calling the gulp function;
+ *         it converts the reward into more funds which are further deposited into
+ *         MasterChef. A performance fee is deducted from the converted funds and sent
+ *         to the buyback contract. The implementation has to handle properly two
+ *         ERC-20 extensions of the PANTHER token: the transfer tax, deducted at every
+ *         transfer, and the max transfer limit, which will prevent large transfers from
+ *         occurring.
+ */
 contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
