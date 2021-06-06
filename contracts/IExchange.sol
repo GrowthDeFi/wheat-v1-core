@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+/**
+ * @notice Exchange contract iterface. Facilitated the conversion between assets
+ *         including liquidity pool shares.
+ */
 interface IExchange
 {
 	// view functions
