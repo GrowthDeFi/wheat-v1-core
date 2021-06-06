@@ -68,7 +68,11 @@ library UniswapV2LiquidityPoolAbstraction
 			address[] memory _path = new address[](2);
 			_path[0] = _token;
 			_path[1] = _otherToken;
-			_otherAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
+			uint256 _oldBalance = Transfers._getBalance(_otherToken);
+			Router02(_router).swapExactTokensForTokensSupportingFeeOnTransferTokens(_swapAmount, 1, _path, address(this), uint256(-1));
+			uint256 _newBalance = Transfers._getBalance(_otherToken);
+			assert(_newBalance >= _oldBalance);
+			_otherAmount = _newBalance - _oldBalance;
 		}
 		Transfers._approveFunds(_otherToken, _router, _otherAmount);
 		(,,_shares) = Router02(_router).addLiquidity(_token, _otherToken, _leftAmount, _otherAmount, 1, 1, address(this), uint256(-1));
@@ -91,7 +95,11 @@ library UniswapV2LiquidityPoolAbstraction
 			address[] memory _path = new address[](2);
 			_path[0] = _otherToken;
 			_path[1] = _token;
-			_additionalAmount = Router02(_router).swapExactTokensForTokens(_swapAmount, 1, _path, address(this), uint256(-1))[1];
+			uint256 _oldBalance = Transfers._getBalance(_token);
+			Router02(_router).swapExactTokensForTokensSupportingFeeOnTransferTokens(_swapAmount, 1, _path, address(this), uint256(-1));
+			uint256 _newBalance = Transfers._getBalance(_token);
+			assert(_newBalance >= _oldBalance);
+			_additionalAmount = _newBalance - _oldBalance;
 		}
 		_amount = _baseAmount.add(_additionalAmount);
 		require(_amount >= _minAmount, "high slippage");
