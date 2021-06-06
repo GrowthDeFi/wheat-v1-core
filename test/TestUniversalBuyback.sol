@@ -24,7 +24,7 @@ contract TestUniversalBuyback is Env
 
 		address TREASURY = 0x0d1d68C73b57a53B1DdCD287aCf4e66Ed745B759;
 		address _exchange = LibExchange.newExchange($.UniswapV2_Compatible_ROUTER02, TREASURY);
-		address _buyback = LibUniversalBuyback.newUniversalBuyback($.CAKE, $.WHEAT, $.GRO, TREASURY, _exchange));
+		address _buyback = LibUniversalBuyback.newUniversalBuyback($.CAKE, $.WHEAT, $.GRO, TREASURY, _exchange);
 
 		Transfers._pushFunds($.CAKE, _buyback, 20e18);
 
