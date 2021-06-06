@@ -8,8 +8,6 @@ const PantherSwapBuybackAdapter = artifacts.require('PantherSwapBuybackAdapter')
 const PantherSwapCompoundingStrategyToken = artifacts.require('PantherSwapCompoundingStrategyToken');
 
 module.exports = async (deployer, network, [account]) => {
-  if (network !== 'bscmain') return;
-
   const OWNER = '0xAD4E38B274720c1a6c7fB8B735C5FAD112DF9A13'; // GrowthDeFi admin multisig
   const TREASURY = '0x0d1d68C73b57a53B1DdCD287aCf4e66Ed745B759'; // GrowthDeFi treasury multisig
   const DEV = '0x7674D2a14076e8af53AC4ba9bBCf0c19FeBe8899'; // GrowthDeFi development fund wallet
