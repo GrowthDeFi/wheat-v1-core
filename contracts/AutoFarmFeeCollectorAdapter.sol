@@ -47,8 +47,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 
 	/**
 	 * @notice Allows for the beforehand calculation of the amount of
-	 *         source reward token to be converted on the next
-	 *         gulp call.
+	 *         source reward token to be converted on the next gulp call.
 	 * @return _totalSource The amount of the source reward token to be converted.
 	 */
 	function pendingSource() external view returns (uint256 _totalSource)
@@ -58,10 +57,9 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 
 	/**
 	 * @notice Allows for the beforehand calculation of the amount of
-	 *         target reward token to be converted on the next
-	 *         gulp call.
+	 *         target reward token to be converted on the next gulp call.
 	 * @return _totalTarget The expected amount of the target reward token
-	 *                      to be sent to collector after conversion.
+	 *                      to be sent to the fee collector after conversion.
 	 */
 	function pendingTarget() external view returns (uint256 _totalTarget)
 	{
