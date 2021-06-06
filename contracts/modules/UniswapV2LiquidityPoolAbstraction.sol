@@ -16,6 +16,15 @@ library UniswapV2LiquidityPoolAbstraction
 {
 	using SafeMath for uint256;
 
+	/**
+	 * @dev Estimates the number of LP shares to be received by a single
+	 *      asset deposit into a liquidity pool.
+	 * @param _router The router address.
+	 * @param _pair The liquidity pool address.
+	 * @param _token The ERC-20 token for the asset being deposited.
+	 * @param _amount The amount to be deposited.
+	 * @return _shares The expected number of LP shares to be received.
+	 */
 	function _calcJoinPoolFromInput(address _router, address _pair, address _token, uint256 _amount) internal view returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
@@ -34,6 +43,15 @@ library UniswapV2LiquidityPoolAbstraction
 		return _shares;
 	}
 
+	/**
+	 * @dev Estimates the amount of tokens to be received by a single
+	 *      asset withdrawal from a liquidity pool.
+	 * @param _router The router address.
+	 * @param _pair The liquidity pool address.
+	 * @param _token The ERC-20 token for the asset being withdrawn.
+	 * @param _shares The number of LP shares provided to the withdrawal.
+	 * @return _amount The expected amount to be received.
+	 */
 	function _calcExitPoolFromInput(address _router, address _pair, address _token, uint256 _shares) internal view returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
@@ -51,6 +69,15 @@ library UniswapV2LiquidityPoolAbstraction
 		return _amount;
 	}
 
+	/**
+	 * @dev Deposits a single asset into a liquidity pool.
+	 * @param _router The router address.
+	 * @param _pair The liquidity pool address.
+	 * @param _token The ERC-20 token for the asset being deposited.
+	 * @param _amount The amount to be deposited.
+	 * @param _minShares The minimum number of LP shares to be received.
+	 * @return _shares The actual number of LP shares received.
+	 */
 	function _joinPoolFromInput(address _router, address _pair, address _token, uint256 _amount, uint256 _minShares) internal returns (uint256 _shares)
 	{
 		if (_amount == 0) return 0;
@@ -80,6 +107,15 @@ library UniswapV2LiquidityPoolAbstraction
 		return _shares;
 	}
 
+	/**
+	 * @dev Withdraws a single asset from a liquidity pool.
+	 * @param _router The router address.
+	 * @param _pair The liquidity pool address.
+	 * @param _token The ERC-20 token for the asset being withdrawn.
+	 * @param _shares The number of LP shares provided to the withdrawal.
+	 * @param _minAmount The minimum amount to be received.
+	 * @return _amount The actual amount received.
+	 */
 	function _exitPoolFromInput(address _router, address _pair, address _token, uint256 _shares, uint256 _minAmount) internal returns (uint256 _amount)
 	{
 		if (_shares == 0) return 0;
@@ -106,6 +142,10 @@ library UniswapV2LiquidityPoolAbstraction
 		return _amount;
 	}
 
+	/**
+	 * @dev Estimates the amount of tokens to be swapped in order to join
+	 * the pool providing both assets.
+         */
 	function _calcSwapOutputFromInput(uint256 _reserveAmount, uint256 _inputAmount) private pure returns (uint256 _outputAmount)
 	{
 		return Math._sqrt(_reserveAmount.mul(_inputAmount.mul(3988000).add(_reserveAmount.mul(3988009)))).sub(_reserveAmount.mul(1997)) / 1994;
