@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+/**
+ * @dev Minimal set of declarations for AutoFarm V2 interoperability.
+ */
 interface AutoFarmV2
 {
 	function AUTOv2() external view returns (address _auto);

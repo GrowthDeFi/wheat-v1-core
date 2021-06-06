@@ -4,7 +4,7 @@ pragma solidity ^0.6.0;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @dev Minimal set of declarations for WETH/WBNB interoperability.
+ * @dev Minimal set of declarations for WBNB interoperability.
  */
 interface WrappedToken is IERC20
 {
