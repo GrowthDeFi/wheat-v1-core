@@ -56,6 +56,7 @@ module.exports = async (deployer, network, [account]) => {
   await deployer.deploy(PancakeSwapCompoundingStrategyToken, 'staked CAKE', 'stkCAKE', 18, PANCAKESWAP_MASTERCHEF, 0, CAKE, DEV, TREASURY, CAKE_COLLECTOR, EXCHANGE);
   const pancakeSwapCompoundingStrategyToken = await PancakeSwapCompoundingStrategyToken.deployed();
   await pancakeSwapCompoundingStrategyToken.transferOwnership(OWNER);
+  const CAKE_STRATEGY = pancakeSwapCompoundingStrategyToken.address;
 
   // deploys AutoFarmFeeCollectorAdapter AUTO => CAKE
   console.log('Publishing AutoFarmFeeCollectorAdapter contract...');
@@ -69,6 +70,7 @@ module.exports = async (deployer, network, [account]) => {
   await deployer.deploy(AutoFarmCompoundingStrategyToken, 'staked 4BELTv2', 'stk4BELT', 18, AUTOFARM_MASTERCHEF, 341, BUSD, true, POOL_4BELT, 3, TREASURY, AUTO_COLLECTOR, EXCHANGE);
   const autoFarmCompoundingStrategyToken = await AutoFarmCompoundingStrategyToken.deployed();
   await autoFarmCompoundingStrategyToken.transferOwnership(OWNER);
+  const AUTO_STRATEGY = autoFarmCompoundingStrategyToken.address;
 
   // deploys PantherSwapBuybackAdapter PANTHER => CAKE
   console.log('Publishing PantherSwapBuybackAdapter contract...');
@@ -82,4 +84,15 @@ module.exports = async (deployer, network, [account]) => {
   await deployer.deploy(PantherSwapCompoundingStrategyToken, 'staked BNB/BUSDv', 'stkBNB/BUSD', 18, PANTHERSWAP_MASTERCHEF, 18, WBNB, DEV, TREASURY, PANTHER_BUYBACK, EXCHANGE);
   const pantherSwapCompoundingStrategyToken = await PantherSwapCompoundingStrategyToken.deployed();
   await pantherSwapCompoundingStrategyToken.transferOwnership(OWNER);
+  const PANTHER_STRATEGY = pantherSwapCompoundingStrategyToken.address;
+
+  // prints summary with addresses
+  console.log('EXCHANGE=' + EXCHANGE);
+  console.log('CAKE_BUYBACK=' + CAKE_BUYBACK);
+  console.log('CAKE_COLLECTOR=' + CAKE_COLLECTOR);
+  console.log('CAKE_STRATEGY=' + CAKE_STRATEGY);
+  console.log('AUTO_COLLECTOR=' + AUTO_COLLECTOR);
+  console.log('AUTO_STRATEGY=' + AUTO_STRATEGY);
+  console.log('PANTHER_BUYBACK=' + PANTHER_BUYBACK);
+  console.log('PANTHER_STRATEGY=' + PANTHER_STRATEGY);
 };
