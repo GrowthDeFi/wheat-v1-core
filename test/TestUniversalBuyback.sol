@@ -4,7 +4,6 @@ pragma solidity ^0.6.0;
 import { Assert } from "truffle/Assert.sol";
 
 import { Env } from "./Env.sol";
-import { LibExchange, LibUniversalBuyback } from "./Libs.sol";
 
 import { UniversalBuyback } from "../contracts/UniversalBuyback.sol";
 
@@ -22,17 +21,19 @@ contract TestUniversalBuyback is Env
 
 		_mint($.CAKE, 20e18); // 20 CAKE
 
-		address TREASURY = 0x0d1d68C73b57a53B1DdCD287aCf4e66Ed745B759;
-		address _exchange = LibExchange.newExchange($.UniswapV2_Compatible_ROUTER02, TREASURY);
-		address _buyback = LibUniversalBuyback.newUniversalBuyback($.CAKE, $.WHEAT, $.GRO, TREASURY, _exchange);
+		address _buyback = CAKE_BUYBACK;
 
 		Transfers._pushFunds($.CAKE, _buyback, 20e18);
 
 		uint256 _pendingBefore = UniversalBuyback(_buyback).pendingBuyback();
 		Assert.equal(_pendingBefore, 20e18, "CAKE balance before must be 20e18");
 
+		uint256 SLIPPAGE = 1e15; // 0.1%
+
 		(uint256 _burning1, uint256 _burning2) =  UniversalBuyback(_buyback).pendingBurning();
-		UniversalBuyback(_buyback).gulp(_burning1, _burning2);
+		uint256 _minBurning1 = _burning1.mul(1e18 - SLIPPAGE).div(1e18);
+		uint256 _minBurning2 = _burning2.mul(1e18 - SLIPPAGE).div(1e18);
+		UniversalBuyback(_buyback).gulp(_minBurning1, _minBurning2);
 
 		uint256 _pendingAfter = UniversalBuyback(_buyback).pendingBuyback();
 		Assert.equal(_pendingAfter, 0e18, "CAKE balance after must be 0e18");

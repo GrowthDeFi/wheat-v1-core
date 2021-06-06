@@ -15,20 +15,25 @@ abstract contract WhitelistGuard is Ownable
 	using EnumerableSet for EnumerableSet.AddressSet;
 
 	EnumerableSet.AddressSet private whitelist;
+	bool private enabled = true;
 
 	/// @dev restricts function call to be EOA or whitelist
 	modifier onlyEOAorWhitelist()
 	{
-		address _from = _msgSender();
-		require(tx.origin == _from || whitelist.contains(_from), "access denied");
+		if (enabled) {
+			address _from = _msgSender();
+			require(tx.origin == _from || whitelist.contains(_from), "access denied");
+		}
 		_;
 	}
 
 	/// @dev restricts function call to whitelist
 	modifier onlyWhitelist()
 	{
-		address _from = _msgSender();
-		require(whitelist.contains(_from), "access denied");
+		if (enabled) {
+			address _from = _msgSender();
+			require(whitelist.contains(_from), "access denied");
+		}
 		_;
 	}
 
@@ -50,5 +55,16 @@ abstract contract WhitelistGuard is Ownable
 	function removeFromWhitelist(address _address) external onlyOwner
 	{
 		require(whitelist.remove(_address), "not listed");
+	}
+
+	/**
+	 * @notice Enables/disables the whitelist access policy.
+	 *         This is a priviledged function.
+	 * @param _enabled Flag indicating whether the whitelist should be
+	 *                 enabled or not.
+	 */
+	function setWhitelistEnabled(bool _enabled) external onlyOwner
+	{
+		enabled = _enabled;
 	}
 }

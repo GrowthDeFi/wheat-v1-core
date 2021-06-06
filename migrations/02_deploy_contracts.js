@@ -39,6 +39,7 @@ module.exports = async (deployer, network, [account]) => {
   console.log('Publishing UniversalBuyback contract...');
   await deployer.deploy(UniversalBuyback, CAKE, WHEAT, GRO, TREASURY, EXCHANGE);
   const universalBuyback = await UniversalBuyback.deployed();
+  await universalBuyback.setWhitelistEnabled(false); // allows testing
   await universalBuyback.transferOwnership(OWNER);
   const CAKE_BUYBACK = universalBuyback.address;
 
@@ -46,6 +47,7 @@ module.exports = async (deployer, network, [account]) => {
   console.log('Publishing PancakeSwapFeeCollectorcontract contract...');
   await deployer.deploy(PancakeSwapFeeCollector, PANCAKESWAP_MASTERCHEF, 0, CAKE, TREASURY, CAKE_BUYBACK, EXCHANGE);
   const pancakeSwapFeeCollector = await PancakeSwapFeeCollector.deployed();
+  await pancakeSwapFeeCollector.setWhitelistEnabled(false); // allows testing
   await pancakeSwapFeeCollector.transferOwnership(OWNER);
   const CAKE_COLLECTOR = pancakeSwapFeeCollector.address;
 
@@ -53,6 +55,7 @@ module.exports = async (deployer, network, [account]) => {
   console.log('Publishing PancakeSwapCompoundingStrategyToken contract...');
   await deployer.deploy(PancakeSwapCompoundingStrategyToken, 'staked CAKE', 'stkCAKE', 18, PANCAKESWAP_MASTERCHEF, 0, CAKE, DEV, TREASURY, CAKE_COLLECTOR, EXCHANGE);
   const pancakeSwapCompoundingStrategyToken = await PancakeSwapCompoundingStrategyToken.deployed();
+  await pancakeSwapCompoundingStrategyToken.setWhitelistEnabled(false); // allows testing
   await pancakeSwapCompoundingStrategyToken.transferOwnership(OWNER);
   const CAKE_STRATEGY = pancakeSwapCompoundingStrategyToken.address;
 
@@ -60,6 +63,7 @@ module.exports = async (deployer, network, [account]) => {
   console.log('Publishing AutoFarmFeeCollectorAdapter contract...');
   await deployer.deploy(AutoFarmFeeCollectorAdapter, AUTO, CAKE, TREASURY, CAKE_COLLECTOR, EXCHANGE);
   const autoFarmFeeCollectorAdapter = await AutoFarmFeeCollectorAdapter.deployed();
+  await autoFarmFeeCollectorAdapter.setWhitelistEnabled(false); // allows testing
   await autoFarmFeeCollectorAdapter.transferOwnership(OWNER);
   const AUTO_COLLECTOR = autoFarmFeeCollectorAdapter.address;
 
@@ -67,6 +71,7 @@ module.exports = async (deployer, network, [account]) => {
   console.log('Publishing AutoFarmCompoundingStrategyToken contract...');
   await deployer.deploy(AutoFarmCompoundingStrategyToken, 'staked 4BELTv2', 'stk4BELT', 18, AUTOFARM_MASTERCHEF, 341, BUSD, true, POOL_4BELT, 3, TREASURY, AUTO_COLLECTOR, EXCHANGE);
   const autoFarmCompoundingStrategyToken = await AutoFarmCompoundingStrategyToken.deployed();
+  await autoFarmCompoundingStrategyToken.setWhitelistEnabled(false); // allows testing
   await autoFarmCompoundingStrategyToken.transferOwnership(OWNER);
   const AUTO_STRATEGY = autoFarmCompoundingStrategyToken.address;
 
@@ -74,6 +79,7 @@ module.exports = async (deployer, network, [account]) => {
   console.log('Publishing PantherSwapBuybackAdapter contract...');
   await deployer.deploy(PantherSwapBuybackAdapter, PANTHER, CAKE, TREASURY, CAKE_BUYBACK, EXCHANGE);
   const pantherSwapBuybackAdapter = await PantherSwapBuybackAdapter.deployed();
+  await pantherSwapBuybackAdapter.setWhitelistEnabled(false); // allows testing
   await pantherSwapBuybackAdapter.transferOwnership(OWNER);
   const PANTHER_BUYBACK = pantherSwapBuybackAdapter.address;
 
@@ -81,6 +87,7 @@ module.exports = async (deployer, network, [account]) => {
   console.log('Publishing PantherSwapCompoundingStrategyToken contract...');
   await deployer.deploy(PantherSwapCompoundingStrategyToken, 'staked BNB/BUSDv', 'stkBNB/BUSD', 18, PANTHERSWAP_MASTERCHEF, 18, WBNB, DEV, TREASURY, PANTHER_BUYBACK, EXCHANGE);
   const pantherSwapCompoundingStrategyToken = await PantherSwapCompoundingStrategyToken.deployed();
+  await pantherSwapCompoundingStrategyToken.setWhitelistEnabled(false); // allows testing
   await pantherSwapCompoundingStrategyToken.transferOwnership(OWNER);
   const PANTHER_STRATEGY = pantherSwapCompoundingStrategyToken.address;
 

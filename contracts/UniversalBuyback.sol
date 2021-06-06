@@ -100,7 +100,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
 		uint256 _burning1 = Transfers._getBalance(buybackToken1);
-		uint256 _burning2 = Transfers._getBalance(buybackToken1);
+		uint256 _burning2 = Transfers._getBalance(buybackToken2);
 		require(_burning1 >= _minBurning1, "high slippage");
 		require(_burning2 >= _minBurning2, "high slippage");
 		_burn(buybackToken1, _burning1);
