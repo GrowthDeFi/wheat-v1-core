@@ -9,9 +9,9 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { Transfers } from "./modules/Transfers.sol";
 
 /**
- * This contract implements a fee collector adapter to be used with AutoFarm
- * strategies, it converts the source reward token (AUTO) into the target
- * reward token (CAKE) whenever the gulp function is called.
+ * @notice This contract implements a fee collector adapter to be used with AutoFarm
+ *         strategies, it converts the source reward token (AUTO) into the target
+ *         reward token (CAKE) whenever the gulp function is called.
  */
 contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 {

@@ -15,13 +15,13 @@ import { BeltStrategyToken, BeltStrategyPool } from "./interop/Belt.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 /**
- * This contract implements a compounding strategy for AutoFarm V2 rewarding contract
- * (which is heavily based on PancakeSwap MasterChef contract implementation).
- * It basically deposits and withdraws funds from AutoFarm and collects the
- * reward token (AUTO). The compounding happens by calling the gulp function;
- * it converts the reward into more funds which are further deposited into
- * AutoFarm. A performance fee is deducted from the converted funds and sent
- * to the fee collector contract.
+ * @notice This contract implements a compounding strategy for AutoFarm V2 rewarding contract
+ *         (which is heavily based on PancakeSwap MasterChef contract implementation).
+ *         It basically deposits and withdraws funds from AutoFarm and collects the
+ *         reward token (AUTO). The compounding happens by calling the gulp function;
+ *         it converts the reward into more funds which are further deposited into
+ *         AutoFarm. A performance fee is deducted from the converted funds and sent
+ *         to the fee collector contract.
  */
 contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 {

@@ -14,13 +14,13 @@ import { MasterChef } from "./interop/MasterChef.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 /**
- * This contract implements a compounding strategy for PancakeSwap MasterChef.
- * It basically deposits and withdraws funds from MasterChef and collects the
- * reward token (CAKE). The compounding happens by calling the gulp function;
- * it converts the reward into more funds which are further deposited into
- * MasterChef. A performance fee is deducted from the converted funds and sent
- * to the fee collector contract. This contract also allows for charging a
- * deposit fee deducted from deposited funds.
+ * @notice This contract implements a compounding strategy for PancakeSwap MasterChef.
+ *         It basically deposits and withdraws funds from MasterChef and collects the
+ *         reward token (CAKE). The compounding happens by calling the gulp function;
+ *         it converts the reward into more funds which are further deposited into
+ *         MasterChef. A performance fee is deducted from the converted funds and sent
+ *         to the fee collector contract. This contract also allows for charging a
+ *         deposit fee deducted from deposited funds.
  */
 contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
 {
