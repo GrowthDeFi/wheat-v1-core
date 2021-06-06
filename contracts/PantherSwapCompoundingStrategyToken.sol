@@ -27,16 +27,13 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	address public immutable routingToken;
 	address public immutable reserveToken;
 
-	// dev/treasury made private to fit contract size
-	address private dev;
-	address private treasury;
+	address public dev;
+	address public treasury;
 	address public buyback;
 
 	address public exchange;
 
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
-
-	uint256 public lastGulpTime;
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
@@ -109,19 +106,21 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		return _totalBalance;
 	}
 
-	function deposit(uint256 _amount) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
 		(uint256 _shares, uint256 _depositAmount,) = _calcSharesFromAmount(_amount);
+		require(_shares >= _minShares, "high slippage");
 		Transfers._pullFunds(reserveToken, _from, _amount);
 		_deposit(_depositAmount);
 		_mint(_from, _shares);
 	}
 
-	function withdraw(uint256 _shares) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
-		(uint256 _amount, uint256 _withdrawalAmount,) = _calcAmountFromShares(_shares);
+		(uint256 _amount, uint256 _withdrawalAmount, uint256 _netAmount) = _calcAmountFromShares(_shares);
+		require(_netAmount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
 		_withdraw(_amount);
 		Transfers._pushFunds(reserveToken, _from, _withdrawalAmount);
@@ -154,10 +153,9 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		_totalBalance = _capTransferAmount(reserveToken, _totalBalance, _retainedReward);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
-		lastGulpTime = now;
 	}
 
-	function recoverLostFunds(address _token) external onlyOwner nonReentrant
+	function recoverLostFunds(address _token) external onlyOwner
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -166,7 +164,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
-	function setDev(address _newDev) external onlyOwner nonReentrant
+	function setDev(address _newDev) external onlyOwner
 	{
 		require(_newDev != address(0), "invalid address");
 		address _oldDev = dev;
@@ -174,7 +172,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeDev(_oldDev, _newDev);
 	}
 
-	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
+	function setTreasury(address _newTreasury) external onlyOwner
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -182,7 +180,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
-	function setBuyback(address _newBuyback) external onlyOwner nonReentrant
+	function setBuyback(address _newBuyback) external onlyOwner
 	{
 		require(_newBuyback != address(0), "invalid address");
 		address _oldBuyback = buyback;
@@ -190,14 +188,14 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeBuyback(_oldBuyback, _newBuyback);
 	}
 
-	function setExchange(address _newExchange) external onlyOwner nonReentrant
+	function setExchange(address _newExchange) external onlyOwner
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
-	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner nonReentrant
+	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner
 	{
 		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
 		uint256 _oldPerformanceFee = performanceFee;

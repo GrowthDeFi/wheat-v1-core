@@ -39,8 +39,6 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
 
-	uint256 public lastGulpTime;
-
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
 		address _dev, address _treasury, address _collector, address _exchange)
@@ -108,20 +106,22 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		return _totalBalance;
 	}
 
-	function deposit(uint256 _amount) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
 		(uint256 _devAmount, uint256 _netAmount, uint256 _shares) = _calcSharesFromAmount(_amount);
+		require(_shares >= _minShares, "high slippage");
 		Transfers._pullFunds(reserveToken, _from, _amount);
 		Transfers._pushFunds(reserveToken, dev, _devAmount);
 		_deposit(_netAmount);
 		_mint(_from, _shares);
 	}
 
-	function withdraw(uint256 _shares) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
 		uint256 _amount = _calcAmountFromShares(_shares);
+		require(_amount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
 		_withdraw(_amount);
 		Transfers._pushFunds(reserveToken, _from, _amount);
@@ -153,10 +153,9 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
-		lastGulpTime = now;
 	}
 
-	function recoverLostFunds(address _token) external onlyOwner nonReentrant
+	function recoverLostFunds(address _token) external onlyOwner
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -165,7 +164,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
-	function setDev(address _newDev) external onlyOwner nonReentrant
+	function setDev(address _newDev) external onlyOwner
 	{
 		require(_newDev != address(0), "invalid address");
 		address _oldDev = dev;
@@ -173,7 +172,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeDev(_oldDev, _newDev);
 	}
 
-	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
+	function setTreasury(address _newTreasury) external onlyOwner
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -181,7 +180,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
-	function setCollector(address _newCollector) external onlyOwner nonReentrant
+	function setCollector(address _newCollector) external onlyOwner
 	{
 		require(_newCollector != address(0), "invalid address");
 		address _oldCollector = collector;
@@ -189,14 +188,14 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeCollector(_oldCollector, _newCollector);
 	}
 
-	function setExchange(address _newExchange) external onlyOwner nonReentrant
+	function setExchange(address _newExchange) external onlyOwner
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
-	function setDepositFee(uint256 _newDepositFee) external onlyOwner nonReentrant
+	function setDepositFee(uint256 _newDepositFee) external onlyOwner
 	{
 		require(_newDepositFee <= MAXIMUM_DEPOSIT_FEE, "invalid rate");
 		uint256 _oldDepositFee = depositFee;
@@ -204,7 +203,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		emit ChangeDepositFee(_oldDepositFee, _newDepositFee);
 	}
 
-	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner nonReentrant
+	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner
 	{
 		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
 		uint256 _oldPerformanceFee = performanceFee;

@@ -28,8 +28,6 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 
 	address public exchange;
 
-	uint256 public lastGulpTime;
-
 	uint256 public migrationTimestamp;
 	address public migrationRecipient;
 
@@ -88,10 +86,9 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 		_deposit(_totalBalance);
 		uint256 _totalReward = Transfers._getBalance(rewardToken);
 		Transfers._pushFunds(rewardToken, buyback, _totalReward);
-		lastGulpTime = now;
 	}
 
-	function recoverLostFunds(address _token) external onlyOwner nonReentrant
+	function recoverLostFunds(address _token) external onlyOwner
 	{
 		require(_token != rewardToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -100,7 +97,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
-	function setBuyback(address _newBuyback) external onlyOwner nonReentrant
+	function setBuyback(address _newBuyback) external onlyOwner
 	{
 		require(_newBuyback != address(0), "invalid address");
 		address _oldBuyback = buyback;
@@ -108,7 +105,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 		emit ChangeBuyback(_oldBuyback, _newBuyback);
 	}
 
-	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
+	function setTreasury(address _newTreasury) external onlyOwner
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -116,14 +113,14 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
-	function setExchange(address _newExchange) external onlyOwner nonReentrant
+	function setExchange(address _newExchange) external onlyOwner
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
-	function announceMigration(address _migrationRecipient) external onlyOwner nonReentrant
+	function announceMigration(address _migrationRecipient) external onlyOwner
 	{
 		require(migrationTimestamp == 0, "ongoing migration");
 		uint256 _migrationTimestamp = now;
@@ -132,7 +129,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 		emit AnnounceMigration(_migrationRecipient, _migrationTimestamp);
 	}
 
-	function cancelMigration() external onlyOwner nonReentrant
+	function cancelMigration() external onlyOwner
 	{
 		uint256 _migrationTimestamp = migrationTimestamp;
 		require(_migrationTimestamp != 0, "migration not started");
@@ -142,7 +139,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 		emit CancelMigration(_migrationRecipient, _migrationTimestamp);
 	}
 
-	function migrate(address _migrationRecipient, bool _emergency) external onlyOwner nonReentrant
+	function migrate(address _migrationRecipient, bool _emergency) external onlyOwner
 	{
 		uint256 _migrationTimestamp = migrationTimestamp;
 		require(_migrationTimestamp != 0, "migration not started");

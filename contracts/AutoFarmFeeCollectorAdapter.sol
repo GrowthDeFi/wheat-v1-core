@@ -18,8 +18,6 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 
 	address public exchange;
 
-	uint256 public lastGulpTime;
-
 	constructor (address _sourceToken, address _targetToken,
 		address _treasury, address _collector, address _exchange) public
 	{
@@ -53,17 +51,16 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 		uint256 _totalTarget = Transfers._getBalance(targetToken);
 		require(_totalTarget >= _minTotalTarget, "high slippage");
 		Transfers._pushFunds(targetToken, collector, _totalTarget);
-		lastGulpTime = now;
 	}
 
-	function recoverLostFunds(address _token) external onlyOwner nonReentrant
+	function recoverLostFunds(address _token) external onlyOwner
 	{
 		require(_token != sourceToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
-	function setCollector(address _newCollector) external onlyOwner nonReentrant
+	function setCollector(address _newCollector) external onlyOwner
 	{
 		require(_newCollector != address(0), "invalid address");
 		address _oldCollector = collector;
@@ -71,7 +68,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 		emit ChangeCollector(_oldCollector, _newCollector);
 	}
 
-	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
+	function setTreasury(address _newTreasury) external onlyOwner
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -79,7 +76,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
-	function setExchange(address _newExchange) external onlyOwner nonReentrant
+	function setExchange(address _newExchange) external onlyOwner
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;

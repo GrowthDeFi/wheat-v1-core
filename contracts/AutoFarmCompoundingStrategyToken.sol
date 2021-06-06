@@ -40,8 +40,6 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
 
-	uint256 public lastGulpTime;
-
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _autoFarm, uint256 _pid, address _routingToken,
 		bool _useBelt, address _beltPool, uint256 _beltPoolIndex,
@@ -138,19 +136,21 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		return _totalBalance;
 	}
 
-	function deposit(uint256 _amount) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
 		(uint256 _shares,) = _calcSharesFromAmount(_amount);
+		require(_shares >= _minShares, "high slippage");
 		Transfers._pullFunds(reserveToken, _from, _amount);
 		_deposit(_amount);
 		_mint(_from, _shares);
 	}
 
-	function withdraw(uint256 _shares) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount) external onlyEOAorWhitelist nonReentrant
 	{
 		address _from = msg.sender;
 		(uint256 _amount, uint256 _netAmount) = _calcAmountFromShares(_shares);
+		require(_netAmount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
 		_withdraw(_amount);
 		Transfers._pushFunds(reserveToken, _from, _netAmount);
@@ -194,10 +194,9 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
-		lastGulpTime = now;
 	}
 
-	function recoverLostFunds(address _token) external onlyOwner nonReentrant
+	function recoverLostFunds(address _token) external onlyOwner
 	{
 		require(_token != beltToken, "invalid token");
 		require(_token != reserveToken, "invalid token");
@@ -207,7 +206,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
-	function setTreasury(address _newTreasury) external onlyOwner nonReentrant
+	function setTreasury(address _newTreasury) external onlyOwner
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -215,7 +214,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
-	function setCollector(address _newCollector) external onlyOwner nonReentrant
+	function setCollector(address _newCollector) external onlyOwner
 	{
 		require(_newCollector != address(0), "invalid address");
 		address _oldCollector = collector;
@@ -223,14 +222,14 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		emit ChangeCollector(_oldCollector, _newCollector);
 	}
 
-	function setExchange(address _newExchange) external onlyOwner nonReentrant
+	function setExchange(address _newExchange) external onlyOwner
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
-	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner nonReentrant
+	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner
 	{
 		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
 		uint256 _oldPerformanceFee = performanceFee;
