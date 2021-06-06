@@ -33,7 +33,7 @@ This repository contains the source code for the WHEAT smart contracts
 | 14        | [stkBUSD/UST](https://bscscan.com/address/0xd27F9D92cb456603FCCdcF2eBA92Db585140D969)       | PancakeSwap 63  | BUSD          |
 | 15        | [stkBUSD/DAI](https://bscscan.com/address/0xEe827483fb49a72C8c13C460275e39f7A59fB439)       | PancakeSwap 52  | BUSD          |
 | 16        | [stkBUSD/USDC](https://bscscan.com/address/0x97527E4033CAdD548eB2Eb5dB3BCdd8BF21f925D)      | PancakeSwap 53  | BUSD          |
-| 17        | -                                                                                           | -               | -             |
+| 17        | [stkBNB](https://bscscan.com/address/0xb71164A849B24Dd474d0B5609FFD29a71dFB79e8)            | -               | -             |
 | 18        | [stkBNB/CAKEv2](https://bscscan.com/address/0x4291474e88E2fEE6eC5B8c28F4Ed2075cEf5B803)     | PancakeSwap 251 | CAKE          |
 | 19        | [stkBNB/BUSDv2](https://bscscan.com/address/0xdC4D358B34619e4fE7feb28bE301B2FBe4F3aFf9)     | PancakeSwap 252 | BNB           |
 | 20        | [stkBNB/BTCBv2](https://bscscan.com/address/0xA561fa603bf0B43Cb0d0911EeccC8B6777d3401B)     | PancakeSwap 262 | BNB           |
