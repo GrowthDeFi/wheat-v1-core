@@ -114,7 +114,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard
 	}
 
 	/**
-	 * @notice Updates the fee collector address used to collect the performance fee.
+	 * @notice Updates the fee collector address used to send converted funds.
 	 *         This is a privileged function.
 	 * @param _newCollector The new fee collector address.
 	 */
