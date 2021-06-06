@@ -31,46 +31,54 @@ module.exports = async (deployer, network, [account]) => {
   const POOL_4BELT = '0xAEA4f7dcd172997947809CE6F12018a6D5c1E8b6'; // 4Belt Pool
 
   // deploys Exchange contract
+  console.log('Publishing Exchange contract...');
   await deployer.deploy(Exchange, PANCAKESWAP_ROUTER, TREASURY);
   const exchange = await Exchange.deployed();
   await exchange.transferOwnership(OWNER);
   const EXCHANGE = exchange.address;
 
   // deploys UniversalBuyback contract
+  console.log('Publishing UniversalBuyback contract...');
   await deployer.deploy(UniversalBuyback, CAKE, WHEAT, GRO, TREASURY, EXCHANGE);
   const universalBuyback = await UniversalBuyback.deployed();
   await universalBuyback.transferOwnership(OWNER);
   const CAKE_BUYBACK = universalBuyback.address;
 
   // deploys PancakeSwapFeeCollectorcontract for pool 0 (CAKE staking)
+  console.log('Publishing PancakeSwapFeeCollectorcontract contract...');
   await deployer.deploy(PancakeSwapFeeCollector, PANCAKESWAP_MASTERCHEF, 0, CAKE, TREASURY, CAKE_BUYBACK, EXCHANGE);
   const pancakeSwapFeeCollector = await PancakeSwapFeeCollector.deployed();
   await pancakeSwapFeeCollector.transferOwnership(OWNER);
   const CAKE_COLLECTOR = pancakeSwapFeeCollector.address;
 
   // deploys PancakeSwapCompoundingStrategyToken for pool 0 (CAKE)
+  console.log('Publishing PancakeSwapCompoundingStrategyToken contract...');
   await deployer.deploy(PancakeSwapCompoundingStrategyToken, 'staked CAKE', 'stkCAKE', 18, PANCAKESWAP_MASTERCHEF, 0, CAKE, DEV, TREASURY, CAKE_COLLECTOR, EXCHANGE);
   const pancakeSwapCompoundingStrategyToken = await PancakeSwapCompoundingStrategyToken.deployed();
   await pancakeSwapCompoundingStrategyToken.transferOwnership(OWNER);
 
   // deploys AutoFarmFeeCollectorAdapter AUTO => CAKE
+  console.log('Publishing AutoFarmFeeCollectorAdapter contract...');
   await deployer.deploy(AutoFarmFeeCollectorAdapter, AUTO, CAKE, TREASURY, CAKE_COLLECTOR, EXCHANGE);
   const autoFarmFeeCollectorAdapter = await AutoFarmFeeCollectorAdapter.deployed();
   await autoFarmFeeCollectorAdapter.transferOwnership(OWNER);
   const AUTO_COLLECTOR = autoFarmFeeCollectorAdapter.address;
 
   // deploys AutoFarmCompoundingStrategyToken for pool 341 (4BELT)
+  console.log('Publishing AutoFarmCompoundingStrategyToken contract...');
   await deployer.deploy(AutoFarmCompoundingStrategyToken, 'staked 4BELTv2', 'stk4BELT', 18, AUTOFARM_MASTERCHEF, 341, BUSD, true, POOL_4BELT, 3, TREASURY, AUTO_COLLECTOR, EXCHANGE);
   const autoFarmCompoundingStrategyToken = await AutoFarmCompoundingStrategyToken.deployed();
   await autoFarmCompoundingStrategyToken.transferOwnership(OWNER);
 
   // deploys PantherSwapBuybackAdapter PANTHER => CAKE
+  console.log('Publishing PantherSwapBuybackAdapter contract...');
   await deployer.deploy(PantherSwapBuybackAdapter, PANTHER, CAKE, TREASURY, CAKE_BUYBACK, EXCHANGE);
   const pantherSwapBuybackAdapter = await PantherSwapBuybackAdapter.deployed();
   await pantherSwapBuybackAdapter.transferOwnership(OWNER);
   const PANTHER_BUYBACK = pantherSwapBuybackAdapter.address;
 
   // deploys PantherSwapCompoundingStrategyToken for pool 0 (CAKE staking)
+  console.log('Publishing PantherSwapCompoundingStrategyToken contract...');
   await deployer.deploy(PantherSwapCompoundingStrategyToken, 'staked BNB/BUSDv', 'stkBNB/BUSD', 18, PANTHERSWAP_MASTERCHEF, 18, WBNB, DEV, TREASURY, PANTHER_BUYBACK, EXCHANGE);
   const pantherSwapCompoundingStrategyToken = await PantherSwapCompoundingStrategyToken.deployed();
   await pantherSwapCompoundingStrategyToken.transferOwnership(OWNER);
