@@ -85,7 +85,7 @@ module.exports = async (deployer, network, [account]) => {
 
   // deploys PantherSwapCompoundingStrategyToken for pool 0 (CAKE staking)
   console.log('Publishing PantherSwapCompoundingStrategyToken contract...');
-  await deployer.deploy(PantherSwapCompoundingStrategyToken, 'staked BNB/BUSDv', 'stkBNB/BUSD', 18, PANTHERSWAP_MASTERCHEF, 18, WBNB, DEV, TREASURY, PANTHER_BUYBACK, EXCHANGE);
+  await deployer.deploy(PantherSwapCompoundingStrategyToken, 'staked BNB/BUSD', 'stkBNB/BUSD', 18, PANTHERSWAP_MASTERCHEF, 18, WBNB, DEV, TREASURY, PANTHER_BUYBACK, EXCHANGE);
   const pantherSwapCompoundingStrategyToken = await PantherSwapCompoundingStrategyToken.deployed();
   await pantherSwapCompoundingStrategyToken.setWhitelistEnabled(false); // allows testing
   await pantherSwapCompoundingStrategyToken.transferOwnership(OWNER);
