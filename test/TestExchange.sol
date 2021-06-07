@@ -7,6 +7,8 @@ import { Env } from "./Env.sol";
 
 import { Exchange } from "../contracts/Exchange.sol";
 
+import { Factory } from "../contracts/interop/UniswapV2.sol";
+
 import { Transfers } from "../contracts/modules/Transfers.sol";
 
 import { $ } from "../contracts/network/$.sol";
@@ -48,6 +50,31 @@ contract TestExchange is Env
 		_testConvertFundsFromOutput($.CAKE, $.WHEAT, 50e18); // 50 WHEAT
 	}
 
+	function test08() external
+	{
+		_testJoinPoolFromInput($.CAKE, $.WBNB, 20e18); // 20 CAKE
+	}
+
+	function test09() external
+	{
+		_testJoinPoolFromInput($.BUSD, $.WBNB, 100e18); // 100 BUSD
+	}
+
+	function test10() external
+	{
+		_testJoinPoolFromInput($.WBNB, $.PANTHER, 1e18); // 1 WBNB
+	}
+
+	function test11() external
+	{
+		_testJoinPoolFromInput($.PANTHER, $.WBNB, 100e18); // 100 PANTHER
+	}
+
+	function test12() external
+	{
+		_testJoinPoolFromInput($.PANTHER, $.BUSD, 100e18); // 100 PANTHER
+	}
+
 	function _testConvertFundsFromInput(address _from, address _to, uint256 _inputAmount) internal
 	{
 		_burnAll(_from);
@@ -61,7 +88,7 @@ contract TestExchange is Env
 
 		if (_from == $.PANTHER) { // workaround the transfer tax
 			_inputAmount = Transfers._getBalance(_from);
-			SLIPPAGE = 5e16; // 5%
+			SLIPPAGE = 6e16; // 6%
 		}
 
 		uint256 _expectedOutputAmount =  Exchange(_exchange).calcConversionFromInput(_from, _to, _inputAmount);
@@ -99,5 +126,40 @@ contract TestExchange is Env
 
 		Assert.equal(Transfers._getBalance(_from), _maxInputAmount - _inputAmount, "Balance after must be the difference");
 		Assert.equal(Transfers._getBalance(_to), _outputAmount, "Balance after must match output");
+	}
+
+	function _testJoinPoolFromInput(address _token, address _otherToken, uint256 _inputAmount) internal
+	{
+		address _pool = Factory($.UniswapV2_Compatible_FACTORY).getPair(_token, _otherToken);
+
+		_burnAll(_pool);
+		_burnAll(_token);
+		_burnAll(_otherToken);
+
+		_mint(_token, _inputAmount);
+
+		address _exchange = EXCHANGE;
+
+		uint256 SLIPPAGE = 1e15; // 0.1%
+
+		if (_token == $.PANTHER) { // workaround the transfer tax
+			_inputAmount = Transfers._getBalance(_token);
+		}
+
+		if (_token == $.PANTHER || _otherToken == $.PANTHER) { // workaround the transfer tax
+			SLIPPAGE = 6e16; // 6%
+		}
+
+		uint256 _expectedOutputShares =  Exchange(_exchange).calcJoinPoolFromInput(_pool, _token, _inputAmount);
+		uint256 _minOutputShares = _expectedOutputShares.mul(1e18 - SLIPPAGE).div(1e18);
+
+		Assert.equal(Transfers._getBalance(_token), _inputAmount, "Balance before must match input");
+		Assert.equal(Transfers._getBalance(_pool), 0e18, "Balance before must be 0e18");
+
+		Transfers._approveFunds(_token, _exchange, _inputAmount);
+		uint256 _outputShares = Exchange(_exchange).joinPoolFromInput(_pool, _token, _inputAmount, _minOutputShares);
+
+		Assert.equal(Transfers._getBalance(_token), 0e18, "Balance after must be 0e18");
+		Assert.equal(Transfers._getBalance(_pool), _outputShares, "Balance after must match output");
 	}
 }
