@@ -23,9 +23,5 @@ jobs:
         NODE_OPTIONS: --max-old-space-size=4096
     - run: env > .env
       env:
-        ANKR_PROJECT_ID: ${{ secrets.ANKR_PROJECT_ID }}
-        ANKR_APIKEY_BSCMAIN: ${{ secrets.ANKR_APIKEY_BSCMAIN }}
-        ANKR_APIKEY_BSCTEST: ${{ secrets.ANKR_APIKEY_BSCTEST }}
-        INFURA_PROJECT_ID: ${{ secrets.INFURA_PROJECT_ID }}
         PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
     - run: ./scripts/start-bscmain-fork.sh & rm -rf ./build/ && npm run test && pkill node

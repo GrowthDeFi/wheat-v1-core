@@ -29,7 +29,7 @@ Running the unit tests:
 
     $ ./scripts/start-bscmain-fork.sh & npm run test
 
-**Important:** Please add a private key to the .env file and update the
+**Important:** Please add a private key to the `.env` file and update the
 `test/Env.sol` file with the contract addresses printed on the screen during
 migration.
 
