@@ -18,7 +18,7 @@ contract Env
 
 	receive() external payable {}
 
-	// these addresses are hardcoded and dependent on the private key used for migrations
+	// these addresses are hardcoded and dependent on the private key used on migration
 	address constant EXCHANGE = 0x66bd90BdB4596482239C82C360fCFC4008b8dfc1;
 	address constant CAKE_BUYBACK = 0xaC5d0E968583862386491332C228F8F4E5DA7AB2;
 	address constant CAKE_COLLECTOR = 0x5BB74FBC6d92c1854104901f4690db1DF4004a24;
