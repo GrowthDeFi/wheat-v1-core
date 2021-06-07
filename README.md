@@ -27,7 +27,7 @@ Compiling the smart contracts:
 
 Running the unit tests:
 
-    $ ./scripts/start-bscmain-fork.sh & npm run test:bscmain
+    $ ./scripts/start-bscmain-fork.sh & npm run test
 
 **Important:** Please add a private key to the .env file and update the
 `test/Env.sol` file with the contract addresses printed on the screen during

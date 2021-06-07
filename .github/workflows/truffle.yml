@@ -28,4 +28,4 @@ jobs:
         ANKR_APIKEY_BSCTEST: ${{ secrets.ANKR_APIKEY_BSCTEST }}
         INFURA_PROJECT_ID: ${{ secrets.INFURA_PROJECT_ID }}
         PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-    - run: ./scripts/start-bscmain-fork.sh & rm -rf ./build/ && npm run test:bscmain && pkill node
+    - run: ./scripts/start-bscmain-fork.sh & rm -rf ./build/ && npm run test && pkill node
