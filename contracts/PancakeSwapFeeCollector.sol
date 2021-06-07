@@ -283,13 +283,21 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	function _deposit(uint256 _amount) internal
 	{
 		Transfers._approveFunds(reserveToken, masterChef, _amount);
-		MasterChef(masterChef).deposit(pid, _amount);
+		if (pid == 0) {
+			MasterChef(masterChef).enterStaking(_amount);
+		} else {
+			MasterChef(masterChef).deposit(pid, _amount);
+		}
 	}
 
 	/// @dev Performs an withdrawal from the MasterChef pool
 	function _withdraw(uint256 _amount) internal
 	{
-		MasterChef(masterChef).withdraw(pid, _amount);
+		if (pid == 0) {
+			MasterChef(masterChef).leaveStaking(_amount);
+		} else {
+			MasterChef(masterChef).withdraw(pid, _amount);
+		}
 	}
 
 	/// @dev Performs an emergency withdrawal from the MasterChef pool
