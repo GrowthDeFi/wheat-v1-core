@@ -556,7 +556,7 @@ const GULP_INTERVAL = {
   // PANTHER buyback adapter
   '0x495089390569d47807F1Db83F14e053002DB25b4': 48 * 60 * 60, // 48 hours
   // Universal buyback
-  '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE': 48 * 60 * 60, // 48 hours
+  '0x01d1c4eC99D0A7D8f4141D42D1624fffa054D7Ae': 48 * 60 * 60, // 48 hours
 };
 */
 
@@ -790,7 +790,7 @@ async function gulpAll(privateKey, network) {
 
   {
     // universal buyback
-    const address = '0x139ee66ABc14889921d24dA7e60DdB03dc2E1bEE';
+    const address = '0x01d1c4eC99D0A7D8f4141D42D1624fffa054D7Ae';
     const amount = await pendingBuyback(privateKey, network, address);
     const MINIMUM_AMOUNT = 1000000000000000000n; // 1 BNB
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
