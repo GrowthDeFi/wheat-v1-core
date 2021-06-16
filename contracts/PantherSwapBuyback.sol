@@ -50,8 +50,8 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _balance = Transfers._getBalance(rewardToken);
-		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
-		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _amount1 = _balance.mul(rewardBuyback1Share) / 1e18;
+		uint256 _amount2 = _balance.mul(rewardBuyback2Share) / 1e18;
 		(_amount1, _amount2) = _capSplitAmount(_amount1, _amount2);
 		_burning1 = IExchange(exchange).calcConversionFromInput(rewardToken, buybackToken1, _amount1);
 		_burning2 = IExchange(exchange).calcConversionFromInput(rewardToken, buybackToken2, _amount2);
@@ -62,14 +62,14 @@ contract PantherSwapBuyback is ReentrancyGuard, WhitelistGuard
 	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _balance = Transfers._getBalance(rewardToken);
-		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
-		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _amount1 = _balance.mul(rewardBuyback1Share) / 1e18;
+		uint256 _amount2 = _balance.mul(rewardBuyback2Share) / 1e18;
 		(_amount1, _amount2) = _capSplitAmount(_amount1, _amount2);
 		Transfers._approveFunds(rewardToken, exchange, _amount1 + _amount2);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
 		uint256 _burning1 = Transfers._getBalance(buybackToken1);
-		uint256 _burning2 = Transfers._getBalance(buybackToken1);
+		uint256 _burning2 = Transfers._getBalance(buybackToken2);
 		require(_burning1 >= _minBurning1, "high slippage");
 		require(_burning2 >= _minBurning2, "high slippage");
 		_burn(buybackToken1, _burning1);

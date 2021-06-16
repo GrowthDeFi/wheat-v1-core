@@ -58,8 +58,8 @@ contract PancakeSwapBuyback is ReentrancyGuard, WhitelistGuard
 		if (routingToken != rewardToken) {
 			_balance = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _balance);
 		}
-		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
-		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _amount1 = _balance.mul(rewardBuyback1Share) / 1e18;
+		uint256 _amount2 = _balance.mul(rewardBuyback2Share) / 1e18;
 		_burning1 = IExchange(exchange).calcConversionFromInput(routingToken, buybackToken1, _amount1);
 		uint256 _amount3 = IExchange(exchange).calcConversionFromInput(routingToken, buybackToken2, _amount2);
 		_burning2 = _amount3 / 2;
@@ -75,8 +75,8 @@ contract PancakeSwapBuyback is ReentrancyGuard, WhitelistGuard
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _balance, 1);
 		}
 		uint256 _balance = Transfers._getBalance(routingToken);
-		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
-		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _amount1 = _balance.mul(rewardBuyback1Share) / 1e18;
+		uint256 _amount2 = _balance.mul(rewardBuyback2Share) / 1e18;
 		uint256 _burning = _amount1 + _amount2;
 		uint256 _sending = _balance - _burning;
 		Transfers._approveFunds(routingToken, exchange, _burning);

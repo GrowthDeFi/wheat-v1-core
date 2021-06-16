@@ -56,8 +56,8 @@ contract Buyback is ReentrancyGuard, WhitelistGuard
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _balance, 1);
 		}
 		uint256 _total = Transfers._getBalance(routingToken);
-		uint256 _amount1 = _total.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
-		uint256 _amount2 = _total.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _amount1 = _total.mul(rewardBuyback1Share) / 1e18;
+		uint256 _amount2 = _total.mul(rewardBuyback2Share) / 1e18;
 		uint256 _burning = _amount1 + _amount2;
 		uint256 _sending = _total - _burning;
 		Transfers._approveFunds(routingToken, exchange, _burning);
