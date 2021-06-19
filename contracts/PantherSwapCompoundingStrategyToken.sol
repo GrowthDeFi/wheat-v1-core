@@ -236,8 +236,8 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		_retained = 0;
 		uint256 _limit = _calcMaxRewardTransferAmount();
 		if (_amount > _limit) {
-			_amount = _limit;
 			_retained = _amount.sub(_limit);
+			_amount = _limit;
 		}
 		return (_amount, _retained);
 	}
