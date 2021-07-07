@@ -2,6 +2,7 @@
 pragma solidity ^0.6.0;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
 
@@ -14,7 +15,7 @@ import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityP
  * @notice This contract provides a helper exchange abstraction to be used by other
  *         contracts, so that it can be replaced to accomodate routing changes.
  */
-contract Exchange is IExchange, Ownable
+contract Exchange is IExchange, Ownable, ReentrancyGuard
 {
 	address public router;
 	address public treasury;
@@ -77,7 +78,7 @@ contract Exchange is IExchange, Ownable
 	 * @param _minOutputAmount The output asset minimum amount to be received.
 	 * @return _outputAmount The output asset amount received.
 	 */
-	function convertFundsFromInput(address _from, address _to, uint256 _inputAmount, uint256 _minOutputAmount) external override returns (uint256 _outputAmount)
+	function convertFundsFromInput(address _from, address _to, uint256 _inputAmount, uint256 _minOutputAmount) external override nonReentrant returns (uint256 _outputAmount)
 	{
 		address _sender = msg.sender;
 		Transfers._pullFunds(_from, _sender, _inputAmount);
@@ -96,7 +97,7 @@ contract Exchange is IExchange, Ownable
 	 * @param _maxInputAmount The input asset maximum amount to be provided.
 	 * @return _inputAmount The input asset amount provided.
 	 */
-	function convertFundsFromOutput(address _from, address _to, uint256 _outputAmount, uint256 _maxInputAmount) external override returns (uint256 _inputAmount)
+	function convertFundsFromOutput(address _from, address _to, uint256 _outputAmount, uint256 _maxInputAmount) external override nonReentrant returns (uint256 _inputAmount)
 	{
 		address _sender = msg.sender;
 		Transfers._pullFunds(_from, _sender, _maxInputAmount);
@@ -118,7 +119,7 @@ contract Exchange is IExchange, Ownable
 	 * @param _minOutputShares The minimum number of LP shares to be received.
 	 * @return _outputShares The actual number of LP shares received.
 	 */
-	function joinPoolFromInput(address _pool, address _token, uint256 _inputAmount, uint256 _minOutputShares) external override returns (uint256 _outputShares)
+	function joinPoolFromInput(address _pool, address _token, uint256 _inputAmount, uint256 _minOutputShares) external override nonReentrant returns (uint256 _outputShares)
 	{
 		address _sender = msg.sender;
 		Transfers._pullFunds(_token, _sender, _inputAmount);
@@ -136,7 +137,7 @@ contract Exchange is IExchange, Ownable
 	 *         This is a privileged function.
 	 * @param _token The address of the token to be recovered.
 	 */
-	function recoverLostFunds(address _token) external onlyOwner
+	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 	{
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
