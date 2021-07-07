@@ -55,6 +55,9 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	// fee configuration
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
 
+	// emergency mode flag
+	bool public emergencyMode;
+
 	/**
 	 * @dev Constructor for this strategy contract.
 	 * @param _name The ERC-20 token name.
@@ -118,7 +121,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 */
 	function totalReserve() public view returns (uint256 _totalReserve)
 	{
-		_totalReserve = _getReserveAmount();
+		_totalReserve = emergencyMode ? Transfers._getBalance(reserveToken) : _getReserveAmount();
 		if (_totalReserve == uint256(-1)) return _totalReserve;
 		return _totalReserve + 1; // avoids division by zero
 	}
@@ -211,6 +214,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 */
 	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
 	{
+		require(!emergencyMode, "not allowed");
 		address _from = msg.sender;
 		(uint256 _shares,) = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
@@ -235,7 +239,9 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		(uint256 _amount, uint256 _netAmount) = _calcAmountFromShares(_shares);
 		require(_netAmount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
-		_withdraw(_amount);
+		if (!emergencyMode) {
+			_withdraw(_amount);
+		}
 		Transfers._pushFunds(reserveToken, _from, _netAmount);
 	}
 
@@ -249,6 +255,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 */
 	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
 	{
+		require(!emergencyMode, "not allowed");
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
 			_withdraw(0);
@@ -285,6 +292,19 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
+	}
+
+	/**
+	 * @notice Allows withdrawing funds from the underlying protocol using
+	 *         the emergency withdrawal functionality. It halts the
+	 *         contract for deposits and gulp, only allowing withdrawals
+	 *         to take place.
+	 *         This is a privileged function.
+	 */
+	function enterEmergencyMode() external onlyOwner
+	{
+		emergencyMode = true;
+		_emergencyWithdraw();
 	}
 
 	/**
@@ -425,6 +445,12 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	function _withdraw(uint256 _amount) internal
 	{
 		AutoFarmV2(autoFarm).withdraw(pid, _amount);
+	}
+
+	/// @dev Performs an emergency withdrawal from the MasterChef pool
+	function _emergencyWithdraw() internal
+	{
+		AutoFarmV2(autoFarm).emergencyWithdraw(pid);
 	}
 
 	// ----- END: underlying contract abstraction

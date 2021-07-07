@@ -51,6 +51,9 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	// fee configuration
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
 
+	// emergency mode flag
+	bool public emergencyMode;
+
 	/**
 	 * @dev Constructor for this strategy contract.
 	 * @param _name The ERC-20 token name.
@@ -94,7 +97,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function totalReserve() public view returns (uint256 _totalReserve)
 	{
-		_totalReserve = _getReserveAmount();
+		_totalReserve = emergencyMode ? Transfers._getBalance(reserveToken) : _getReserveAmount();
 		if (_totalReserve == uint256(-1)) return _totalReserve;
 		return _totalReserve + 1; // avoids division by zero
 	}
@@ -180,6 +183,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
 	{
+		require(!emergencyMode, "not allowed");
 		address _from = msg.sender;
 		(uint256 _shares, uint256 _depositAmount,) = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
@@ -203,7 +207,9 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		(uint256 _amount, uint256 _withdrawalAmount, uint256 _netAmount) = _calcAmountFromShares(_shares);
 		require(_netAmount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
-		_withdraw(_amount);
+		if (!emergencyMode) {
+			_withdraw(_amount);
+		}
 		Transfers._pushFunds(reserveToken, _from, _withdrawalAmount);
 	}
 
@@ -217,6 +223,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
 	{
+		require(!emergencyMode, "not allowed");
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
 			_withdraw(0);
@@ -242,6 +249,19 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		_totalBalance = _capTransferAmount(reserveToken, _totalBalance, _retainedReward);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
+	}
+
+	/**
+	 * @notice Allows withdrawing funds from the underlying protocol using
+	 *         the emergency withdrawal functionality. It halts the
+	 *         contract for deposits and gulp, only allowing withdrawals
+	 *         to take place.
+	 *         This is a privileged function.
+	 */
+	function enterEmergencyMode() external onlyOwner
+	{
+		emergencyMode = true;
+		_emergencyWithdraw();
 	}
 
 	/**
@@ -439,6 +459,12 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	function _withdraw(uint256 _amount) internal
 	{
 		PantherMasterChef(masterChef).withdraw(pid, _amount);
+	}
+
+	/// @dev Performs an emergency withdrawal from the MasterChef pool
+	function _emergencyWithdraw() internal
+	{
+		PantherMasterChef(masterChef).emergencyWithdraw(pid);
 	}
 
 	// ----- END: underlying contract abstraction
