@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-
 import { IExchange } from "./IExchange.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Math } from "./modules/Math.sol";
 import { Transfers } from "./modules/Transfers.sol";
@@ -14,7 +13,7 @@ import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityP
  * @notice This contract provides a helper exchange abstraction to be used by other
  *         contracts, so that it can be replaced to accomodate routing changes.
  */
-contract Exchange is IExchange, Ownable
+contract Exchange is IExchange, DelayedActionGuard
 {
 	address public router;
 	address public treasury;
@@ -137,6 +136,7 @@ contract Exchange is IExchange, Ownable
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
@@ -148,6 +148,7 @@ contract Exchange is IExchange, Ownable
 	 * @param _newRouter The new router address.
 	 */
 	function setRouter(address _newRouter) external onlyOwner
+		delayed(this.setRouter.selector, keccak256(abi.encode(_newRouter)))
 	{
 		require(_newRouter != address(0), "invalid address");
 		address _oldRouter = router;
@@ -161,6 +162,7 @@ contract Exchange is IExchange, Ownable
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
