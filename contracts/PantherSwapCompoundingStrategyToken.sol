@@ -150,21 +150,22 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _pendingReward = _getPendingReward();
 		uint256 _balanceReward = Transfers._getBalance(rewardToken);
 		uint256 _totalReward = _pendingReward.add(_balanceReward);
-		(uint256 _feeReward, uint256 _retainedReward) = _capFeeAmount(_totalReward.mul(performanceFee) / 1e18);
+		uint256 _limitReward = _calcMaxRewardTransferAmount();
+		if (_totalReward > _limitReward) {
+			_totalReward = _limitReward;
+		}
+		uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
 		uint256 _netReward = _totalReward - _feeReward;
 		uint256 _totalRouting = _netReward;
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
-			_netReward = _capTransferAmount(rewardToken, _netReward, _retainedReward);
 			_totalRouting = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _netReward);
 		}
 		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
-			_totalRouting = _capTransferAmount(routingToken, _totalRouting, _retainedReward);
 			_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
 		}
-		_totalBalance = _capTransferAmount(reserveToken, _totalBalance, _retainedReward);
 		return _totalBalance;
 	}
 
@@ -221,25 +222,28 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		if (_pendingReward > 0) {
 			_withdraw(0);
 		}
-		uint256 __totalReward = Transfers._getBalance(rewardToken);
-		(uint256 _feeReward, uint256 _retainedReward) = _capFeeAmount(__totalReward.mul(performanceFee) / 1e18);
+		uint256 _totalReward = Transfers._getBalance(rewardToken);
+		uint256 _limitReward = _calcMaxRewardTransferAmount();
+		if (_totalReward > _limitReward) {
+			_totalReward = _limitReward;
+		}
+		uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
+		uint256 _netReward = _totalReward - _feeReward;
 		Transfers._pushFunds(rewardToken, buyback, _feeReward);
+		uint256 _totalRouting = _netReward;
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
-			uint256 _totalReward = Transfers._getBalance(rewardToken);
-			_totalReward = _capTransferAmount(rewardToken, _totalReward, _retainedReward);
-			Transfers._approveFunds(rewardToken, exchange, _totalReward);
-			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
+			Transfers._approveFunds(rewardToken, exchange, _netReward);
+			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _netReward, 1);
+			_totalRouting = Transfers._getBalance(routingToken);
 		}
+		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
-			uint256 _totalRouting = Transfers._getBalance(routingToken);
-			_totalRouting = _capTransferAmount(routingToken, _totalRouting, _retainedReward);
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
+			_totalBalance = Transfers._getBalance(reserveToken);
 		}
-		uint256 _totalBalance = Transfers._getBalance(reserveToken);
-		_totalBalance = _capTransferAmount(reserveToken, _totalBalance, _retainedReward);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 	}
@@ -351,31 +355,6 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 			_netAmount = _withdrawalAmount;
 		}
 		return (_amount, _withdrawalAmount, _netAmount);
-	}
-
-	/// @dev Helper function to cap the fee amount to be handled in order to stay within the PANTHER max limit
-	function _capFeeAmount(uint256 _amount) internal view returns (uint256 _capped, uint256 _retained)
-	{
-		_retained = 0;
-		uint256 _limit = _calcMaxRewardTransferAmount();
-		if (_amount > _limit) {
-			_amount = _limit;
-			_retained = _amount.sub(_limit);
-		}
-		return (_amount, _retained);
-	}
-
-	/// @dev Helper function to cap the amount to be transfered in order to stay within the PANTHER max limit
-	function _capTransferAmount(address _token, uint256 _amount, uint256 _retained) internal view returns (uint256 _capped)
-	{
-		if (_token == rewardToken) {
-			_amount = _amount.sub(_retained);
-			uint256 _limit = _calcMaxRewardTransferAmount();
-			if (_amount > _limit) {
-				_amount = _limit;
-			}
-		}
-		return _amount;
 	}
 
 	// ----- BEGIN: underlying contract abstraction
