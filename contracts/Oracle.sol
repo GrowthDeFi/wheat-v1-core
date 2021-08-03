@@ -24,67 +24,57 @@ contract Oracle is IOracle, Ownable
 		uint256 minimumInterval;
 	}
 
-	uint256 constant DEFAULT_MINIMUM_INTERVAL = 24 hours;
+	uint256 constant DEFAULT_MINIMUM_INTERVAL = 6 hours;
 
 	mapping (address => PairInfo) private pairInfo;
 
-	function activate(address _pair) external override
-	{
-		PairInfo storage _pairInfo = pairInfo[_pair];
-		if (!_pairInfo.active) {
-			uint256 _price0CumulativeLast = IUniswapV2Pair(_pair).price0CumulativeLast();
-			uint256 _price1CumulativeLast = IUniswapV2Pair(_pair).price1CumulativeLast();
-			(uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) = IUniswapV2Pair(_pair).getReserves();
-			require(_reserve0 > 0 && _reserve1 > 0, "no reserves"); // ensure that there's liquidity in the pair
-
-			FixedPoint.uq112x112 memory _price0Average = FixedPoint.fraction(_reserve1, _reserve0);
-			FixedPoint.uq112x112 memory _price1Average = FixedPoint.fraction(_reserve0, _reserve1);
-
-			_pairInfo.active = true;
-			_pairInfo.price0CumulativeLast = _price0CumulativeLast;
-			_pairInfo.price1CumulativeLast = _price1CumulativeLast;
-			_pairInfo.blockTimestampLast = _blockTimestampLast;
-			_pairInfo.price0Average = _price0Average;
-			_pairInfo.price1Average = _price1Average;
-			_pairInfo.minimumInterval = DEFAULT_MINIMUM_INTERVAL;
-		}
-	}
-
-	function consultLastPrice(address _pair, address _token, uint256 _amountIn) public view override returns (uint256 _amountOut)
+	function consultCurrentPrice(address _pair, address _token, uint256 _amountIn) external view override returns (uint256 _amountOut)
 	{
 		address _token0 = IUniswapV2Pair(_pair).token0();
 		address _token1 = IUniswapV2Pair(_pair).token1();
 		bool _use0 = _token == _token0;
 		bool _use1 = _token == _token1;
 		require(_use0 || _use1, "invalid token");
-		PairInfo storage _pairInfo = pairInfo[_pair];
-		require(_pairInfo.active, "not active");
-		FixedPoint.uq112x112 memory _priceAverage = _use0 ? _pairInfo.price0Average : _pairInfo.price1Average;
-		return _priceAverage.mul(_amountIn).decode144();
+		(,,, FixedPoint.uq112x112 memory _price0Current, FixedPoint.uq112x112 memory _price1Current) = _calcCurrentPrice(_pair);
+		FixedPoint.uq112x112 memory _priceCurrent = _use0 ? _price0Current : _price1Current;
+		return _priceCurrent.mul(_amountIn).decode144();
 	}
 
-	function consultCurrentPrice(address _pair, address _token, uint256 _amountIn) public view override returns (uint256 _amountOut)
+	function consultAveragePrice(address _pair, address _token, uint256 _amountIn) external view override returns (uint256 _amountOut)
 	{
 		address _token0 = IUniswapV2Pair(_pair).token0();
 		address _token1 = IUniswapV2Pair(_pair).token1();
 		bool _use0 = _token == _token0;
 		bool _use1 = _token == _token1;
 		require(_use0 || _use1, "invalid token");
-		(,,,, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average) = _calculatePrice(_pair);
+		(,,, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average,) = _calcAveragePrice(_pair);
 		FixedPoint.uq112x112 memory _priceAverage = _use0 ? _price0Average : _price1Average;
 		return _priceAverage.mul(_amountIn).decode144();
 	}
 
-	function updatePrice(address _pair) external override
+	function updateAveragePrice(address _pair) external override
 	{
-		(uint256 _price0CumulativeLast, uint256 _price1CumulativeLast, uint32 _blockTimestampLast, uint32 _timeElapsed, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average) = _calculatePrice(_pair);
 		PairInfo storage _pairInfo = pairInfo[_pair];
-		if (_timeElapsed >= _pairInfo.minimumInterval) {
+		if (!_pairInfo.active) {
+			(uint256 _price0CumulativeLast, uint256 _price1CumulativeLast, uint32 _blockTimestampLast, FixedPoint.uq112x112 memory _price0Current, FixedPoint.uq112x112 memory _price1Current) = _calcCurrentPrice(_pair);
+			_pairInfo.active = true;
 			_pairInfo.price0CumulativeLast = _price0CumulativeLast;
 			_pairInfo.price1CumulativeLast = _price1CumulativeLast;
 			_pairInfo.blockTimestampLast = _blockTimestampLast;
-			_pairInfo.price0Average = _price0Average;
-			_pairInfo.price1Average = _price1Average;
+			_pairInfo.price0Average = _price0Current;
+			_pairInfo.price1Average = _price1Current;
+			if (_pairInfo.minimumInterval == 0) {
+				_pairInfo.minimumInterval = DEFAULT_MINIMUM_INTERVAL;
+			}
+		} else {
+			(uint256 _price0CumulativeLast, uint256 _price1CumulativeLast, uint32 _blockTimestampLast, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average, uint32 _timeElapsed) = _calcAveragePrice(_pair);
+			if (_timeElapsed >= _pairInfo.minimumInterval) {
+				_pairInfo.price0CumulativeLast = _price0CumulativeLast;
+				_pairInfo.price1CumulativeLast = _price1CumulativeLast;
+				_pairInfo.blockTimestampLast = _blockTimestampLast;
+				_pairInfo.price0Average = _price0Average;
+				_pairInfo.price1Average = _price1Average;
+			}
 		}
 	}
 
@@ -97,7 +87,18 @@ contract Oracle is IOracle, Ownable
 		emit ChangeMinimumInterval(_pair, _oldMinimumInterval, _newMinimumInterval);
 	}
 
-	function _calculatePrice(address _pair) internal view returns (uint256 _price0Cumulative, uint256 _price1Cumulative, uint32 _blockTimestamp, uint32 _timeElapsed, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average)
+	function _calcCurrentPrice(address _pair) internal view returns (uint256 _price0Cumulative, uint256 _price1Cumulative, uint32 _blockTimestamp, FixedPoint.uq112x112 memory _price0Current, FixedPoint.uq112x112 memory _price1Current)
+	{
+		_price0Cumulative = IUniswapV2Pair(_pair).price0CumulativeLast();
+		_price1Cumulative = IUniswapV2Pair(_pair).price1CumulativeLast();
+		(uint112 _reserve0, uint112 _reserve1,) = IUniswapV2Pair(_pair).getReserves();
+		require(_reserve0 > 0 && _reserve1 > 0, "no reserves"); // ensure that there's liquidity in the pair
+		_price0Current = FixedPoint.fraction(_reserve1, _reserve0);
+		_price1Current = FixedPoint.fraction(_reserve0, _reserve1);
+		return (_price0Cumulative, _price1Cumulative, _blockTimestamp, _price0Current, _price1Current);
+	}
+
+	function _calcAveragePrice(address _pair) internal view returns (uint256 _price0Cumulative, uint256 _price1Cumulative, uint32 _blockTimestamp, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average, uint32 _timeElapsed)
 	{
 		PairInfo storage _pairInfo = pairInfo[_pair];
 		require(_pairInfo.active, "not active");
@@ -109,14 +110,14 @@ contract Oracle is IOracle, Ownable
 
 		// cumulative price is in (uq112x112 price * seconds) units so we simply wrap it after division by time elapsed
 		(_price0Cumulative, _price1Cumulative, _blockTimestamp) = UniswapV2OracleLibrary.currentCumulativePrices(_pair);
-		_timeElapsed = _blockTimestamp - _blockTimestampLast; // overflow is desired
 		_price0Average = _price0AverageLast;
 		_price1Average = _price1AverageLast;
+		_timeElapsed = _blockTimestamp - _blockTimestampLast; // overflow is desired
 		if (_timeElapsed > 0) {
 			_price0Average = FixedPoint.uq112x112(uint224((_price0Cumulative - _price0CumulativeLast) / _timeElapsed)); // overflow is desired, casting never truncates
 			_price1Average = FixedPoint.uq112x112(uint224((_price1Cumulative - _price1CumulativeLast) / _timeElapsed)); // overflow is desired, casting never truncates
 		}
-		return (_price0Cumulative, _price1Cumulative, _blockTimestamp, _timeElapsed, _price0Average, _price1Average);
+		return (_price0Cumulative, _price1Cumulative, _blockTimestamp, _price0Average, _price1Average, _timeElapsed);
 	}
 
 	// events emitted by this contract

@@ -8,10 +8,9 @@ pragma solidity ^0.6.0;
 interface IOracle
 {
 	// view functions
-	function consultLastPrice(address _pair, address _token, uint256 _amountIn) external view returns (uint256 _amountOut);
 	function consultCurrentPrice(address _pair, address _token, uint256 _amountIn) external view returns (uint256 _amountOut);
+	function consultAveragePrice(address _pair, address _token, uint256 _amountIn) external view returns (uint256 _amountOut);
 
 	// open functions
-	function activate(address _pair) external;
-	function updatePrice(address _pair) external;
+	function updateAveragePrice(address _pair) external;
 }
