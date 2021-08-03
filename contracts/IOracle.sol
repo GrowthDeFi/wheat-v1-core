@@ -2,12 +2,16 @@
 pragma solidity ^0.6.0;
 
 /**
- * @notice Oracle contract interface. Facilitates the conversion between assets
- *         including liquidity pool shares.
+ * @notice Oracle contract interface. Provides average prices as basis to avoid
+ *         price manipulations.
  */
 interface IOracle
 {
 	// view functions
-	//function calcMinimumFromInput(address _from, address _to, uint256 _inputAmount) external view returns (uint256 _minOutputAmount);
-	//function calcMinimumFromOutput(address _from, address _to, uint256 _outputAmount) external view returns (uint256 _maxInputAmount);
+	function consultLastPrice(address _pair, address _token, uint256 _amountIn) external view returns (uint256 _amountOut);
+	function consultCurrentPrice(address _pair, address _token, uint256 _amountIn) external view returns (uint256 _amountOut);
+
+	// open functions
+	function activate(address _pair) external;
+	function updatePrice(address _pair) external;
 }
