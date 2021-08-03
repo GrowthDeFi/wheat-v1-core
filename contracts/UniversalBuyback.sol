@@ -5,6 +5,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
+import { IOracle } from "./IOracle.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -33,8 +34,9 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	// addresses receiving tokens
 	address public treasury;
 
-	// exchange contract address
+	// exchange and oracle contract address
 	address public exchange;
+	address public oracle;
 
 	// split configuration
 	uint256 public rewardBuyback1Share = DEFAULT_REWARD_BUYBACK1_SHARE;
@@ -87,15 +89,15 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	/**
 	 * Performs the conversion of the accumulated reward token into
 	 * the buyback tokens, according to the defined splitting, and burns them.
-	 * @param _minBurning1 The minimum amount expected to be burned from the first buyback token.
-	 * @param _minBurning2 The minimum amount expected to be burned from the second buyback token.
 	 */
-	function gulp(uint256 _minBurning1, uint256 _minBurning2) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _minBurning1 = 1;// IOracle(oracle).calcMinimumFromInput(rewardToken, buybackToken1, _amount1);
+		uint256 _minBurning2 = 1; //IOracle(oracle).calcMinimumFromInput(rewardToken, buybackToken2, _amount2);
 		Transfers._approveFunds(rewardToken, exchange, _amount1 + _amount2);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
