@@ -5,7 +5,10 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
+import { IOracle } from "./IOracle.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+
+import { Factory } from "./interop/UniswapV2.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -18,6 +21,8 @@ import { Transfers } from "./modules/Transfers.sol";
 contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
+
+	uint256 constant DEFAULT_MAX_GULP_DEVIATION = 1e18; // 1%
 
 	uint256 constant DEFAULT_REWARD_BUYBACK1_SHARE = 70e16; // 70%
 	uint256 constant DEFAULT_REWARD_BUYBACK2_SHARE = 30e16; // 30%
@@ -33,8 +38,11 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	// addresses receiving tokens
 	address public treasury;
 
-	// exchange contract address
+	// exchange and oracle contract addresses
 	address public exchange;
+	address public oracle;
+
+	uint256 public maxGulpDeviation = DEFAULT_MAX_GULP_DEVIATION;
 
 	// split configuration
 	uint256 public rewardBuyback1Share = DEFAULT_REWARD_BUYBACK1_SHARE;
@@ -68,41 +76,24 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	}
 
 	/**
-	 * @notice Allows for the beforehand calculation of the amount of
-	 *         buyback tokens to be burned on the next gulp call.
-	 * @return _burning1 The amount of the first buyback token to be burned.
-	 * @return _burning2 The amount of the second buyback token to be burned.
-	 */
-	function pendingBurning() external view returns (uint256 _burning1, uint256 _burning2)
-	{
-		require(exchange != address(0), "exchange not set");
-		uint256 _balance = Transfers._getBalance(rewardToken);
-		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
-		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
-		_burning1 = IExchange(exchange).calcConversionFromInput(rewardToken, buybackToken1, _amount1);
-		_burning2 = IExchange(exchange).calcConversionFromInput(rewardToken, buybackToken2, _amount2);
-		return (_burning1, _burning2);
-	}
-
-	/**
 	 * Performs the conversion of the accumulated reward token into
 	 * the buyback tokens, according to the defined splitting, and burns them.
-	 * @param _minBurning1 The minimum amount expected to be burned from the first buyback token.
-	 * @param _minBurning2 The minimum amount expected to be burned from the second buyback token.
 	 */
-	function gulp(uint256 _minBurning1, uint256 _minBurning2) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
+
 		require(exchange != address(0), "exchange not set");
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		bool _shouldGulp1 = _checkGulpDeviation(rewardToken, buybackToken1, _amount1);
+		bool _shouldGulp2 = _checkGulpDeviation(rewardToken, buybackToken2, _amount2);
+		if (!_shouldGulp1 || !_shouldGulp2) return;
 		Transfers._approveFunds(rewardToken, exchange, _amount1 + _amount2);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
 		uint256 _burning1 = Transfers._getBalance(buybackToken1);
 		uint256 _burning2 = Transfers._getBalance(buybackToken2);
-		require(_burning1 >= _minBurning1, "high slippage");
-		require(_burning2 >= _minBurning2, "high slippage");
 		_burn(buybackToken1, _burning1);
 		_burn(buybackToken2, _burning2);
 	}
@@ -166,6 +157,26 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _newRewardBuyback1Share, _newRewardBuyback2Share);
 	}
 
+	function setMaxGulpDeviation(uint256 _newMaxGulpDeviation) external onlyOwner
+	{
+		require(_newMaxGulpDeviation <= 1e18, "invalid deviation");
+		uint256 _oldMaxGulpDeviation = maxGulpDeviation;
+		maxGulpDeviation = _newMaxGulpDeviation;
+		emit ChangeMaxGulpDeviation(_oldMaxGulpDeviation, _newMaxGulpDeviation);
+	}
+
+	function _checkGulpDeviation(address _from, address _to, uint256 _amountIn) internal returns (bool _shouldGulp)
+	{
+		address _pair = IExchange(exchange).getPair(_from, _to);
+		IOracle(oracle).updateAveragePrice(_pair);
+		uint256 _averageAmountOut = IOracle(oracle).consultAveragePrice(_pair, _from, _amountIn);
+		uint256 _currentAmountOut = IOracle(oracle).consultCurrentPrice(_pair, _from, _amountIn);
+		if (_currentAmountOut >= _averageAmountOut) return true;
+		uint256 _amountOutDifference = _averageAmountOut - _currentAmountOut;
+		uint256 _gulpDeviation = _amountOutDifference.mul(1e18) / _averageAmountOut;
+		return _gulpDeviation <= maxGulpDeviation;
+	}
+
 	/// @dev Implements token burning by sending to a dead address
 	function _burn(address _token, uint256 _amount) internal
 	{
@@ -176,4 +187,5 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeRewardSplit(uint256 _oldRewardBuyback1Share, uint256 _oldRewardBuyback2Share, uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share);
+	event ChangeMaxGulpDeviation(uint256 _oldMaxGulpDeviation, uint256 _newMaxGulpDeviation);
 }

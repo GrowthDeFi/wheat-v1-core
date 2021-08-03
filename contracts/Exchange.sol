@@ -10,6 +10,8 @@ import { Transfers } from "./modules/Transfers.sol";
 import { UniswapV2ExchangeAbstraction } from "./modules/UniswapV2ExchangeAbstraction.sol";
 import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
 
+import { Factory, Router02 } from "./interop/UniswapV2.sol";
+
 /**
  * @notice This contract provides a helper exchange abstraction to be used by other
  *         contracts, so that it can be replaced to accomodate routing changes.
@@ -28,6 +30,11 @@ contract Exchange is IExchange, Ownable
 	{
 		router = _router;
 		treasury = _treasury;
+	}
+
+	function getPair(address _from, address _to) external view override returns (address _pair)
+	{
+		return Factory(Router02(router).factory()).getPair(_from, _to);
 	}
 
 	/**

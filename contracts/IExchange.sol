@@ -8,6 +8,7 @@ pragma solidity ^0.6.0;
 interface IExchange
 {
 	// view functions
+	function getPair(address _from, address _to) external view returns (address _pair);
 	function calcConversionFromInput(address _from, address _to, uint256 _inputAmount) external view returns (uint256 _outputAmount);
 	function calcConversionFromOutput(address _from, address _to, uint256 _outputAmount) external view returns (uint256 _inputAmount);
 	function calcJoinPoolFromInput(address _pool, address _token, uint256 _inputAmount) external view returns (uint256 _outputShares);
