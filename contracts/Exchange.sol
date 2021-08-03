@@ -77,26 +77,6 @@ contract Exchange is IExchange, Ownable
 		return UniswapV2LiquidityPoolAbstraction._calcJoinPoolFromInput(router, _pool, _token, _inputAmount);
 	}
 
-	function calcAveragePriceFactorFromInput(address _from, address _to, uint256 _inputAmount) external override returns (uint256 _factor)
-	{
-		address _WBNB = Router02(router).WETH();
-		address _factory = Router02(router).factory();
-		address[] memory _path = UniswapV2ExchangeAbstraction._buildPath(_from, _WBNB, _to);
-		_factor = 1e18;
-		uint256 _amount = _inputAmount;
-		for (uint256 _i = 1; _i < _path.length; _i++) {
-			address _tokenA = _path[_i - 1];
-			address _tokenB = _path[_i];
-			address _pair = Factory(_factory).getPair(_tokenA, _tokenB);
-			IOracle(oracle).updateAveragePrice(_pair);
-			uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pair, _tokenA, _amount);
-			uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pair, _tokenA, _amount);
-			_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
-			_amount = _currentOutputAmount;
-		}
-		return _factor;
-	}
-
 	/**
 	 * @notice Convert funds between two assets given the exact input amount.
 	 * @param _from The input asset address.
@@ -155,6 +135,35 @@ contract Exchange is IExchange, Ownable
 		_outputShares = Math._min(_outputShares, Transfers._getBalance(_pool)); // deals with potential transfer tax
 		Transfers._pushFunds(_pool, _sender, _outputShares);
 		return _outputShares;
+	}
+
+	function oracleAveragePriceFactorFromInput(address _from, address _to, uint256 _inputAmount) external override returns (uint256 _factor)
+	{
+		address _WBNB = Router02(router).WETH();
+		address _factory = Router02(router).factory();
+		address[] memory _path = UniswapV2ExchangeAbstraction._buildPath(_from, _WBNB, _to);
+		_factor = 1e18;
+		uint256 _amount = _inputAmount;
+		for (uint256 _i = 1; _i < _path.length; _i++) {
+			address _tokenA = _path[_i - 1];
+			address _tokenB = _path[_i];
+			address _pair = Factory(_factory).getPair(_tokenA, _tokenB);
+			IOracle(oracle).updateAveragePrice(_pair);
+			uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pair, _tokenA, _amount);
+			uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pair, _tokenA, _amount);
+			_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
+			_amount = _currentOutputAmount;
+		}
+		return _factor;
+	}
+
+	function oraclePoolAveragePriceFactorFromInput(address _pool, address _token, uint256 _inputAmount) external override returns (uint256 _factor)
+	{
+		IOracle(oracle).updateAveragePrice(_pool);
+		uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pool, _token, _inputAmount);
+		uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pool, _token, _inputAmount);
+		_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
+		return _factor;
 	}
 
 	/**

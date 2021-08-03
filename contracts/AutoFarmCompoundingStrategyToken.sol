@@ -27,6 +27,8 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 {
 	using SafeMath for uint256;
 
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
 	uint256 constant DEFAULT_PERFORMANCE_FEE = 50e16; // 50%
 
@@ -51,6 +53,9 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 
 	// exchange contract address
 	address public exchange;
+
+	// minimal gulp factor
+	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	// fee configuration
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
@@ -244,10 +249,8 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 * the reserve token. This function allows the compounding of rewards.
 	 * Part of the reward accumulated is collected and sent to the fee collector
 	 * contract as performance fee.
-	 * @param _minRewardAmount The minimum amount expected to be incorporated
-	 *                         into the reserve after the call.
 	 */
-	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -261,12 +264,15 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
+			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
+			if (_factor < minimalGulpFactor) return;
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
 			if (useBelt) {
+				// TODO add price oracle for belt tokens and 4belt pool
 				Transfers._approveFunds(routingToken, beltToken, _totalRouting);
 				BeltStrategyToken(beltToken).deposit(_totalRouting, 1);
 				if (beltPool != address(0)) {
@@ -278,12 +284,13 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 				}
 			} else {
 				require(exchange != address(0), "exchange not set");
+				uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
+				if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return;
 				Transfers._approveFunds(routingToken, exchange, _totalRouting);
 				IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 			}
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
-		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 	}
 
@@ -341,6 +348,21 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
+	}
+
+	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
 	}
 
 	/**
@@ -434,4 +456,5 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 }
