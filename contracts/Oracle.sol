@@ -28,7 +28,7 @@ contract Oracle is IOracle, Ownable
 
 	mapping (address => PairInfo) private pairInfo;
 
-	function consultCurrentPrice(address _pair, address _token, uint256 _amountIn) external view override returns (uint256 _amountOut)
+	function consultCurrentPrice(address _pair, address _token, uint256 _inputAmount) external view override returns (uint256 _outputAmount)
 	{
 		address _token0 = IUniswapV2Pair(_pair).token0();
 		address _token1 = IUniswapV2Pair(_pair).token1();
@@ -37,10 +37,10 @@ contract Oracle is IOracle, Ownable
 		require(_use0 || _use1, "invalid token");
 		(,,, FixedPoint.uq112x112 memory _price0Current, FixedPoint.uq112x112 memory _price1Current) = _calcCurrentPrice(_pair);
 		FixedPoint.uq112x112 memory _priceCurrent = _use0 ? _price0Current : _price1Current;
-		return _priceCurrent.mul(_amountIn).decode144();
+		return _priceCurrent.mul(_inputAmount).decode144();
 	}
 
-	function consultAveragePrice(address _pair, address _token, uint256 _amountIn) external view override returns (uint256 _amountOut)
+	function consultAveragePrice(address _pair, address _token, uint256 _inputAmount) external view override returns (uint256 _outputAmount)
 	{
 		address _token0 = IUniswapV2Pair(_pair).token0();
 		address _token1 = IUniswapV2Pair(_pair).token1();
@@ -49,7 +49,7 @@ contract Oracle is IOracle, Ownable
 		require(_use0 || _use1, "invalid token");
 		(,,, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average,) = _calcAveragePrice(_pair);
 		FixedPoint.uq112x112 memory _priceAverage = _use0 ? _price0Average : _price1Average;
-		return _priceAverage.mul(_amountIn).decode144();
+		return _priceAverage.mul(_inputAmount).decode144();
 	}
 
 	function updateAveragePrice(address _pair) external override

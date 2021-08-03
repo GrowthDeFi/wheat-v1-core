@@ -2,8 +2,10 @@
 pragma solidity ^0.6.0;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import { IExchange } from "./IExchange.sol";
+import { IOracle } from "./IOracle.sol";
 
 import { Math } from "./modules/Math.sol";
 import { Transfers } from "./modules/Transfers.sol";
@@ -18,7 +20,10 @@ import { Factory, Router02 } from "./interop/UniswapV2.sol";
  */
 contract Exchange is IExchange, Ownable
 {
+	using SafeMath for uint256;
+
 	address public router;
+	address public oracle;
 	address public treasury;
 
 	/**
@@ -26,15 +31,11 @@ contract Exchange is IExchange, Ownable
 	 * @param _router The Uniswap V2 compatible router address to be used for operations.
 	 * @param _treasury The treasury address used to recover lost funds.
 	 */
-	constructor (address _router, address _treasury) public
+	constructor (address _router, address _oracle, address _treasury) public
 	{
 		router = _router;
+		oracle = _oracle;
 		treasury = _treasury;
-	}
-
-	function getPair(address _from, address _to) external view override returns (address _pair)
-	{
-		return Factory(Router02(router).factory()).getPair(_from, _to);
 	}
 
 	/**
@@ -74,6 +75,26 @@ contract Exchange is IExchange, Ownable
 	function calcJoinPoolFromInput(address _pool, address _token, uint256 _inputAmount) external view override returns (uint256 _outputShares)
 	{
 		return UniswapV2LiquidityPoolAbstraction._calcJoinPoolFromInput(router, _pool, _token, _inputAmount);
+	}
+
+	function calcAveragePriceFactorFromInput(address _from, address _to, uint256 _inputAmount) external override returns (uint256 _factor)
+	{
+		address _WBNB = Router02(router).WETH();
+		address _factory = Router02(router).factory();
+		address[] memory _path = UniswapV2ExchangeAbstraction._buildPath(_from, _WBNB, _to);
+		_factor = 1e18;
+		uint256 _amount = _inputAmount;
+		for (uint256 _i = 1; _i < _path.length; _i++) {
+			address _tokenA = _path[_i - 1];
+			address _tokenB = _path[_i];
+			address _pair = Factory(_factory).getPair(_tokenA, _tokenB);
+			IOracle(oracle).updateAveragePrice(_pair);
+			uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pair, _tokenA, _amount);
+			uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pair, _tokenA, _amount);
+			_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
+			_amount = _currentOutputAmount;
+		}
+		return _factor;
 	}
 
 	/**
@@ -163,6 +184,19 @@ contract Exchange is IExchange, Ownable
 	}
 
 	/**
+	 * @notice Updates the Uniswap V2 compatible oracle address.
+	 *         This is a privileged function.
+	 * @param _newOracle The new oracle address.
+	 */
+	function setOracle(address _newOracle) external onlyOwner
+	{
+		require(_newOracle != address(0), "invalid address");
+		address _oldOracle = oracle;
+		oracle = _newOracle;
+		emit ChangeOracle(_oldOracle, _newOracle);
+	}
+
+	/**
 	 * @notice Updates the treasury address used to recover lost funds.
 	 *         This is a privileged function.
 	 * @param _newTreasury The new treasury address.
@@ -177,5 +211,6 @@ contract Exchange is IExchange, Ownable
 
 	// events emitted by this contract
 	event ChangeRouter(address _oldRouter, address _newRouter);
+	event ChangeOracle(address _oldOracle, address _newOracle);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 }

@@ -22,7 +22,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 {
 	using SafeMath for uint256;
 
-	uint256 constant DEFAULT_MAX_GULP_DEVIATION = 1e18; // 1%
+	uint256 constant DEFAULT_MIN_GULP_FACTOR = 99e16; // 99%
 
 	uint256 constant DEFAULT_REWARD_BUYBACK1_SHARE = 70e16; // 70%
 	uint256 constant DEFAULT_REWARD_BUYBACK2_SHARE = 30e16; // 30%
@@ -38,11 +38,10 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	// addresses receiving tokens
 	address public treasury;
 
-	// exchange and oracle contract addresses
+	// exchange contract address
 	address public exchange;
-	address public oracle;
 
-	uint256 public maxGulpDeviation = DEFAULT_MAX_GULP_DEVIATION;
+	uint256 public minGulpFactor = DEFAULT_MIN_GULP_FACTOR;
 
 	// split configuration
 	uint256 public rewardBuyback1Share = DEFAULT_REWARD_BUYBACK1_SHARE;
@@ -86,9 +85,9 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
-		bool _shouldGulp1 = _checkGulpDeviation(rewardToken, buybackToken1, _amount1);
-		bool _shouldGulp2 = _checkGulpDeviation(rewardToken, buybackToken2, _amount2);
-		if (!_shouldGulp1 || !_shouldGulp2) return;
+		uint256 _factor1 = IExchange(exchange).calcAveragePriceFactorFromInput(rewardToken, buybackToken1, _amount1);
+		uint256 _factor2 = IExchange(exchange).calcAveragePriceFactorFromInput(rewardToken, buybackToken2, _amount2);
+		if (_factor1 < minGulpFactor || _factor2 < minGulpFactor) return;
 		Transfers._approveFunds(rewardToken, exchange, _amount1 + _amount2);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
@@ -157,24 +156,12 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _newRewardBuyback1Share, _newRewardBuyback2Share);
 	}
 
-	function setMaxGulpDeviation(uint256 _newMaxGulpDeviation) external onlyOwner
+	function setMinGulpFactor(uint256 _newMinGulpFactor) external onlyOwner
 	{
-		require(_newMaxGulpDeviation <= 1e18, "invalid deviation");
-		uint256 _oldMaxGulpDeviation = maxGulpDeviation;
-		maxGulpDeviation = _newMaxGulpDeviation;
-		emit ChangeMaxGulpDeviation(_oldMaxGulpDeviation, _newMaxGulpDeviation);
-	}
-
-	function _checkGulpDeviation(address _from, address _to, uint256 _amountIn) internal returns (bool _shouldGulp)
-	{
-		address _pair = IExchange(exchange).getPair(_from, _to);
-		IOracle(oracle).updateAveragePrice(_pair);
-		uint256 _averageAmountOut = IOracle(oracle).consultAveragePrice(_pair, _from, _amountIn);
-		uint256 _currentAmountOut = IOracle(oracle).consultCurrentPrice(_pair, _from, _amountIn);
-		if (_currentAmountOut >= _averageAmountOut) return true;
-		uint256 _amountOutDifference = _averageAmountOut - _currentAmountOut;
-		uint256 _gulpDeviation = _amountOutDifference.mul(1e18) / _averageAmountOut;
-		return _gulpDeviation <= maxGulpDeviation;
+		require(_newMinGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinGulpFactor = minGulpFactor;
+		minGulpFactor = _newMinGulpFactor;
+		emit ChangeMinGulpFactor(_oldMinGulpFactor, _newMinGulpFactor);
 	}
 
 	/// @dev Implements token burning by sending to a dead address
@@ -187,5 +174,5 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeRewardSplit(uint256 _oldRewardBuyback1Share, uint256 _oldRewardBuyback2Share, uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share);
-	event ChangeMaxGulpDeviation(uint256 _oldMaxGulpDeviation, uint256 _newMaxGulpDeviation);
+	event ChangeMinGulpFactor(uint256 _oldMinGulpFactor, uint256 _newMinGulpFactor);
 }
