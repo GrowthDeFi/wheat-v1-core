@@ -2,7 +2,7 @@
 pragma solidity ^0.6.0;
 
 /**
- * @notice Exchange contract iterface. Facilitated the conversion between assets
+ * @notice Exchange contract interface. Facilitates the conversion between assets
  *         including liquidity pool shares.
  */
 interface IExchange
