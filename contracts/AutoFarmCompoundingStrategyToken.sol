@@ -278,7 +278,6 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	/// @dev Actual gulp implementation
 	function _gulp() internal returns (bool _success)
 	{
-		require(!emergencyMode, "not allowed");
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
 			_withdraw(0);
