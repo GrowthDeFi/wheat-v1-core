@@ -25,7 +25,7 @@ contract Oracle is IOracle, DelayedActionGuard
 		uint256 minimumInterval;
 	}
 
-	uint256 constant DEFAULT_MINIMUM_INTERVAL = 6 hours;
+	uint256 constant DEFAULT_MINIMUM_INTERVAL = 5 minutes;
 
 	mapping (address => PairInfo) private pairInfo;
 
