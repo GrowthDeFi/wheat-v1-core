@@ -39,6 +39,7 @@ contract DelayedActionGuard is Ownable
 		emit AnnounceDelayedAction(_selector, interval.hash);
 	}
 
+	/*
 	function cancelDelayedAction(bytes4 _selector) external onlyOwner
 	{
 		Interval storage interval = intervals[_selector];
@@ -48,6 +49,7 @@ contract DelayedActionGuard is Ownable
 		interval.start = 0;
 		interval.end = 0;
 	}
+	*/
 
 	function _defaultIntervalParams() internal pure virtual returns (uint64 _wait, uint64 _open)
 	{
@@ -56,5 +58,5 @@ contract DelayedActionGuard is Ownable
 
 	event AnnounceDelayedAction(bytes4 _selector, bytes32 _hash);
 	event ExecuteDelayedAction(bytes4 _selector, bytes32 _hash);
-	event CancelDelayedAction(bytes4 _selector, bytes32 _hash);
+	// event CancelDelayedAction(bytes4 _selector, bytes32 _hash);
 }
