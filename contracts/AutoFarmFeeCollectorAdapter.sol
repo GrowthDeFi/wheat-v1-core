@@ -105,7 +105,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard, Delayed
 	 *         This is a privileged function.
 	 * @param _token The address of the token to be recovered.
 	 */
-	function recoverLostFunds(address _token) external onlyOwner
+	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != sourceToken, "invalid token");
