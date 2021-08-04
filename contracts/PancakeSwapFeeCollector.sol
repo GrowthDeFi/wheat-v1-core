@@ -75,6 +75,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 *         next gulp call.
 	 * @return _depositAmount The amount of the reserve token to be deposited.
 	 */
+	/*
 	function pendingDeposit() external view returns (uint256 _depositAmount)
 	{
 		uint256 _totalReward = Transfers._getBalance(rewardToken);
@@ -90,16 +91,19 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 		}
 		return _totalBalance;
 	}
+	*/
 
 	/**
 	 * @notice Allows for the beforehand calculation of the amount of
 	 *         reward token currently pending for collection.
 	 * @return _pendingReward The amount of the reward token pending collection.
 	 */
+	/*
 	function pendingReward() external view returns (uint256 _pendingReward)
 	{
 		return _getPendingReward();
 	}
+	*/
 
 	/**
 	 * Performs the conversion of the reward token received from strategies

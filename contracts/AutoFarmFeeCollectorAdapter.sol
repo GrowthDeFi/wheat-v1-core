@@ -56,10 +56,12 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ Del
 	 *         source reward token to be converted on the next gulp call.
 	 * @return _totalSource The amount of the source reward token to be converted.
 	 */
+	/*
 	function pendingSource() external view returns (uint256 _totalSource)
 	{
 		return Transfers._getBalance(sourceToken);
 	}
+	*/
 
 	/**
 	 * @notice Allows for the beforehand calculation of the amount of
@@ -67,6 +69,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ Del
 	 * @return _totalTarget The expected amount of the target reward token
 	 *                      to be sent to the fee collector after conversion.
 	 */
+	/*
 	function pendingTarget() external view returns (uint256 _totalTarget)
 	{
 		require(exchange != address(0), "exchange not set");
@@ -74,6 +77,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ Del
 		_totalTarget = IExchange(exchange).calcConversionFromInput(sourceToken, targetToken, _totalSource);
 		return _totalTarget;
 	}
+	*/
 
 	/**
 	 * Performs the conversion of the accumulated source reward token into

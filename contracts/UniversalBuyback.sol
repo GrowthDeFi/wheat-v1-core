@@ -68,10 +68,12 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 	 *         reward token to be converted on the next gulp call.
 	 * @return _buybackAmount The amount of the reward token to be converted.
 	 */
+	/*
 	function pendingBuyback() external view returns (uint256 _buybackAmount)
 	{
 		return Transfers._getBalance(rewardToken);
 	}
+	*/
 
 	/**
 	 * @notice Allows for the beforehand calculation of the amount of
@@ -79,6 +81,7 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 	 * @return _burning1 The amount of the first buyback token to be burned.
 	 * @return _burning2 The amount of the second buyback token to be burned.
 	 */
+	/*
 	function pendingBurning() external view returns (uint256 _burning1, uint256 _burning2)
 	{
 		require(exchange != address(0), "exchange not set");
@@ -89,6 +92,7 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 		_burning2 = IExchange(exchange).calcConversionFromInput(rewardToken, buybackToken2, _amount2);
 		return (_burning1, _burning2);
 	}
+	*/
 
 	/**
 	 * Performs the conversion of the accumulated reward token into

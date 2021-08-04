@@ -168,6 +168,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	 *         gulp call.
 	 * @return _feeReward The amount of the reward token to be collected.
 	 */
+	/*
 	function pendingPerformanceFee() external view returns (uint256 _feeReward)
 	{
 		uint256 _pendingReward = _getPendingReward();
@@ -176,6 +177,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 		_feeReward = _totalReward.mul(performanceFee) / 1e18;
 		return _feeReward;
 	}
+	*/
 
 	/**
 	 * @notice Allows for the beforehand calculation of the amount of
@@ -183,6 +185,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	 *         to be incorporated into the reserve on the next gulp call.
 	 * @return _rewardAmount The amount of the reserve token to be collected.
 	 */
+	/*
 	function pendingReward() external view returns (uint256 _rewardAmount)
 	{
 		uint256 _pendingReward = _getPendingReward();
@@ -212,6 +215,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 		}
 		return _totalBalance;
 	}
+	*/
 
 	/**
 	 * @notice Performs the minting of shares upon the deposit of the
