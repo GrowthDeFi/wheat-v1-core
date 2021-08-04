@@ -51,7 +51,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	address private immutable reserveToken;
 
 	// addresses receiving tokens
-	address private treasury;
+	// address private treasury;
 	address private collector;
 
 	// exchange contract address
@@ -80,7 +80,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 		address _rewardToken,
 		address _routingToken,
 		address _reserveToken,
-		address _treasury,
+		// address _treasury,
 		address _collector,
 		address _exchange,
 		uint256 _minimalGulpFactor,
@@ -99,7 +99,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 			rewardToken,
 			routingToken,
 			reserveToken,
-			treasury,
+			// treasury,
 			collector,
 			exchange,
 			minimalGulpFactor,
@@ -158,7 +158,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
-		treasury = _treasury;
+		/*treasury =*/ _treasury;
 		collector = _collector;
 		exchange = _exchange;
 		_mint(address(1), 1); // avoids division by zero
@@ -385,6 +385,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	 *         This is a privileged function.
 	 * @param _token The address of the token to be recovered.
 	 */
+	/*
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
@@ -395,12 +396,14 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
+	*/
 
 	/**
 	 * @notice Updates the treasury address used to recover lost funds.
 	 *         This is a privileged function.
 	 * @param _newTreasury The new treasury address.
 	 */
+	/*
 	function setTreasury(address _newTreasury) external onlyOwner
 		// delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
@@ -409,6 +412,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 		treasury = _newTreasury;
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
+	*/
 
 	/**
 	 * @notice Updates the fee collector address used to collect the performance fee.
@@ -563,7 +567,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	// ----- END: underlying contract abstraction
 
 	// events emitted by this contract
-	event ChangeTreasury(address _oldTreasury, address _newTreasury);
+	// event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);

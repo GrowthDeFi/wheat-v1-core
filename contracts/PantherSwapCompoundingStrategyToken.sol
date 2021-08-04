@@ -46,7 +46,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 
 	// addresses receiving tokens
 	address private dev;
-	address private treasury;
+	// address private treasury;
 	address private buyback;
 
 	// exchange contract address
@@ -72,7 +72,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		address _routingToken,
 		address _reserveToken,
 		address _dev,
-		address _treasury,
+		// address _treasury,
 		address _buyback,
 		address _exchange,
 		uint256 _minimalGulpFactor,
@@ -88,7 +88,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 			routingToken,
 			reserveToken,
 			dev,
-			treasury,
+			// treasury,
 			buyback,
 			exchange,
 			minimalGulpFactor,
@@ -127,7 +127,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
 		dev = _dev;
-		treasury = _treasury;
+		/*treasury =*/ _treasury;
 		buyback = _buyback;
 		exchange = _exchange;
 		_mint(address(1), 1); // avoids division by zero
@@ -338,6 +338,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	 *         This is a privileged function.
 	 * @param _token The address of the token to be recovered.
 	 */
+	/*
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
@@ -347,6 +348,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
+	*/
 
 	/**
 	 * @notice Updates the developer address used to collect PantherSwap referral benefits.
@@ -367,6 +369,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	 *         This is a privileged function.
 	 * @param _newTreasury The new treasury address.
 	 */
+	/*
 	function setTreasury(address _newTreasury) external onlyOwner
 		// delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
@@ -375,6 +378,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		treasury = _newTreasury;
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
+	*/
 
 	/**
 	 * @notice Updates the buyback collector address used to collect the performance fee.
@@ -550,7 +554,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 
 	// events emitted by this contract
 	event ChangeDev(address _oldDev, address _newDev);
-	event ChangeTreasury(address _oldTreasury, address _newTreasury);
+	// event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
