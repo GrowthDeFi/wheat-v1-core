@@ -22,8 +22,8 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 
-	uint256 constant DEFAULT_REWARD_BUYBACK1_SHARE = 70e16; // 70%
-	uint256 constant DEFAULT_REWARD_BUYBACK2_SHARE = 30e16; // 30%
+	uint256 constant DEFAULT_REWARD_BUYBACK1_SHARE = 85e16; // 85%
+	uint256 constant DEFAULT_REWARD_BUYBACK2_SHARE = 15e16; // 15%
 
 	// dead address to receive "burnt" tokens
 	address constant public FURNACE = 0x000000000000000000000000000000000000dEaD;
@@ -118,9 +118,9 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
 		uint256 _burning1 = Transfers._getBalance(buybackToken1);
-		uint256 _burning2 = Transfers._getBalance(buybackToken2);
+		uint256 _savings2 = Transfers._getBalance(buybackToken2);
 		_burn(buybackToken1, _burning1);
-		_burn(buybackToken2, _burning2);
+		_save(buybackToken2, _savings2);
 		return true;
 	}
 
@@ -201,6 +201,12 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 		rewardBuyback1Share = _newRewardBuyback1Share;
 		rewardBuyback2Share = _newRewardBuyback2Share;
 		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _newRewardBuyback1Share, _newRewardBuyback2Share);
+	}
+
+	/// @dev Implements token saving by sending to the treasury address
+	function _save(address _token, uint256 _amount) internal
+	{
+		Transfers._pushFunds(_token, treasury, _amount);
 	}
 
 	/// @dev Implements token burning by sending to a dead address
