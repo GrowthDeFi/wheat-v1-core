@@ -358,7 +358,6 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	function setDev(address _newDev) external onlyOwner
 		// delayed(this.setDev.selector, keccak256(abi.encode(_newDev)))
 	{
-		require(_newDev != address(0), "invalid address");
 		address _oldDev = dev;
 		dev = _newDev;
 		emit ChangeDev(_oldDev, _newDev);
