@@ -28,6 +28,8 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 {
 	using SafeMath for uint256;
 
+	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
+
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
 	uint256 constant DEFAULT_PERFORMANCE_FEE = 5e16; // 5%
 
@@ -47,6 +49,9 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	// exchange contract address
 	address public exchange;
+
+	// force gulp ratio
+	uint256 public forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
 
 	// fee configuration
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
@@ -180,7 +185,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
-		if (_execGulp) {
+		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
 			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
 		}
 		address _from = msg.sender;
@@ -325,6 +330,20 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	}
 
 	/**
+	 * @notice Updates the force gulp ratio. Any deposit larger then the
+	 *         ratio, relative to the reserve, forces gulp.
+	 *         This is a privileged function.
+	 * @param _newForceGulpRatio The new force gulp ratio.
+	 */
+	function setForceGulpRatio(uint256 _newForceGulpRatio) external onlyOwner
+	{
+		require(_newForceGulpRatio <= 1e18, "invalid rate");
+		uint256 _oldForceGulpRatio = forceGulpRatio;
+		forceGulpRatio = _newForceGulpRatio;
+		emit ChangeForceGulpRatio(_oldForceGulpRatio, _newForceGulpRatio);
+	}
+
+	/**
 	 * @notice Updates the performance fee rate.
 	 *         This is a privileged function.
 	 * @param _newPerformanceFee The new performance fee rate.
@@ -460,5 +479,6 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
