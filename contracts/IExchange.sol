@@ -2,7 +2,7 @@
 pragma solidity ^0.6.0;
 
 /**
- * @notice Exchange contract iterface. Facilitated the conversion between assets
+ * @notice Exchange contract interface. Facilitates the conversion between assets
  *         including liquidity pool shares.
  */
 interface IExchange
@@ -16,4 +16,6 @@ interface IExchange
 	function convertFundsFromInput(address _from, address _to, uint256 _inputAmount, uint256 _minOutputAmount) external returns (uint256 _outputAmount);
 	function convertFundsFromOutput(address _from, address _to, uint256 _outputAmount, uint256 _maxInputAmount) external returns (uint256 _inputAmount);
 	function joinPoolFromInput(address _pool, address _token, uint256 _inputAmount, uint256 _minOutputShares) external returns (uint256 _outputShares);
+	function oracleAveragePriceFactorFromInput(address _from, address _to, uint256 _inputAmount) external returns (uint256 _factor);
+	function oraclePoolAveragePriceFactorFromInput(address _pool, address _token, uint256 _inputAmount) external returns (uint256 _factor);
 }

@@ -6,10 +6,12 @@
     "/contracts/**/*.sol",
     "/build/contracts/*.json"
   ],
-  "dependencies": {},
   "devDependencies": {
     "@openzeppelin/contracts": "3.3.0",
     "@truffle/hdwallet-provider": "^1.2.2",
+    "@uniswap/lib": "^4.0.1-alpha",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "axios": "^0.21.1",
     "dotenv": "^8.2.0",
     "ganache-cli": "^6.12.2",

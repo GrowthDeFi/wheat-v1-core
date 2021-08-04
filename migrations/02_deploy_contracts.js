@@ -1,3 +1,4 @@
+const Oracle = artifacts.require('Oracle');
 const Exchange = artifacts.require('Exchange');
 const UniversalBuyback = artifacts.require('UniversalBuyback');
 const PancakeSwapFeeCollector = artifacts.require('PancakeSwapFeeCollector');
@@ -28,9 +29,16 @@ module.exports = async (deployer, network, [account]) => {
 
   const POOL_4BELT = '0xAEA4f7dcd172997947809CE6F12018a6D5c1E8b6'; // 4Belt Pool
 
+  // deploys Oracle contract
+  console.log('Publishing Oracle contract...');
+  await deployer.deploy(Oracle);
+  const oracle = await Oracle.deployed();
+  await oracle.transferOwnership(OWNER);
+  const ORACLE = oracle.address;
+
   // deploys Exchange contract
   console.log('Publishing Exchange contract...');
-  await deployer.deploy(Exchange, PANCAKESWAP_ROUTER, TREASURY);
+  await deployer.deploy(Exchange, PANCAKESWAP_ROUTER, ORACLE, TREASURY);
   const exchange = await Exchange.deployed();
   await exchange.transferOwnership(OWNER);
   const EXCHANGE = exchange.address;
@@ -92,6 +100,7 @@ module.exports = async (deployer, network, [account]) => {
   const PANTHER_STRATEGY = pantherSwapCompoundingStrategyToken.address;
 
   // prints summary with addresses
+  console.log('ORACLE=' + ORACLE);
   console.log('EXCHANGE=' + EXCHANGE);
   console.log('CAKE_BUYBACK=' + CAKE_BUYBACK);
   console.log('CAKE_COLLECTOR=' + CAKE_COLLECTOR);
