@@ -177,8 +177,11 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minShares The minimum number of shares expected to be
 	 *                   received in the operation.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
+		if (_execGulp) {
+			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+		}
 		address _from = msg.sender;
 		(uint256 _devAmount, uint256 _netAmount, uint256 _shares) = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
@@ -197,8 +200,11 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minAmount The minimum amount of the reserve token expected
 	 *                   to be received in the operation.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
+		if (_execGulp) {
+			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+		}
 		address _from = msg.sender;
 		uint256 _amount = _calcAmountFromShares(_shares);
 		require(_amount >= _minAmount, "high slippage");
@@ -216,6 +222,11 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 *                         into the reserve after the call.
 	 */
 	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
+	{
+		require(_gulp(_minRewardAmount), "gulp unavailable");
+	}
+
+	function _gulp(uint256 _minRewardAmount) internal returns (bool _success)
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -241,6 +252,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
+		return true;
 	}
 
 	/**
