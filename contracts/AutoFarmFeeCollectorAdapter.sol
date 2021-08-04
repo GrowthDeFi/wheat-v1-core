@@ -16,6 +16,8 @@ import { Transfers } from "./modules/Transfers.sol";
  */
 contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+
 	// adapter token configuration
 	address public immutable sourceToken;
 	address public immutable targetToken;
@@ -26,6 +28,9 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard, Delayed
 
 	// exchange contract address
 	address public exchange;
+
+	// minimal gulp factor
+	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	/**
 	 * @dev Constructor for this adapter contract.
@@ -73,18 +78,24 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard, Delayed
 	/**
 	 * Performs the conversion of the accumulated source reward token into
 	 * the target reward token and sends to the fee collector.
-	 * @param _minTotalTarget The minimum amount expected to be sent to the
-	 *                        fee collector.
 	 */
-	function gulp(uint256 _minTotalTarget) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
+	{
+		require(_gulp(), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
 	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _totalSource = Transfers._getBalance(sourceToken);
+		uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(sourceToken, targetToken, _totalSource);
+		if (_factor < minimalGulpFactor) return false;
 		Transfers._approveFunds(sourceToken, exchange, _totalSource);
 		IExchange(exchange).convertFundsFromInput(sourceToken, targetToken, _totalSource, 1);
 		uint256 _totalTarget = Transfers._getBalance(targetToken);
-		require(_totalTarget >= _minTotalTarget, "high slippage");
 		Transfers._pushFunds(targetToken, collector, _totalTarget);
+		return true;
 	}
 
 	/**
@@ -144,8 +155,25 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard, Delayed
 		emit ChangeExchange(_oldExchange, _newExchange);
 	}
 
+	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
+	}
+
 	// events emitted by this contract
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 }

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+
 import { IExchange } from "./IExchange.sol";
+import { IOracle } from "./IOracle.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Math } from "./modules/Math.sol";
@@ -9,13 +12,18 @@ import { Transfers } from "./modules/Transfers.sol";
 import { UniswapV2ExchangeAbstraction } from "./modules/UniswapV2ExchangeAbstraction.sol";
 import { UniswapV2LiquidityPoolAbstraction } from "./modules/UniswapV2LiquidityPoolAbstraction.sol";
 
+import { Factory, Router02 } from "./interop/UniswapV2.sol";
+
 /**
  * @notice This contract provides a helper exchange abstraction to be used by other
  *         contracts, so that it can be replaced to accomodate routing changes.
  */
 contract Exchange is IExchange, DelayedActionGuard
 {
+	using SafeMath for uint256;
+
 	address public router;
+	address public oracle;
 	address public treasury;
 
 	/**
@@ -23,9 +31,10 @@ contract Exchange is IExchange, DelayedActionGuard
 	 * @param _router The Uniswap V2 compatible router address to be used for operations.
 	 * @param _treasury The treasury address used to recover lost funds.
 	 */
-	constructor (address _router, address _treasury) public
+	constructor (address _router, address _oracle, address _treasury) public
 	{
 		router = _router;
+		oracle = _oracle;
 		treasury = _treasury;
 	}
 
@@ -128,6 +137,35 @@ contract Exchange is IExchange, DelayedActionGuard
 		return _outputShares;
 	}
 
+	function oracleAveragePriceFactorFromInput(address _from, address _to, uint256 _inputAmount) external override returns (uint256 _factor)
+	{
+		address _WBNB = Router02(router).WETH();
+		address _factory = Router02(router).factory();
+		address[] memory _path = UniswapV2ExchangeAbstraction._buildPath(_from, _WBNB, _to);
+		_factor = 1e18;
+		uint256 _amount = _inputAmount;
+		for (uint256 _i = 1; _i < _path.length; _i++) {
+			address _tokenA = _path[_i - 1];
+			address _tokenB = _path[_i];
+			address _pair = Factory(_factory).getPair(_tokenA, _tokenB);
+			IOracle(oracle).updateAveragePrice(_pair);
+			uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pair, _tokenA, _amount);
+			uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pair, _tokenA, _amount);
+			_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
+			_amount = _currentOutputAmount;
+		}
+		return _factor;
+	}
+
+	function oraclePoolAveragePriceFactorFromInput(address _pool, address _token, uint256 _inputAmount) external override returns (uint256 _factor)
+	{
+		IOracle(oracle).updateAveragePrice(_pool);
+		uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pool, _token, _inputAmount);
+		uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pool, _token, _inputAmount);
+		_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
+		return _factor;
+	}
+
 	/**
 	 * @notice Allows the recovery of tokens sent by mistake to this
 	 *         contract, excluding tokens relevant to its operations.
@@ -157,6 +195,20 @@ contract Exchange is IExchange, DelayedActionGuard
 	}
 
 	/**
+	 * @notice Updates the Uniswap V2 compatible oracle address.
+	 *         This is a privileged function.
+	 * @param _newOracle The new oracle address.
+	 */
+	function setOracle(address _newOracle) external onlyOwner
+		delayed(this.setOracle.selector, keccak256(abi.encode(_newOracle)))
+	{
+		require(_newOracle != address(0), "invalid address");
+		address _oldOracle = oracle;
+		oracle = _newOracle;
+		emit ChangeOracle(_oldOracle, _newOracle);
+	}
+
+	/**
 	 * @notice Updates the treasury address used to recover lost funds.
 	 *         This is a privileged function.
 	 * @param _newTreasury The new treasury address.
@@ -172,5 +224,6 @@ contract Exchange is IExchange, DelayedActionGuard
 
 	// events emitted by this contract
 	event ChangeRouter(address _oldRouter, address _newRouter);
+	event ChangeOracle(address _oldOracle, address _newOracle);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 }

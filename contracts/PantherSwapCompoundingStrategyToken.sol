@@ -29,6 +29,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 {
 	using SafeMath for uint256;
 
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
 
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
@@ -50,6 +51,9 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	// exchange contract address
 	address public exchange;
+
+	// minimal gulp factor
+	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	// force gulp ratio
 	uint256 public forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
@@ -187,7 +191,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
-			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+			require(_gulp(), "gulp unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _shares, uint256 _depositAmount,) = _calcSharesFromAmount(_amount);
@@ -209,7 +213,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
 		if (_execGulp) {
-			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+			require(_gulp(), "gulp unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _amount, uint256 _withdrawalAmount, uint256 _netAmount) = _calcAmountFromShares(_shares);
@@ -224,16 +228,14 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * the reserve token. This function allows the compounding of rewards.
 	 * Part of the reward accumulated is collected and sent to the fee collector
 	 * contract as performance fee.
-	 * @param _minRewardAmount The minimum amount expected to be incorporated
-	 *                         into the reserve after the call.
 	 */
-	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
-		require(_gulp(_minRewardAmount), "gulp unavailable");
+		require(_gulp(), "gulp unavailable");
 	}
 
 	/// @dev Actual gulp implementation
-	function _gulp(uint256 _minRewardAmount) internal returns (bool _success)
+	function _gulp() internal returns (bool _success)
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -246,6 +248,8 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
 			_totalReward = _capTransferAmount(rewardToken, _totalReward, _retainedReward);
+			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
+			if (_factor < minimalGulpFactor) return false;
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
@@ -253,12 +257,13 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
 			_totalRouting = _capTransferAmount(routingToken, _totalRouting, _retainedReward);
+			uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
+			if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return false;
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		_totalBalance = _capTransferAmount(reserveToken, _totalBalance, _retainedReward);
-		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
 		return true;
 	}
@@ -334,6 +339,22 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
+	}
+
+	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
 	}
 
 	/**
@@ -488,6 +509,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }

@@ -5,8 +5,11 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
+import { IOracle } from "./IOracle.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
+
+import { Factory } from "./interop/UniswapV2.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -19,6 +22,8 @@ import { Transfers } from "./modules/Transfers.sol";
 contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
+
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 
 	uint256 constant DEFAULT_REWARD_BUYBACK1_SHARE = 70e16; // 70%
 	uint256 constant DEFAULT_REWARD_BUYBACK2_SHARE = 30e16; // 30%
@@ -36,6 +41,9 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 
 	// exchange contract address
 	address public exchange;
+
+	// minimal gulp factor
+	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	// split configuration
 	uint256 public rewardBuyback1Share = DEFAULT_REWARD_BUYBACK1_SHARE;
@@ -88,24 +96,31 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 	/**
 	 * Performs the conversion of the accumulated reward token into
 	 * the buyback tokens, according to the defined splitting, and burns them.
-	 * @param _minBurning1 The minimum amount expected to be burned from the first buyback token.
-	 * @param _minBurning2 The minimum amount expected to be burned from the second buyback token.
 	 */
-	function gulp(uint256 _minBurning1, uint256 _minBurning2) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
+	{
+		require(_gulp(), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
 	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
+		uint256 _factor1 = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, buybackToken1, _amount1);
+		if (_factor1 < minimalGulpFactor) return false;
+		uint256 _factor2 = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, buybackToken2, _amount2);
+		if (_factor2 < minimalGulpFactor) return false;
 		Transfers._approveFunds(rewardToken, exchange, _amount1 + _amount2);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
 		uint256 _burning1 = Transfers._getBalance(buybackToken1);
 		uint256 _burning2 = Transfers._getBalance(buybackToken2);
-		require(_burning1 >= _minBurning1, "high slippage");
-		require(_burning2 >= _minBurning2, "high slippage");
 		_burn(buybackToken1, _burning1);
 		_burn(buybackToken2, _burning2);
+		return true;
 	}
 
 	/**
@@ -152,6 +167,22 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 	}
 
 	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
+	}
+
+	/**
 	 * @notice Updates the split share for the buyback and burn tokens.
 	 *         The sum must add up to 100%.
 	 *         This is a privileged function.
@@ -179,6 +210,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 
 	// events emitted by this contract
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeRewardSplit(uint256 _oldRewardBuyback1Share, uint256 _oldRewardBuyback2Share, uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share);
 }

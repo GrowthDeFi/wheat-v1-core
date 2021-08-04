@@ -21,6 +21,8 @@ import { Pair } from "./interop/UniswapV2.sol";
  */
 contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+
 	// underlying contract configuration
 	address private immutable masterChef;
 	uint256 private immutable pid;
@@ -36,6 +38,9 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 
 	// exchange contract address
 	address public exchange;
+
+	// minimal gulp factor
+	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	/**
 	 * @dev Constructor for this fee collector contract.
@@ -98,30 +103,38 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 
 	/**
 	 * Performs the conversion of the reward token received from strategies
-         * into the reserve token. Also collects the rewards from its deposits
+	 * into the reserve token. Also collects the rewards from its deposits
 	 * and sent it to the buyback contract.
-	 * @param _minDepositAmount The minimum amount expected to be incorporated
-	 *                          into the reserve after the call.
 	 */
-	function gulp(uint256 _minDepositAmount) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
+	{
+		require(_gulp(), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
 	{
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
+			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
+			if (_factor < minimalGulpFactor) return false;
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
+			uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
+			if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return false;
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
-		require(_totalBalance >= _minDepositAmount, "high slippage");
 		_deposit(_totalBalance);
 		uint256 _totalReward = Transfers._getBalance(rewardToken);
 		Transfers._pushFunds(rewardToken, buyback, _totalReward);
+		return true;
 	}
 
 	/**
@@ -181,6 +194,22 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
+	}
+
+	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
 	}
 
 	/**
@@ -275,5 +304,6 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 	event Migrate(address indexed _migrationRecipient);
 }

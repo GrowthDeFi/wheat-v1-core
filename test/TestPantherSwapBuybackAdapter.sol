@@ -27,11 +27,7 @@ contract TestPantherSwapBuybackAdapter is Env
 		uint256 _pendingBefore = PantherSwapBuybackAdapter(_adapter).pendingSource();
 		Assert.isAtLeast(_pendingBefore, 94e18, "PANTHER balance before must be 94e18");
 
-		uint256 SLIPPAGE = 6e16; // 6%
-
-		uint256 _target =  PantherSwapBuybackAdapter(_adapter).pendingTarget();
-		uint256 _minTarget = _target.mul(1e18 - SLIPPAGE).div(1e18);
-		PantherSwapBuybackAdapter(_adapter).gulp(_minTarget);
+		PantherSwapBuybackAdapter(_adapter).gulp();
 
 		uint256 _pendingAfter = PantherSwapBuybackAdapter(_adapter).pendingSource();
 		Assert.equal(_pendingAfter, 0e18, "AUTO balance after must be 0e18");
