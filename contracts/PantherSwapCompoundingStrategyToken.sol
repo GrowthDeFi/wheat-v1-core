@@ -25,7 +25,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         transfer, and the max transfer limit, which will prevent large transfers from
  *         occurring.
  */
-contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard, DelayedActionGuard
+contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -192,7 +192,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minShares The minimum number of shares expected to be
 	 *                   received in the operation.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(!emergencyMode, "not allowed");
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
@@ -215,7 +215,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minAmount The minimum amount of the reserve token expected
 	 *                   to be received in the operation.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		if (_execGulp) {
 			require(!emergencyMode, "not allowed");
@@ -237,7 +237,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * Part of the reward accumulated is collected and sent to the fee collector
 	 * contract as performance fee.
 	 */
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(!emergencyMode, "not allowed");
 		require(_gulp(), "gulp unavailable");

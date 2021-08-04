@@ -16,7 +16,7 @@ import { Transfers } from "./modules/Transfers.sol";
  *         into the two desired buyback tokens, according to the configured splitting;
  *         and burn these amounts.
  */
-contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
+contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -94,7 +94,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 	 * Performs the conversion of the accumulated reward token into
 	 * the buyback tokens, according to the defined splitting, and burns them.
 	 */
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(_gulp(), "gulp unavailable");
 	}

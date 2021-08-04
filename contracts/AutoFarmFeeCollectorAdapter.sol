@@ -14,7 +14,7 @@ import { Transfers } from "./modules/Transfers.sol";
  *         strategies, it converts the source reward token (AUTO) into the target
  *         reward token (CAKE) whenever the gulp function is called.
  */
-contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
+contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 
@@ -79,7 +79,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, WhitelistGuard, Delayed
 	 * Performs the conversion of the accumulated source reward token into
 	 * the target reward token and sends to the fee collector.
 	 */
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(_gulp(), "gulp unavailable");
 	}

@@ -19,7 +19,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         on MasterChed from reserve funds are, on the other hand, collected and sent to
  *         the buyback contract. These operations happen via the gulp function.
  */
-contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
+contract PancakeSwapFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 
@@ -106,7 +106,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 	 * into the reserve token. Also collects the rewards from its deposits
 	 * and sent it to the buyback contract.
 	 */
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(_gulp(), "gulp unavailable");
 	}

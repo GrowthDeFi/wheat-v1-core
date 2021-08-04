@@ -16,7 +16,7 @@ import { PantherToken } from "./interop/PantherSwap.sol";
  *         strategies, it converts the source reward token (PANTHER) into the target
  *         reward token (BNB) whenever the gulp function is called.
  */
-contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
+contract PantherSwapBuybackAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 
@@ -85,7 +85,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard, DelayedAc
 	 * Performs the conversion of the accumulated source reward token into
 	 * the target reward token and sends to the buyback contract.
 	 */
-	function gulp() external onlyEOAorWhitelist nonReentrant
+	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(_gulp(), "gulp unavailable");
 	}
