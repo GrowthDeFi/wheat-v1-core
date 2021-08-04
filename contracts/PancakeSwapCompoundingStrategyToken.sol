@@ -27,6 +27,8 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 {
 	using SafeMath for uint256;
 
+	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
+
 	uint256 constant MAXIMUM_DEPOSIT_FEE = 5e16; // 5%
 	uint256 constant DEFAULT_DEPOSIT_FEE = 0e16; // 0%
 
@@ -49,6 +51,9 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 
 	// exchange contract address
 	address public exchange;
+
+	// force gulp ratio
+	uint256 public forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
 
 	// fee configuration
 	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
@@ -178,8 +183,11 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minShares The minimum number of shares expected to be
 	 *                   received in the operation.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
+		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
+			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+		}
 		address _from = msg.sender;
 		(uint256 _devAmount, uint256 _netAmount, uint256 _shares) = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
@@ -198,8 +206,11 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minAmount The minimum amount of the reserve token expected
 	 *                   to be received in the operation.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
+		if (_execGulp) {
+			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+		}
 		address _from = msg.sender;
 		uint256 _amount = _calcAmountFromShares(_shares);
 		require(_amount >= _minAmount, "high slippage");
@@ -217,6 +228,12 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 *                         into the reserve after the call.
 	 */
 	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
+	{
+		require(_gulp(_minRewardAmount), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp(uint256 _minRewardAmount) internal returns (bool _success)
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -242,6 +259,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
+		return true;
 	}
 
 	/**
@@ -315,6 +333,21 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
+	}
+
+	/**
+	 * @notice Updates the force gulp ratio. Any deposit larger then the
+	 *         ratio, relative to the reserve, forces gulp.
+	 *         This is a privileged function.
+	 * @param _newForceGulpRatio The new force gulp ratio.
+	 */
+	function setForceGulpRatio(uint256 _newForceGulpRatio) external onlyOwner
+		delayed(this.setForceGulpRatio.selector, keccak256(abi.encode(_newForceGulpRatio)))
+	{
+		require(_newForceGulpRatio <= 1e18, "invalid rate");
+		uint256 _oldForceGulpRatio = forceGulpRatio;
+		forceGulpRatio = _newForceGulpRatio;
+		emit ChangeForceGulpRatio(_oldForceGulpRatio, _newForceGulpRatio);
 	}
 
 	/**
@@ -413,6 +446,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
 	event ChangeDepositFee(uint256 _oldDepositFee, uint256 _newDepositFee);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
