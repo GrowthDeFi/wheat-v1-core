@@ -29,6 +29,12 @@ contract Oracle is IOracle, DelayedActionGuard
 
 	mapping (address => PairInfo) private pairInfo;
 
+	function minimumInterval(address _pair) external view returns (uint256 _minimumInterval)
+	{
+		PairInfo storage _pairInfo = pairInfo[_pair];
+		return _pairInfo.minimumInterval;
+	}
+
 	function consultCurrentPrice(address _pair, address _token, uint256 _inputAmount) external view override returns (uint256 _outputAmount)
 	{
 		address _token0 = IUniswapV2Pair(_pair).token0();
@@ -89,15 +95,17 @@ contract Oracle is IOracle, DelayedActionGuard
 		emit ChangeMinimumInterval(_pair, _oldMinimumInterval, _newMinimumInterval);
 	}
 
-	function _calcCurrentPrice(address _pair) internal view returns (uint256 _price0Cumulative, uint256 _price1Cumulative, uint32 _blockTimestamp, FixedPoint.uq112x112 memory _price0Current, FixedPoint.uq112x112 memory _price1Current)
+	function _calcCurrentPrice(address _pair) internal view returns (uint256 _price0CumulativeLast, uint256 _price1CumulativeLast, uint32 _blockTimestampLast, FixedPoint.uq112x112 memory _price0Current, FixedPoint.uq112x112 memory _price1Current)
 	{
-		_price0Cumulative = IUniswapV2Pair(_pair).price0CumulativeLast();
-		_price1Cumulative = IUniswapV2Pair(_pair).price1CumulativeLast();
-		(uint112 _reserve0, uint112 _reserve1,) = IUniswapV2Pair(_pair).getReserves();
+		_price0CumulativeLast = IUniswapV2Pair(_pair).price0CumulativeLast();
+		_price1CumulativeLast = IUniswapV2Pair(_pair).price1CumulativeLast();
+		uint112 _reserve0;
+		uint112 _reserve1;
+		(_reserve0, _reserve1, _blockTimestampLast) = IUniswapV2Pair(_pair).getReserves();
 		require(_reserve0 > 0 && _reserve1 > 0, "no reserves"); // ensure that there's liquidity in the pair
 		_price0Current = FixedPoint.fraction(_reserve1, _reserve0);
 		_price1Current = FixedPoint.fraction(_reserve0, _reserve1);
-		return (_price0Cumulative, _price1Cumulative, _blockTimestamp, _price0Current, _price1Current);
+		return (_price0CumulativeLast, _price1CumulativeLast, _blockTimestampLast, _price0Current, _price1Current);
 	}
 
 	function _calcAveragePrice(address _pair) internal view returns (uint256 _price0Cumulative, uint256 _price1Cumulative, uint32 _blockTimestamp, FixedPoint.uq112x112 memory _price0Average, FixedPoint.uq112x112 memory _price1Average, uint32 _timeElapsed)
