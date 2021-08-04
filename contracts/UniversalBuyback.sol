@@ -132,7 +132,7 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
-		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != rewardToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
@@ -145,7 +145,7 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
-		// delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
