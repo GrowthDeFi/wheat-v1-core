@@ -343,6 +343,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newForceGulpRatio The new force gulp ratio.
 	 */
 	function setForceGulpRatio(uint256 _newForceGulpRatio) external onlyOwner
+		delayed(this.setForceGulpRatio.selector, keccak256(abi.encode(_newForceGulpRatio)))
 	{
 		require(_newForceGulpRatio <= 1e18, "invalid rate");
 		uint256 _oldForceGulpRatio = forceGulpRatio;
