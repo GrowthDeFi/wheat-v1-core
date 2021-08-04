@@ -5,6 +5,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -15,7 +16,7 @@ import { PantherToken } from "./interop/PantherSwap.sol";
  *         strategies, it converts the source reward token (PANTHER) into the target
  *         reward token (BNB) whenever the gulp function is called.
  */
-contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
+contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 
@@ -108,6 +109,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != sourceToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
@@ -120,6 +122,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -133,6 +136,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _newBuyback The new buyback contract address.
 	 */
 	function setBuyback(address _newBuyback) external onlyOwner
+		delayed(this.setBuyback.selector, keccak256(abi.encode(_newBuyback)))
 	{
 		require(_newBuyback != address(0), "invalid address");
 		address _oldBuyback = buyback;
@@ -147,6 +151,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _newExchange The new exchange address.
 	 */
 	function setExchange(address _newExchange) external onlyOwner
+		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;

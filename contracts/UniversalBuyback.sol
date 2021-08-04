@@ -7,6 +7,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 import { IExchange } from "./IExchange.sol";
 import { IOracle } from "./IOracle.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Factory } from "./interop/UniswapV2.sol";
 
@@ -18,7 +19,7 @@ import { Transfers } from "./modules/Transfers.sol";
  *         into the two desired buyback tokens, according to the configured splitting;
  *         and burn these amounts.
  */
-contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
+contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -123,6 +124,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != rewardToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
@@ -135,6 +137,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -149,6 +152,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	 * @param _newExchange The new exchange address.
 	 */
 	function setExchange(address _newExchange) external onlyOwner
+		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
@@ -163,6 +167,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard
 	 * @param _newRewardBuyback2Share The second token share.
 	 */
 	function setRewardSplit(uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share) external onlyOwner
+		delayed(this.setRewardSplit.selector, keccak256(abi.encode(_newRewardBuyback1Share, _newRewardBuyback2Share)))
 	{
 		require(_newRewardBuyback1Share <= 1e18, "invalid rate");
 		require(_newRewardBuyback2Share <= 1e18, "invalid rate");

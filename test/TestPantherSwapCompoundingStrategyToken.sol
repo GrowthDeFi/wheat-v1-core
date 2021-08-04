@@ -40,7 +40,7 @@ contract TestPantherSwapCompoundingStrategyToken is Env
 		uint256 _expectedShares =  PantherSwapCompoundingStrategyToken(_strategy).calcSharesFromAmount(_lpshares);
 		uint256 _minShares = _expectedShares.mul(1e18 - SLIPPAGE).div(1e18);
 		Transfers._approveFunds(_pool, _strategy, _lpshares);
-		PantherSwapCompoundingStrategyToken(_strategy).deposit(_lpshares, _minShares);
+		PantherSwapCompoundingStrategyToken(_strategy).deposit(_lpshares, _minShares, false);
 
 		Assert.equal(Transfers._getBalance(_pool), 0e18, "LP shares balance after must be 0e18");
 		Assert.isAtLeast(Transfers._getBalance(_strategy), _minShares, "Shares balance after deposit must be at least the minimum");
@@ -49,7 +49,7 @@ contract TestPantherSwapCompoundingStrategyToken is Env
 
 		uint256 _expectedAmount =  PantherSwapCompoundingStrategyToken(_strategy).calcAmountFromShares(_shares);
 		uint256 _minAmount = _expectedAmount.mul(1e18 - SLIPPAGE).div(1e18);
-		PantherSwapCompoundingStrategyToken(_strategy).withdraw(_shares, _minAmount);
+		PantherSwapCompoundingStrategyToken(_strategy).withdraw(_shares, _minAmount, false);
 
 		Assert.isAtLeast(Transfers._getBalance(_pool), _minAmount, "LP shares balance after wthdrawal must be at least the minimum");
 		Assert.equal(Transfers._getBalance(_strategy), 0e18, "Shares balance after withdrawal must be 0e18");

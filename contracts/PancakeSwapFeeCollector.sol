@@ -5,6 +5,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -18,12 +19,9 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         on MasterChed from reserve funds are, on the other hand, collected and sent to
  *         the buyback contract. These operations happen via the gulp function.
  */
-contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
+contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
-
-	uint256 constant MIGRATION_WAIT_INTERVAL = 1 days;
-	uint256 constant MIGRATION_OPEN_INTERVAL = 1 days;
 
 	// underlying contract configuration
 	address private immutable masterChef;
@@ -43,10 +41,6 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 
 	// minimal gulp factor
 	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
-
-	// funds migration status
-	uint256 public migrationTimestamp;
-	address public migrationRecipient;
 
 	/**
 	 * @dev Constructor for this fee collector contract.
@@ -144,6 +138,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != rewardToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -158,6 +153,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -171,6 +167,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	 * @param _newBuyback The new buyback contract address.
 	 */
 	function setBuyback(address _newBuyback) external onlyOwner
+		delayed(this.setBuyback.selector, keccak256(abi.encode(_newBuyback)))
 	{
 		require(_newBuyback != address(0), "invalid address");
 		address _oldBuyback = buyback;
@@ -185,6 +182,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	 * @param _newExchange The new exchange address.
 	 */
 	function setExchange(address _newExchange) external onlyOwner
+		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
@@ -199,6 +197,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	 * @param _newMinimalGulpFactor The new minimal gulp factor.
 	 */
 	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
 	{
 		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
 		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
@@ -207,56 +206,21 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	}
 
 	/**
-	 * @notice Announces the migration of this contracts funds to a new address.
-	 *         This is a privileged function.
-	 * @param _migrationRecipient The address to receive the migrated funds.
-	 */
-	function announceMigration(address _migrationRecipient) external onlyOwner
-	{
-		require(migrationTimestamp == 0, "ongoing migration");
-		uint256 _migrationTimestamp = now;
-		migrationTimestamp = _migrationTimestamp;
-		migrationRecipient = _migrationRecipient;
-		emit AnnounceMigration(_migrationRecipient, _migrationTimestamp);
-	}
-
-	/**
-	 * @notice Cancels a previously announced migration of this contracts funds.
-	 *         This is a privileged function.
-	 */
-	function cancelMigration() external onlyOwner
-	{
-		uint256 _migrationTimestamp = migrationTimestamp;
-		require(_migrationTimestamp != 0, "migration not started");
-		address _migrationRecipient = migrationRecipient;
-		migrationTimestamp = 0;
-		migrationRecipient = address(0);
-		emit CancelMigration(_migrationRecipient, _migrationTimestamp);
-	}
-
-	/**
-	 * @notice Performs a previously announced migration of this contracts funds.
+	 * @notice Performs a migration of this contracts funds.
 	 *         This is a privileged function.
 	 * @param _migrationRecipient The address to receive the migrated funds.
 	 * @param _emergency A flag indicating whether or not use the emergency
 	 *                   mode from the underlying MasterChef contract.
 	 */
 	function migrate(address _migrationRecipient, bool _emergency) external onlyOwner
+		delayed(this.migrate.selector, keccak256(abi.encode(_migrationRecipient, _emergency)))
 	{
-		uint256 _migrationTimestamp = migrationTimestamp;
-		require(_migrationTimestamp != 0, "migration not started");
-		require(_migrationRecipient == migrationRecipient, "recipient mismatch");
-		uint256 _start = _migrationTimestamp + MIGRATION_WAIT_INTERVAL;
-		uint256 _end = _start + MIGRATION_OPEN_INTERVAL;
-		require(_start <= now && now < _end, "not available");
-		_migrate(_emergency);
-		migrationTimestamp = 0;
-		migrationRecipient = address(0);
-		emit Migrate(_migrationRecipient, _migrationTimestamp);
+		_migrate(_migrationRecipient, _emergency);
+		emit Migrate(_migrationRecipient);
 	}
 
 	/// @dev Performs the actual migration of funds
-	function _migrate(bool _emergency) internal
+	function _migrate(address _migrationRecipient, bool _emergency) internal
 	{
 		if (_emergency) {
 			_emergencyWithdraw();
@@ -272,7 +236,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 			Transfers._pushFunds(rewardToken, buyback, _totalReward);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
-		Transfers._pushFunds(reserveToken, migrationRecipient, _totalBalance);
+		Transfers._pushFunds(reserveToken, _migrationRecipient, _totalBalance);
 	}
 
 	// ----- BEGIN: underlying contract abstraction
@@ -333,8 +297,6 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeExchange(address _oldExchange, address _newExchange);
-	event AnnounceMigration(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
-	event CancelMigration(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
-	event Migrate(address indexed _migrationRecipient, uint256 indexed _migrationTimestamp);
 	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
+	event Migrate(address indexed _migrationRecipient);
 }
