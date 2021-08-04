@@ -63,6 +63,9 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
 
+	// emergency mode flag
+	bool public emergencyMode;
+
 	/**
 	 * @dev Constructor for this strategy contract.
 	 * @param _name The ERC-20 token name.
@@ -106,7 +109,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function totalReserve() public view returns (uint256 _totalReserve)
 	{
-		_totalReserve = _getReserveAmount();
+		_totalReserve = emergencyMode ? Transfers._getBalance(reserveToken) : _getReserveAmount();
 		if (_totalReserve == uint256(-1)) return _totalReserve;
 		return _totalReserve + 1; // avoids division by zero
 	}
@@ -189,6 +192,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
+		require(!emergencyMode, "not allowed");
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
 			require(_gulp(), "gulp unavailable");
 		}
@@ -213,13 +217,16 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
 		if (_execGulp) {
+			require(!emergencyMode, "not allowed");
 			require(_gulp(), "gulp unavailable");
 		}
 		address _from = msg.sender;
 		uint256 _amount = _calcAmountFromShares(_shares);
 		require(_amount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
-		_withdraw(_amount);
+		if (!emergencyMode) {
+			_withdraw(_amount);
+		}
 		Transfers._pushFunds(reserveToken, _from, _amount);
 	}
 
@@ -231,6 +238,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
+		require(!emergencyMode, "not allowed");
 		require(_gulp(), "gulp unavailable");
 	}
 
@@ -265,6 +273,19 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
 		_deposit(_totalBalance);
 		return true;
+	}
+
+	/**
+	 * @notice Allows withdrawing funds from the underlying protocol using
+	 *         the emergency withdrawal functionality. It halts the
+	 *         contract for deposits and gulp, only allowing withdrawals
+	 *         to take place.
+	 *         This is a privileged function.
+	 */
+	function enterEmergencyMode() external onlyOwner
+	{
+		emergencyMode = true;
+		_emergencyWithdraw();
 	}
 
 	/**
@@ -458,6 +479,12 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		} else {
 			MasterChef(masterChef).withdraw(pid, _amount);
 		}
+	}
+
+	/// @dev Performs an emergency withdrawal from the MasterChef pool
+	function _emergencyWithdraw() internal
+	{
+		MasterChef(masterChef).emergencyWithdraw(pid);
 	}
 
 	// ----- END: underlying contract abstraction
