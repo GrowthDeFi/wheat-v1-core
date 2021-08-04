@@ -30,11 +30,8 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
 	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
 
-	uint256 constant MAXIMUM_DEPOSIT_FEE = 5e16; // 5%
-	uint256 constant DEFAULT_DEPOSIT_FEE = 0e16; // 0%
-
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 10e16; // 10%
+	uint256 constant DEFAULT_PERFORMANCE_FEE = 5e16; // 5%
 
 	// underlying contract configuration
 	address private immutable masterChef;
@@ -46,8 +43,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	address private immutable reserveToken;
 
 	// addresses receiving tokens
-	address private dev;
-	// address private treasury;
+	address private treasury;
 	address private collector;
 
 	// exchange contract address
@@ -60,7 +56,6 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	uint256 private forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
 
 	// fee configuration
-	uint256 private depositFee = DEFAULT_DEPOSIT_FEE;
 	uint256 private performanceFee = DEFAULT_PERFORMANCE_FEE;
 
 	// emergency mode flag
@@ -73,13 +68,11 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		address _rewardToken,
 		address _routingToken,
 		address _reserveToken,
-		address _dev,
-		// address _treasury,
+		address _treasury,
 		address _collector,
 		address _exchange,
 		uint256 _minimalGulpFactor,
 		uint256 _forceGulpRatio,
-		uint256 _depositFee,
 		uint256 _performanceFee,
 		bool _emergencyMode
 	)
@@ -90,13 +83,11 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 			rewardToken,
 			routingToken,
 			reserveToken,
-			dev,
-			// treasury,
+			treasury,
 			collector,
 			exchange,
 			minimalGulpFactor,
 			forceGulpRatio,
-			depositFee,
 			performanceFee,
 			emergencyMode
 		);
@@ -112,14 +103,13 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	 * @param _routingToken The ERC-20 token address to be used as routing
 	 *                      token, must be either the reserve token itself
 	 *                      or one of the tokens that make up a liquidity pool.
-	 * @param _dev The developer address to collect the deposit fee.
 	 * @param _treasury The treasury address used to recover lost funds.
 	 * @param _collector The fee collector address to collect the performance fee.
 	 * @param _exchange The exchange contract used to convert funds.
 	 */
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
-		address _dev, address _treasury, address _collector, address _exchange)
+		address _treasury, address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
@@ -130,8 +120,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
-		dev = _dev;
-		/*treasury =*/ _treasury;
+		treasury = _treasury;
 		collector = _collector;
 		exchange = _exchange;
 		_mint(address(1), 1); // avoids division by zero
@@ -158,8 +147,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	 */
 	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
-		(,,_shares) = _calcSharesFromAmount(_amount);
-		return _shares;
+		return _calcSharesFromAmount(_amount);
 	}
 
 	/**
@@ -237,11 +225,10 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 			require(_gulp(), "unavailable");
 		}
 		address _from = msg.sender;
-		(uint256 _devAmount, uint256 _netAmount, uint256 _shares) = _calcSharesFromAmount(_amount);
+		uint256 _shares = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
 		Transfers._pullFunds(reserveToken, _from, _amount);
-		Transfers._pushFunds(reserveToken, dev, _devAmount);
-		_deposit(_netAmount);
+		_deposit(_amount);
 		_mint(_from, _shares);
 	}
 
@@ -335,9 +322,8 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	 *         This is a privileged function.
 	 * @param _token The address of the token to be recovered.
 	 */
-	/*
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
-		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
+		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -345,37 +331,20 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
-	*/
-
-	/**
-	 * @notice Updates the developer address used to collect the deposit fee.
-	 *         This is a privileged function.
-	 * @param _newDev The new dev address.
-	 */
-	function setDev(address _newDev) external onlyOwner
-		// delayed(this.setDev.selector, keccak256(abi.encode(_newDev)))
-	{
-		require(_newDev != address(0), "invalid address");
-		address _oldDev = dev;
-		dev = _newDev;
-		emit ChangeDev(_oldDev, _newDev);
-	}
 
 	/**
 	 * @notice Updates the treasury address used to recover lost funds.
 	 *         This is a privileged function.
 	 * @param _newTreasury The new treasury address.
 	 */
-	/*
 	function setTreasury(address _newTreasury) external onlyOwner
-		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
+		// delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
 		treasury = _newTreasury;
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
-	*/
 
 	/**
 	 * @notice Updates the fee collector address used to collect the performance fee.
@@ -437,20 +406,6 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	}
 
 	/**
-	 * @notice Updates the deposit fee rate.
-	 *         This is a privileged function.
-	 * @param _newDepositFee The new deposit fee rate.
-	 */
-	function setDepositFee(uint256 _newDepositFee) external onlyOwner
-		delayed(this.setDepositFee.selector, keccak256(abi.encode(_newDepositFee)))
-	{
-		require(_newDepositFee <= MAXIMUM_DEPOSIT_FEE, "invalid rate");
-		uint256 _oldDepositFee = depositFee;
-		depositFee = _newDepositFee;
-		emit ChangeDepositFee(_oldDepositFee, _newDepositFee);
-	}
-
-	/**
 	 * @notice Updates the performance fee rate.
 	 *         This is a privileged function.
 	 * @param _newPerformanceFee The new performance fee rate.
@@ -465,12 +420,9 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	}
 
 	/// @dev Calculation of shares from amount given the share price (ratio between reserve and supply)
-	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _feeAmount, uint256 _netAmount, uint256 _shares)
+	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _shares)
 	{
-		_feeAmount = _amount.mul(depositFee) / 1e18;
-		_netAmount = _amount - _feeAmount;
-		_shares = _netAmount.mul(totalSupply()) / totalReserve();
-		return (_feeAmount, _netAmount, _shares);
+		return _amount.mul(totalSupply()) / totalReserve();
 	}
 
 	/// @dev Calculation of amount from shares given the share price (ratio between reserve and supply)
@@ -534,12 +486,10 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	// ----- END: underlying contract abstraction
 
 	// events emitted by this contract
-	event ChangeDev(address _oldDev, address _newDev);
-	// event ChangeTreasury(address _oldTreasury, address _newTreasury);
+	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
-	event ChangeDepositFee(uint256 _oldDepositFee, uint256 _newDepositFee);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }

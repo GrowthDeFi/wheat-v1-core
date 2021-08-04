@@ -61,7 +61,7 @@ module.exports = async (deployer, network, [account]) => {
 
   // deploys PancakeSwapCompoundingStrategyToken for pool 0 (CAKE)
   console.log('Publishing PancakeSwapCompoundingStrategyToken contract...');
-  await deployer.deploy(PancakeSwapCompoundingStrategyToken, 'staked CAKE', 'stkCAKE', 18, PANCAKESWAP_MASTERCHEF, 0, CAKE, DEV, TREASURY, CAKE_COLLECTOR, EXCHANGE);
+  await deployer.deploy(PancakeSwapCompoundingStrategyToken, 'staked CAKE', 'stkCAKE', 18, PANCAKESWAP_MASTERCHEF, 0, CAKE, TREASURY, CAKE_COLLECTOR, EXCHANGE);
   const pancakeSwapCompoundingStrategyToken = await PancakeSwapCompoundingStrategyToken.deployed();
   await pancakeSwapCompoundingStrategyToken.setWhitelistEnabled(false); // allows testing
   await pancakeSwapCompoundingStrategyToken.transferOwnership(OWNER);
