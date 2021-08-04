@@ -87,6 +87,12 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard, DelayedAc
 	 */
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
+		require(_gulp(), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
+	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _totalSource = Transfers._getBalance(sourceToken);
 		uint256 _limitSource = _calcMaxRewardTransferAmount();
@@ -94,11 +100,12 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard, DelayedAc
 			_totalSource = _limitSource;
 		}
 		uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(sourceToken, targetToken, _totalSource);
-		if (_factor < minimalGulpFactor) return;
+		if (_factor < minimalGulpFactor) return false;
 		Transfers._approveFunds(sourceToken, exchange, _totalSource);
 		IExchange(exchange).convertFundsFromInput(sourceToken, targetToken, _totalSource, 1);
 		uint256 _totalTarget = Transfers._getBalance(targetToken);
 		Transfers._pushFunds(targetToken, buyback, _totalTarget);
+		return true;
 	}
 
 	/**

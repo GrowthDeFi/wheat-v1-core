@@ -99,14 +99,20 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 	 */
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
+		require(_gulp(), "gulp unavailable");
+	}
 
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
+	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _balance = Transfers._getBalance(rewardToken);
 		uint256 _amount1 = _balance.mul(DEFAULT_REWARD_BUYBACK1_SHARE) / 1e18;
 		uint256 _amount2 = _balance.mul(DEFAULT_REWARD_BUYBACK2_SHARE) / 1e18;
 		uint256 _factor1 = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, buybackToken1, _amount1);
+		if (_factor1 < minimalGulpFactor) return false;
 		uint256 _factor2 = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, buybackToken2, _amount2);
-		if (_factor1 < minimalGulpFactor || _factor2 < minimalGulpFactor) return;
+		if (_factor2 < minimalGulpFactor) return false;
 		Transfers._approveFunds(rewardToken, exchange, _amount1 + _amount2);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken1, _amount1, 1);
 		IExchange(exchange).convertFundsFromInput(rewardToken, buybackToken2, _amount2, 1);
@@ -114,6 +120,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 		uint256 _burning2 = Transfers._getBalance(buybackToken2);
 		_burn(buybackToken1, _burning1);
 		_burn(buybackToken2, _burning2);
+		return true;
 	}
 
 	/**

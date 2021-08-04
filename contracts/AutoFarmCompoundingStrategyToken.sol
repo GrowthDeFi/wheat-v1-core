@@ -223,7 +223,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
-			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+			require(_gulp(), "gulp unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _shares,) = _calcSharesFromAmount(_amount);
@@ -246,7 +246,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
 		if (_execGulp) {
-			require(_gulp(1), "gulp unavailable"); // TODO to be updated by fix 6.3
+			require(_gulp(), "gulp unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _amount, uint256 _netAmount) = _calcAmountFromShares(_shares);
@@ -264,11 +264,11 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 */
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
-		require(_gulp(_minRewardAmount), "gulp unavailable");
+		require(_gulp(), "gulp unavailable");
 	}
 
 	/// @dev Actual gulp implementation
-	function _gulp(uint256 _minRewardAmount) internal returns (bool _success)
+	function _gulp() internal returns (bool _success)
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -283,7 +283,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
 			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
-			if (_factor < minimalGulpFactor) return;
+			if (_factor < minimalGulpFactor) return false;
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
@@ -303,7 +303,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 			} else {
 				require(exchange != address(0), "exchange not set");
 				uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
-				if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return;
+				if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return false;
 				Transfers._approveFunds(routingToken, exchange, _totalRouting);
 				IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 			}

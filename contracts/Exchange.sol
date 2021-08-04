@@ -200,6 +200,7 @@ contract Exchange is IExchange, DelayedActionGuard
 	 * @param _newOracle The new oracle address.
 	 */
 	function setOracle(address _newOracle) external onlyOwner
+		delayed(this.setOracle.selector, keccak256(abi.encode(_newOracle)))
 	{
 		require(_newOracle != address(0), "invalid address");
 		address _oldOracle = oracle;

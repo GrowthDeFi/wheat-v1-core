@@ -8,8 +8,9 @@ import { IUniswapV2Pair } from "@uniswap/v2-core/contracts/interfaces/IUniswapV2
 import { UniswapV2OracleLibrary } from "@uniswap/v2-periphery/contracts/libraries/UniswapV2OracleLibrary.sol";
 
 import { IOracle } from "./IOracle.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
-contract Oracle is IOracle, Ownable
+contract Oracle is IOracle, DelayedActionGuard
 {
 	using FixedPoint for FixedPoint.uq112x112;
 	using FixedPoint for FixedPoint.uq144x112;
@@ -79,6 +80,7 @@ contract Oracle is IOracle, Ownable
 	}
 
 	function setMinimumInterval(address _pair, uint256 _newMinimumInterval) external onlyOwner
+		delayed(this.setMinimumInterval.selector, keccak256(abi.encode(_pair, _newMinimumInterval)))
 	{
 		require(_newMinimumInterval > 0, "invalid interval");
 		PairInfo storage _pairInfo = pairInfo[_pair];

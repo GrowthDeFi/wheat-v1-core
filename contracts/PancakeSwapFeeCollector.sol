@@ -108,11 +108,17 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 	 */
 	function gulp() external onlyEOAorWhitelist nonReentrant
 	{
+		require(_gulp(), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
+	{
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
 			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
-			if (_factor < minimalGulpFactor) return;
+			if (_factor < minimalGulpFactor) return false;
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
@@ -120,7 +126,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
 			uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
-			if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return;
+			if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return false;
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
@@ -128,6 +134,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, WhitelistGuard, DelayedActi
 		_deposit(_totalBalance);
 		uint256 _totalReward = Transfers._getBalance(rewardToken);
 		Transfers._pushFunds(rewardToken, buyback, _totalReward);
+		return true;
 	}
 
 	/**
