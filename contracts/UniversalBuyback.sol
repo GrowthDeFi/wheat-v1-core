@@ -5,11 +5,8 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { IOracle } from "./IOracle.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
-
-import { Factory } from "./interop/UniswapV2.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
