@@ -32,6 +32,9 @@ contract Oracle is IOracle, DelayedActionGuard
 	function minimumInterval(address _pair) external view returns (uint256 _minimumInterval)
 	{
 		PairInfo storage _pairInfo = pairInfo[_pair];
+		if (_pairInfo.minimumInterval == 0) {
+			return DEFAULT_MINIMUM_INTERVAL;
+		}
 		return _pairInfo.minimumInterval;
 	}
 
