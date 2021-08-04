@@ -41,30 +41,66 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	uint256 private immutable pid;
 
 	// strategy token configuration
-	address public immutable rewardToken;
-	address public immutable routingToken;
-	address public immutable reserveToken;
+	address private immutable rewardToken;
+	address private immutable routingToken;
+	address private immutable reserveToken;
 
 	// addresses receiving tokens
-	address public dev;
-	address public treasury;
-	address public collector;
+	address private dev;
+	address private treasury;
+	address private collector;
 
 	// exchange contract address
-	address public exchange;
+	address private exchange;
 
 	// minimal gulp factor
-	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
+	uint256 private minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	// force gulp ratio
-	uint256 public forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
+	uint256 private forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
 
 	// fee configuration
-	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
-	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
+	uint256 private depositFee = DEFAULT_DEPOSIT_FEE;
+	uint256 private performanceFee = DEFAULT_PERFORMANCE_FEE;
 
 	// emergency mode flag
-	bool public emergencyMode;
+	bool private emergencyMode;
+
+	/// @dev Single public function to expose the private state, saves contract space
+	function state() external view returns (
+		address _masterChef,
+		uint256 _pid,
+		address _rewardToken,
+		address _routingToken,
+		address _reserveToken,
+		address _dev,
+		address _treasury,
+		address _collector,
+		address _exchange,
+		uint256 _minimalGulpFactor,
+		uint256 _forceGulpRatio,
+		uint256 _depositFee,
+		uint256 _performanceFee,
+		bool _emergencyMode
+	)
+	{
+		return (
+			masterChef,
+			pid,
+			rewardToken,
+			routingToken,
+			reserveToken,
+			dev,
+			treasury,
+			collector,
+			exchange,
+			minimalGulpFactor,
+			forceGulpRatio,
+			depositFee,
+			performanceFee,
+			emergencyMode
+		);
+	}
 
 	/**
 	 * @dev Constructor for this strategy contract.

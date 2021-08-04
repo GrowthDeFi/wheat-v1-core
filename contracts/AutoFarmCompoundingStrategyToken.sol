@@ -46,28 +46,68 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	uint256 private immutable beltPoolIndex;
 
 	// strategy token configuration
-	address public immutable rewardToken;
-	address public immutable routingToken;
-	address public immutable reserveToken;
+	address private immutable rewardToken;
+	address private immutable routingToken;
+	address private immutable reserveToken;
 
 	// addresses receiving tokens
-	address public treasury;
-	address public collector;
+	address private treasury;
+	address private collector;
 
 	// exchange contract address
-	address public exchange;
+	address private exchange;
 
 	// minimal gulp factor
-	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
+	uint256 private minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	// force gulp ratio
-	uint256 public forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
+	uint256 private forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
 
 	// fee configuration
-	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
+	uint256 private performanceFee = DEFAULT_PERFORMANCE_FEE;
 
 	// emergency mode flag
-	bool public emergencyMode;
+	bool private emergencyMode;
+
+	/// @dev Single public function to expose the private state, saves contract space
+	function state() external view returns (
+		address _autoFarm,
+		uint256 _pid,
+		// bool _useBelt,
+		address _beltToken,
+		address _beltPool,
+		// uint256 _beltPoolIndex,
+		address _rewardToken,
+		address _routingToken,
+		address _reserveToken,
+		address _treasury,
+		address _collector,
+		address _exchange,
+		uint256 _minimalGulpFactor,
+		uint256 _forceGulpRatio,
+		uint256 _performanceFee,
+		bool _emergencyMode
+	)
+	{
+		return (
+			autoFarm,
+			pid,
+			// useBelt,
+			beltToken,
+			beltPool,
+			// beltPoolIndex,
+			rewardToken,
+			routingToken,
+			reserveToken,
+			treasury,
+			collector,
+			exchange,
+			minimalGulpFactor,
+			forceGulpRatio,
+			performanceFee,
+			emergencyMode
+		);
+	}
 
 	/**
 	 * @dev Constructor for this strategy contract.
