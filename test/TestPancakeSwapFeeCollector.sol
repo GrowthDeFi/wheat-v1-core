@@ -23,13 +23,10 @@ contract TestPancakeSwapFeeCollector is Env
 
 		Transfers._pushFunds($.CAKE, _collector, 20e18);
 
-		uint256 SLIPPAGE = 1e15; // 0.1%
-
 		uint256 _depositAmountBefore =  PancakeSwapFeeCollector(_collector).pendingDeposit();
 		Assert.isAbove(_depositAmountBefore, 0e18, "CAKE balance before must be greater than 0e18");
 
-		uint256 _minDepositAmount = _depositAmountBefore.mul(1e18 - SLIPPAGE).div(1e18);
-		PancakeSwapFeeCollector(_collector).gulp(_minDepositAmount);
+		PancakeSwapFeeCollector(_collector).gulp();
 
 		uint256 _depositAmountAfter = PancakeSwapFeeCollector(_collector).pendingDeposit();
 		Assert.equal(_depositAmountAfter, 0e18, "CAKE balance after must be 0e18");
