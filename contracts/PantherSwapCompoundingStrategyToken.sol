@@ -200,7 +200,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	{
 		require(!emergencyMode, "not allowed");
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
-			require(_gulp(), "gulp unavailable");
+			require(_gulp(), "unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _shares, uint256 _depositAmount,) = _calcSharesFromAmount(_amount);
@@ -223,7 +223,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	{
 		if (_execGulp) {
 			require(!emergencyMode, "not allowed");
-			require(_gulp(), "gulp unavailable");
+			require(_gulp(), "unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _amount, uint256 _withdrawalAmount, uint256 _netAmount) = _calcAmountFromShares(_shares);
@@ -244,7 +244,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(!emergencyMode, "not allowed");
-		require(_gulp(), "gulp unavailable");
+		require(_gulp(), "unavailable");
 	}
 
 	/// @dev Actual gulp implementation

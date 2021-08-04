@@ -112,7 +112,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 */
 	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
-		require(_gulp(), "gulp unavailable");
+		require(_gulp(), "unavailable");
 	}
 
 	/// @dev Actual gulp implementation

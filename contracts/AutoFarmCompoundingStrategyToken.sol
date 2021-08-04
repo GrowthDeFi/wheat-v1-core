@@ -231,7 +231,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	{
 		require(!emergencyMode, "not allowed");
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
-			require(_gulp(), "gulp unavailable");
+			require(_gulp(), "unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _shares,) = _calcSharesFromAmount(_amount);
@@ -255,7 +255,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	{
 		if (_execGulp) {
 			require(!emergencyMode, "not allowed");
-			require(_gulp(), "gulp unavailable");
+			require(_gulp(), "unavailable");
 		}
 		address _from = msg.sender;
 		(uint256 _amount, uint256 _netAmount) = _calcAmountFromShares(_shares);
@@ -276,7 +276,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		require(!emergencyMode, "not allowed");
-		require(_gulp(), "gulp unavailable");
+		require(_gulp(), "unavailable");
 	}
 
 	/// @dev Actual gulp implementation

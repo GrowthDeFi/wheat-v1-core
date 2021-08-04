@@ -100,7 +100,7 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 	 */
 	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
-		require(_gulp(), "gulp unavailable");
+		require(_gulp(), "unavailable");
 	}
 
 	/// @dev Actual gulp implementation
