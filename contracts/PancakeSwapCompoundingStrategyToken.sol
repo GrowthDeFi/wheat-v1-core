@@ -7,6 +7,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -22,9 +23,12 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         to the fee collector contract. This contract also allows for charging a
  *         deposit fee deducted from deposited funds.
  */
-contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
+contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
+
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
 
 	uint256 constant MAXIMUM_DEPOSIT_FEE = 5e16; // 5%
 	uint256 constant DEFAULT_DEPOSIT_FEE = 0e16; // 0%
@@ -49,9 +53,18 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	// exchange contract address
 	address public exchange;
 
+	// minimal gulp factor
+	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
+
+	// force gulp ratio
+	uint256 public forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
+
 	// fee configuration
 	uint256 public depositFee = DEFAULT_DEPOSIT_FEE;
 	uint256 public performanceFee = DEFAULT_PERFORMANCE_FEE;
+
+	// emergency mode flag
+	bool public emergencyMode;
 
 	/**
 	 * @dev Constructor for this strategy contract.
@@ -96,7 +109,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 */
 	function totalReserve() public view returns (uint256 _totalReserve)
 	{
-		_totalReserve = _getReserveAmount();
+		_totalReserve = emergencyMode ? Transfers._getBalance(reserveToken) : _getReserveAmount();
 		if (_totalReserve == uint256(-1)) return _totalReserve;
 		return _totalReserve + 1; // avoids division by zero
 	}
@@ -177,8 +190,12 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minShares The minimum number of shares expected to be
 	 *                   received in the operation.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares) external onlyEOAorWhitelist nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
+		require(!emergencyMode, "not allowed");
+		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
+			require(_gulp(), "gulp unavailable");
+		}
 		address _from = msg.sender;
 		(uint256 _devAmount, uint256 _netAmount, uint256 _shares) = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
@@ -197,13 +214,19 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _minAmount The minimum amount of the reserve token expected
 	 *                   to be received in the operation.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount) external onlyEOAorWhitelist nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external onlyEOAorWhitelist nonReentrant
 	{
+		if (_execGulp) {
+			require(!emergencyMode, "not allowed");
+			require(_gulp(), "gulp unavailable");
+		}
 		address _from = msg.sender;
 		uint256 _amount = _calcAmountFromShares(_shares);
 		require(_amount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
-		_withdraw(_amount);
+		if (!emergencyMode) {
+			_withdraw(_amount);
+		}
 		Transfers._pushFunds(reserveToken, _from, _amount);
 	}
 
@@ -212,10 +235,15 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * the reserve token. This function allows the compounding of rewards.
 	 * Part of the reward accumulated is collected and sent to the fee collector
 	 * contract as performance fee.
-	 * @param _minRewardAmount The minimum amount expected to be incorporated
-	 *                         into the reserve after the call.
 	 */
-	function gulp(uint256 _minRewardAmount) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
+	{
+		require(!emergencyMode, "not allowed");
+		require(_gulp(), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
 	{
 		uint256 _pendingReward = _getPendingReward();
 		if (_pendingReward > 0) {
@@ -229,18 +257,35 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		if (rewardToken != routingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
+			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
+			if (_factor < minimalGulpFactor) return false;
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
 		if (routingToken != reserveToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
+			uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
+			if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return false;
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
 			IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
 		}
 		uint256 _totalBalance = Transfers._getBalance(reserveToken);
-		require(_totalBalance >= _minRewardAmount, "high slippage");
 		_deposit(_totalBalance);
+		return true;
+	}
+
+	/**
+	 * @notice Allows withdrawing funds from the underlying protocol using
+	 *         the emergency withdrawal functionality. It halts the
+	 *         contract for deposits and gulp, only allowing withdrawals
+	 *         to take place.
+	 *         This is a privileged function.
+	 */
+	function enterEmergencyMode() external onlyOwner
+	{
+		emergencyMode = true;
+		_emergencyWithdraw();
 	}
 
 	/**
@@ -251,6 +296,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -265,6 +311,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newDev The new dev address.
 	 */
 	function setDev(address _newDev) external onlyOwner
+		delayed(this.setDev.selector, keccak256(abi.encode(_newDev)))
 	{
 		require(_newDev != address(0), "invalid address");
 		address _oldDev = dev;
@@ -278,6 +325,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -291,6 +339,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newCollector The new fee collector address.
 	 */
 	function setCollector(address _newCollector) external onlyOwner
+		delayed(this.setCollector.selector, keccak256(abi.encode(_newCollector)))
 	{
 		require(_newCollector != address(0), "invalid address");
 		address _oldCollector = collector;
@@ -305,10 +354,42 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newExchange The new exchange address.
 	 */
 	function setExchange(address _newExchange) external onlyOwner
+		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
+	}
+
+	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
+	}
+
+	/**
+	 * @notice Updates the force gulp ratio. Any deposit larger then the
+	 *         ratio, relative to the reserve, forces gulp.
+	 *         This is a privileged function.
+	 * @param _newForceGulpRatio The new force gulp ratio.
+	 */
+	function setForceGulpRatio(uint256 _newForceGulpRatio) external onlyOwner
+		delayed(this.setForceGulpRatio.selector, keccak256(abi.encode(_newForceGulpRatio)))
+	{
+		require(_newForceGulpRatio <= 1e18, "invalid rate");
+		uint256 _oldForceGulpRatio = forceGulpRatio;
+		forceGulpRatio = _newForceGulpRatio;
+		emit ChangeForceGulpRatio(_oldForceGulpRatio, _newForceGulpRatio);
 	}
 
 	/**
@@ -317,6 +398,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newDepositFee The new deposit fee rate.
 	 */
 	function setDepositFee(uint256 _newDepositFee) external onlyOwner
+		delayed(this.setDepositFee.selector, keccak256(abi.encode(_newDepositFee)))
 	{
 		require(_newDepositFee <= MAXIMUM_DEPOSIT_FEE, "invalid rate");
 		uint256 _oldDepositFee = depositFee;
@@ -330,6 +412,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newPerformanceFee The new performance fee rate.
 	 */
 	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner
+		delayed(this.setPerformanceFee.selector, keccak256(abi.encode(_newPerformanceFee)))
 	{
 		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
 		uint256 _oldPerformanceFee = performanceFee;
@@ -398,6 +481,12 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		}
 	}
 
+	/// @dev Performs an emergency withdrawal from the MasterChef pool
+	function _emergencyWithdraw() internal
+	{
+		MasterChef(masterChef).emergencyWithdraw(pid);
+	}
+
 	// ----- END: underlying contract abstraction
 
 	// events emitted by this contract
@@ -405,6 +494,8 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
+	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
 	event ChangeDepositFee(uint256 _oldDepositFee, uint256 _newDepositFee);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }

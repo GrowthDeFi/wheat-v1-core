@@ -89,7 +89,7 @@ library UniswapV2ExchangeAbstraction
 	 * @param _to The output asset address.
 	 * @return _path The route to perform conversion.
 	 */
-	function _buildPath(address _from, address _through, address _to) private pure returns (address[] memory _path)
+	function _buildPath(address _from, address _through, address _to) internal pure returns (address[] memory _path)
 	{
 		assert(_from != _to);
 		if (_from == _through || _to == _through) {
