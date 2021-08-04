@@ -231,6 +231,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 		require(_gulp(_minRewardAmount), "gulp unavailable");
 	}
 
+	/// @dev Actual gulp implementation
 	function _gulp(uint256 _minRewardAmount) internal returns (bool _success)
 	{
 		uint256 _pendingReward = _getPendingReward();
