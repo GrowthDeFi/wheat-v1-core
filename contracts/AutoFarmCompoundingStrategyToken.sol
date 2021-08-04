@@ -7,6 +7,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -23,7 +24,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         AutoFarm. A performance fee is deducted from the converted funds and sent
  *         to the fee collector contract.
  */
-contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
+contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -313,6 +314,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != beltToken, "invalid token");
 		require(_token != reserveToken, "invalid token");
@@ -328,6 +330,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -341,6 +344,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 * @param _newCollector The new fee collector address.
 	 */
 	function setCollector(address _newCollector) external onlyOwner
+		delayed(this.setCollector.selector, keccak256(abi.encode(_newCollector)))
 	{
 		require(_newCollector != address(0), "invalid address");
 		address _oldCollector = collector;
@@ -355,6 +359,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 * @param _newExchange The new exchange address.
 	 */
 	function setExchange(address _newExchange) external onlyOwner
+		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
@@ -381,6 +386,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGu
 	 * @param _newPerformanceFee The new performance fee rate.
 	 */
 	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner
+		delayed(this.setPerformanceFee.selector, keccak256(abi.encode(_newPerformanceFee)))
 	{
 		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
 		uint256 _oldPerformanceFee = performanceFee;

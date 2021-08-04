@@ -7,6 +7,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -22,7 +23,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         to the fee collector contract. This contract also allows for charging a
  *         deposit fee deducted from deposited funds.
  */
-contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard
+contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -269,6 +270,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -283,6 +285,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newDev The new dev address.
 	 */
 	function setDev(address _newDev) external onlyOwner
+		delayed(this.setDev.selector, keccak256(abi.encode(_newDev)))
 	{
 		require(_newDev != address(0), "invalid address");
 		address _oldDev = dev;
@@ -296,6 +299,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -309,6 +313,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newCollector The new fee collector address.
 	 */
 	function setCollector(address _newCollector) external onlyOwner
+		delayed(this.setCollector.selector, keccak256(abi.encode(_newCollector)))
 	{
 		require(_newCollector != address(0), "invalid address");
 		address _oldCollector = collector;
@@ -323,6 +328,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newExchange The new exchange address.
 	 */
 	function setExchange(address _newExchange) external onlyOwner
+		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
@@ -349,6 +355,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newDepositFee The new deposit fee rate.
 	 */
 	function setDepositFee(uint256 _newDepositFee) external onlyOwner
+		delayed(this.setDepositFee.selector, keccak256(abi.encode(_newDepositFee)))
 	{
 		require(_newDepositFee <= MAXIMUM_DEPOSIT_FEE, "invalid rate");
 		uint256 _oldDepositFee = depositFee;
@@ -362,6 +369,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, Whitelis
 	 * @param _newPerformanceFee The new performance fee rate.
 	 */
 	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner
+		delayed(this.setPerformanceFee.selector, keccak256(abi.encode(_newPerformanceFee)))
 	{
 		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
 		uint256 _oldPerformanceFee = performanceFee;
