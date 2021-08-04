@@ -148,11 +148,11 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 		for (uint256 _i = 1; _i < _path.length; _i++) {
 			address _tokenA = _path[_i - 1];
 			address _tokenB = _path[_i];
-			address _pair = Factory(_factory).getPair(_tokenA, _tokenB);
-			IOracle(oracle).updateAveragePrice(_pair);
-			uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pair, _tokenA, _amount);
-			uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pair, _tokenA, _amount);
-			_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
+			address _pool = Factory(_factory).getPair(_tokenA, _tokenB);
+			IOracle(oracle).updateAveragePrice(_pool);
+			uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pool, _tokenA, _amount);
+			uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pool, _tokenA, _amount);
+			_factor = _currentOutputAmount.mul(_factor) / _averageOutputAmount;
 			_amount = _currentOutputAmount;
 		}
 		return _factor;
@@ -163,7 +163,7 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 		IOracle(oracle).updateAveragePrice(_pool);
 		uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pool, _token, _inputAmount);
 		uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pool, _token, _inputAmount);
-		_factor = _factor.mul(_currentOutputAmount) / _averageOutputAmount;
+		_factor = _currentOutputAmount.mul(1e18) / _averageOutputAmount;
 		return _factor;
 	}
 
