@@ -300,7 +300,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
-		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
+		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
@@ -329,7 +329,7 @@ contract PancakeSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
-		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
+		// delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
