@@ -5,6 +5,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { IExchange } from "./IExchange.sol";
 import { WhitelistGuard } from "./WhitelistGuard.sol";
+import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -15,8 +16,10 @@ import { PantherToken } from "./interop/PantherSwap.sol";
  *         strategies, it converts the source reward token (PANTHER) into the target
  *         reward token (BNB) whenever the gulp function is called.
  */
-contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
+contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 {
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+
 	// adapter token configuration
 	address public immutable sourceToken;
 	address public immutable targetToken;
@@ -27,6 +30,9 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 
 	// exchange contract address
 	address public exchange;
+
+	// minimal gulp factor
+	uint256 public minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
 
 	/**
 	 * @dev Constructor for this adapter contract.
@@ -78,10 +84,14 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	/**
 	 * Performs the conversion of the accumulated source reward token into
 	 * the target reward token and sends to the buyback contract.
-	 * @param _minTotalTarget The minimum amount expected to be sent to the
-	 *                        buyback contract.
 	 */
-	function gulp(uint256 _minTotalTarget) external onlyEOAorWhitelist nonReentrant
+	function gulp() external onlyEOAorWhitelist nonReentrant
+	{
+		require(_gulp(), "gulp unavailable");
+	}
+
+	/// @dev Actual gulp implementation
+	function _gulp() internal returns (bool _success)
 	{
 		require(exchange != address(0), "exchange not set");
 		uint256 _totalSource = Transfers._getBalance(sourceToken);
@@ -89,11 +99,13 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 		if (_totalSource > _limitSource) {
 			_totalSource = _limitSource;
 		}
+		uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(sourceToken, targetToken, _totalSource);
+		if (_factor < minimalGulpFactor) return false;
 		Transfers._approveFunds(sourceToken, exchange, _totalSource);
 		IExchange(exchange).convertFundsFromInput(sourceToken, targetToken, _totalSource, 1);
 		uint256 _totalTarget = Transfers._getBalance(targetToken);
-		require(_totalTarget >= _minTotalTarget, "high slippage");
 		Transfers._pushFunds(targetToken, buyback, _totalTarget);
+		return true;
 	}
 
 	/**
@@ -104,6 +116,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != sourceToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
@@ -116,6 +129,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -129,6 +143,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _newBuyback The new buyback contract address.
 	 */
 	function setBuyback(address _newBuyback) external onlyOwner
+		delayed(this.setBuyback.selector, keccak256(abi.encode(_newBuyback)))
 	{
 		require(_newBuyback != address(0), "invalid address");
 		address _oldBuyback = buyback;
@@ -143,10 +158,27 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	 * @param _newExchange The new exchange address.
 	 */
 	function setExchange(address _newExchange) external onlyOwner
+		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
 	{
 		address _oldExchange = exchange;
 		exchange = _newExchange;
 		emit ChangeExchange(_oldExchange, _newExchange);
+	}
+
+	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
 	}
 
 	/// @dev Returns the max transfer amount as permitted by the PANTHER token.
@@ -159,4 +191,5 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 }

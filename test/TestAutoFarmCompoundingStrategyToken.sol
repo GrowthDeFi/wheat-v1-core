@@ -65,7 +65,7 @@ contract TestAutoFarmCompoundingStrategyToken is Env
 		uint256 _expectedShares =  AutoFarmCompoundingStrategyToken(_strategy).calcSharesFromAmount(_lpshares);
 		uint256 _minShares = _expectedShares.mul(1e18 - SLIPPAGE).div(1e18);
 		Transfers._approveFunds(_poolToken, _strategy, _lpshares);
-		AutoFarmCompoundingStrategyToken(_strategy).deposit(_lpshares, _minShares);
+		AutoFarmCompoundingStrategyToken(_strategy).deposit(_lpshares, _minShares, false);
 
 		Assert.equal(Transfers._getBalance(_poolToken), 0e18, "LP shares balance after deposit must be 0e18");
 		Assert.isAtLeast(Transfers._getBalance(_strategy), _minShares, "Shares balance after deposit must be at least the minimum");
@@ -84,7 +84,7 @@ contract TestAutoFarmCompoundingStrategyToken is Env
 
 		uint256 _expectedAmount =  AutoFarmCompoundingStrategyToken(_strategy).calcAmountFromShares(_shares);
 		uint256 _minAmount = _expectedAmount.mul(1e18 - SLIPPAGE).div(1e18);
-		AutoFarmCompoundingStrategyToken(_strategy).withdraw(_shares, _minAmount);
+		AutoFarmCompoundingStrategyToken(_strategy).withdraw(_shares, _minAmount, false);
 
 		Assert.equal(Transfers._getBalance(_strategy), 0e18, "Shares balance after withdrawal must be 0e18");
 		Assert.isAtLeast(Transfers._getBalance(_poolToken), _minAmount, "LP shares balance after wthdrawal must be at least the minimum");

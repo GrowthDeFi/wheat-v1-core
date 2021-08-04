@@ -27,11 +27,7 @@ contract TestAutoFarmFeeCollectorAdapter is Env
 		uint256 _pendingBefore = AutoFarmFeeCollectorAdapter(_adapter).pendingSource();
 		Assert.equal(_pendingBefore, 1e17, "AUTO balance before must be 1e17");
 
-		uint256 SLIPPAGE = 1e15; // 0.1%
-
-		uint256 _target =  AutoFarmFeeCollectorAdapter(_adapter).pendingTarget();
-		uint256 _minTarget = _target.mul(1e18 - SLIPPAGE).div(1e18);
-		AutoFarmFeeCollectorAdapter(_adapter).gulp(_minTarget);
+		AutoFarmFeeCollectorAdapter(_adapter).gulp();
 
 		uint256 _pendingAfter = AutoFarmFeeCollectorAdapter(_adapter).pendingSource();
 		Assert.equal(_pendingAfter, 0e18, "AUTO balance after must be 0e18");
