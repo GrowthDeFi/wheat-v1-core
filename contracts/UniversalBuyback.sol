@@ -167,6 +167,22 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 	}
 
 	/**
+	 * @notice Updates the minimal gulp factor which defines the tolerance
+	 *         for gulping when below the average price. Default is 99%,
+	 *         which implies accepting up to 1% below the average price.
+	 *         This is a privileged function.
+	 * @param _newMinimalGulpFactor The new minimal gulp factor.
+	 */
+	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
+	{
+		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
+		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
+		minimalGulpFactor = _newMinimalGulpFactor;
+		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
+	}
+
+	/**
 	 * @notice Updates the split share for the buyback and burn tokens.
 	 *         The sum must add up to 100%.
 	 *         This is a privileged function.
@@ -186,21 +202,6 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 		emit ChangeRewardSplit(_oldRewardBuyback1Share, _oldRewardBuyback2Share, _newRewardBuyback1Share, _newRewardBuyback2Share);
 	}
 
-	/**
-	 * @notice Updates the minimal gulp factor which defines the tolerance
-	 *         for gulping when below the average price. Default is 99%,
-	 *         which implies accepting up to 1% below the average price.
-	 *         This is a privileged function.
-	 * @param _newMinimalGulpFactor The new minimal gulp factor.
-	 */
-	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
-	{
-		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
-		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
-		minimalGulpFactor = _newMinimalGulpFactor;
-		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
-	}
-
 	/// @dev Implements token burning by sending to a dead address
 	function _burn(address _token, uint256 _amount) internal
 	{
@@ -209,7 +210,7 @@ contract UniversalBuyback is ReentrancyGuard, WhitelistGuard, DelayedActionGuard
 
 	// events emitted by this contract
 	event ChangeExchange(address _oldExchange, address _newExchange);
+	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeRewardSplit(uint256 _oldRewardBuyback1Share, uint256 _oldRewardBuyback2Share, uint256 _newRewardBuyback1Share, uint256 _newRewardBuyback2Share);
-	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
 }

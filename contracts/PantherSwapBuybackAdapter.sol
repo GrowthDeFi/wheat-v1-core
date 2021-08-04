@@ -173,6 +173,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, WhitelistGuard, DelayedAc
 	 * @param _newMinimalGulpFactor The new minimal gulp factor.
 	 */
 	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
+		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
 	{
 		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
 		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
