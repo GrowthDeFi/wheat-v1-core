@@ -725,7 +725,7 @@ async function gulpAll(privateKey, network) {
     for (const address of addresses) {
       const fee = await performanceFee(privateKey, network, address);
       const feeAmount = await pendingPerformanceFee(privateKey, network, address);
-      const MINIMUM_AMOUNT = 600000000000000000000n; // 600 PANTHER
+      const MINIMUM_AMOUNT = 2000000000000000000000n; // 2000 PANTHER
       if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
