@@ -140,6 +140,7 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 
 	function oracleAveragePriceFactorFromInput(address _from, address _to, uint256 _inputAmount) external override returns (uint256 _factor)
 	{
+		require(_inputAmount > 0, "invalid amount");
 		address _WBNB = Router02(router).WETH();
 		address _factory = Router02(router).factory();
 		address[] memory _path = UniswapV2ExchangeAbstraction._buildPath(_from, _WBNB, _to);
@@ -160,6 +161,7 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 
 	function oraclePoolAveragePriceFactorFromInput(address _pool, address _token, uint256 _inputAmount) external override returns (uint256 _factor)
 	{
+		require(_inputAmount > 0, "invalid amount");
 		IOracle(oracle).updateAveragePrice(_pool);
 		uint256 _averageOutputAmount = IOracle(oracle).consultAveragePrice(_pool, _token, _inputAmount);
 		uint256 _currentOutputAmount = IOracle(oracle).consultCurrentPrice(_pool, _token, _inputAmount);

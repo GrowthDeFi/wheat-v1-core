@@ -328,6 +328,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 		}
 		{
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
+			if (_totalReward == 0) return true;
 			uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
 			Transfers._pushFunds(rewardToken, collector, _feeReward);
 		}

@@ -289,6 +289,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 			_withdraw(0);
 		}
 		uint256 _totalReward = Transfers._getBalance(rewardToken);
+		if (_totalReward == 0) return true;
 		uint256 _limitReward = _calcMaxRewardTransferAmount();
 		if (_totalReward > _limitReward) {
 			_totalReward = _limitReward;
@@ -307,7 +308,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 		}
 		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
-			require(exchange != address(0), "exchange not set");
+			// require(exchange != address(0), "exchange not set");
 			uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
 			if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return false;
 			Transfers._approveFunds(routingToken, exchange, _totalRouting);
