@@ -636,7 +636,7 @@ async function gulpAll(privateKey, network) {
     // 5 - stkCAKE
     const address = '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C';
     const amount = await pendingReward(privateKey, network, address);
-    const MINIMUM_AMOUNT = 20000000000000000000n; // 20 CAKE
+    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
@@ -691,7 +691,7 @@ async function gulpAll(privateKey, network) {
     for (const address of addresses) {
       const fee = await performanceFee(privateKey, network, address);
       const feeAmount = await pendingPerformanceFee(privateKey, network, address);
-      const MINIMUM_AMOUNT = 100000000000000000n; // 0.1 AUTO
+      const MINIMUM_AMOUNT = 1000000000000000000n; // 1 AUTO
       if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -742,7 +742,7 @@ async function gulpAll(privateKey, network) {
     // CAKE collector
     const address = '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36';
     const amount = await pendingReward(privateKey, network, address);
-    const MINIMUM_AMOUNT = 20000000000000000000n; // 20 CAKE
+    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
@@ -755,7 +755,7 @@ async function gulpAll(privateKey, network) {
     // AUTO/CAKE collector adapter
     const address = '0x626E98ef225A6f79523C9004E8731B793dfd0F68';
     const amount = await pendingSource(privateKey, network, address);
-    const MINIMUM_AMOUNT = 100000000000000000n; // 0.1 AUTO
+    const MINIMUM_AMOUNT = 1000000000000000000n; // 1 AUTO
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
@@ -783,7 +783,7 @@ async function gulpAll(privateKey, network) {
     // CAKE buyback
     const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
     const amount = await pendingBuyback(privateKey, network, address);
-    const MINIMUM_AMOUNT = 20000000000000000000n; // 20 CAKE
+    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
