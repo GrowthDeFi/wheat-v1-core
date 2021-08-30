@@ -725,7 +725,7 @@ async function gulpAll(privateKey, network) {
     for (const address of addresses) {
       const fee = await performanceFee(privateKey, network, address);
       const feeAmount = await pendingPerformanceFee(privateKey, network, address);
-      const MINIMUM_AMOUNT = 2000000000000000000000n; // 2000 PANTHER
+      const MINIMUM_AMOUNT = 6000000000000000000000n; // 6000 PANTHER
       if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -766,7 +766,7 @@ async function gulpAll(privateKey, network) {
     // PANTHER buyback adapter
     const address = '0x495089390569d47807F1Db83F14e053002DB25b4';
     const amount = await pendingSource(privateKey, network, address);
-    const MINIMUM_AMOUNT = 600000000000000000000n; // 600 PANTHER
+    const MINIMUM_AMOUNT = 2000000000000000000000n; // 2000 PANTHER
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
