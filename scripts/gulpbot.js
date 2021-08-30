@@ -702,6 +702,7 @@ async function gulpAll(privateKey, network) {
     }
   }
 
+/*
   {
     // PANTHER strategies
     const addresses = [
@@ -735,6 +736,7 @@ async function gulpAll(privateKey, network) {
       }
     }
   }
+*/
 
   {
     // CAKE collector
@@ -762,6 +764,7 @@ async function gulpAll(privateKey, network) {
     }
   }
 
+/*
   {
     // PANTHER buyback adapter
     const address = '0x495089390569d47807F1Db83F14e053002DB25b4';
@@ -774,6 +777,7 @@ async function gulpAll(privateKey, network) {
       }
     }
   }
+*/
 
   {
     // CAKE buyback
