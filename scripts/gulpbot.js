@@ -654,7 +654,7 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     const abi = [
       {
         name: "oracleAveragePriceFactorFromInput",
-        type: 'function'
+        type: 'function',
         inputs: [
           { name: '_from', type: 'address' },
           { name: '_to', type: 'address' },
@@ -666,7 +666,7 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
       },
       {
         name: 'oraclePoolAveragePriceFactorFromInput',
-        type: 'function'
+        type: 'function',
         inputs: [
           { name: '_pool', type: 'address' },
           { name: '_token', type: 'address' },
