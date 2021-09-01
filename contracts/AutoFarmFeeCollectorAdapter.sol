@@ -16,7 +16,7 @@ import { Transfers } from "./modules/Transfers.sol";
  */
 contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
-	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
 	// adapter token configuration
 	address public immutable sourceToken;

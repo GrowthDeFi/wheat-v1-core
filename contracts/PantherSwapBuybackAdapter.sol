@@ -18,7 +18,7 @@ import { PantherToken } from "./interop/PantherSwap.sol";
  */
 contract PantherSwapBuybackAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
-	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
 	// adapter token configuration
 	address public immutable sourceToken;

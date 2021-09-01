@@ -20,7 +20,7 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 {
 	using SafeMath for uint256;
 
-	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
 	uint256 constant DEFAULT_REWARD_BUYBACK1_SHARE = 85e16; // 85%
 	uint256 constant DEFAULT_REWARD_BUYBACK2_SHARE = 15e16; // 15%

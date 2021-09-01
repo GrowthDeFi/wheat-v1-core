@@ -29,7 +29,7 @@ contract PantherSwapCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitel
 {
 	using SafeMath for uint256;
 
-	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
 
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%

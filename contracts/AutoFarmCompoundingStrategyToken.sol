@@ -28,7 +28,7 @@ contract AutoFarmCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelist
 {
 	using SafeMath for uint256;
 
-	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
 	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
 

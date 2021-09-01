@@ -21,7 +21,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  */
 contract PancakeSwapFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
-	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 99e16; // 99%
+	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
 	// underlying contract configuration
 	address private immutable masterChef;
