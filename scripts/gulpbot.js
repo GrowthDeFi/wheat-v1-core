@@ -679,10 +679,10 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     ];
     const contract = new web3.eth.Contract(abi, exchange);
     if (rewardToken !== routingToken) {
-      await contract.oracleAveragePriceFactorFromInput(rewardToken, routingToken, 1e18).send({ from });
+      await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, 1e18).send({ from });
     }
     if (reserveToken !== routingToken) {
-      await contract.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, 1e18).send({ from });
+      await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, 1e18).send({ from });
     }
   }
 }
