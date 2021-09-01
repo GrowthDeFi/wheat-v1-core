@@ -643,47 +643,112 @@ async function listContracts(privateKey, network) {
   }
 }
 
+async function fixTwap(privateKey, network, address, exchange, rewardToken, routingToken, reserveToken) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = STRATEGY_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  const [from] = web3.currentProvider.getAddresses();
+  try {
+    await contract.methods.gulp().estimateGas({ from });
+  } catch {
+    const abi = [
+      {
+        name: "oracleAveragePriceFactorFromInput",
+        type: 'function'
+        inputs: [
+          { name: '_from', type: 'address' },
+          { name: '_to', type: 'address' },
+          { name: '_inputAmount', type: 'uint256' },
+        ],
+        outputs: [
+          { name: '_factor', type: 'uint256' },
+        ],
+      },
+      {
+        name: 'oraclePoolAveragePriceFactorFromInput',
+        type: 'function'
+        inputs: [
+          { name: '_pool', type: 'address' },
+          { name: '_token', type: 'address' },
+          { name: '_inputAmount', type: 'uint256' },
+        ],
+        outputs: [
+          { name: '_factor', type: 'uint256' },
+        ],
+      },
+    ];
+    const contract = new web3.eth.Contract(abi, exchange);
+    if (rewardToken !== routingToken) {
+      await contract.oracleAveragePriceFactorFromInput(rewardToken, routingToken, 1e18).send({ from });
+    }
+    if (reserveToken !== routingToken) {
+      await contract.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, 1e18).send({ from });
+    }
+  }
+}
+
 async function gulpAll(privateKey, network) {
 
   // NEW SYSTEM v3
   const CAKE = '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82';
   const CAKE_MASTERCHEF = '0x73feaa1eE314F8c655E354234017bE2193C9E24E';
+  const CAKE_EXCHANGE = '0xf31366e709C8d75BCC6e3Bc172E46831D6A4C2B3';
   const BANANA = '0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95';
   const BANANA_MASTERCHEF = '0x5c8D727b265DBAfaba67E050f2f739cAeEB4A6F9';
+  const BANANA_EXCHANGE = '0x39c54945C9B880d4B5F15b0BA3c8c17226C37d68';
+  const BNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
+  const ETH = '0x2170Ed0880ac9A755fd29B2688956BD959F933F8';
+  const BUSD = '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56';
+  const USDT = '0x55d398326f99059fF775485246999027B3197955';
+  const PCS_BNB_CAKE = '0x0eD7e52944161450477ee417DE9Cd3a859b14fD0';
+  const PCS_BNB_BUSD = '0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16';
+  const PCS_BUSD_USDT = '0x7EFaEf62fDdCCa950418312c6C91Aef321375A00';
+  const PCS_BNB_ETH = '0x74E4716E431f45807DCF19f284c7aA99F18a4fbc';
+  const PCS_BNB_BTCB = '0x61EB789d75A95CAa3fF50ed7E47b96c132fEc082';
+  const PCS_BNB_USDT = '0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE';
+  const PCS_BUSD_USDC = '0x2354ef4DF11afacb85a5C7f98B624072ECcddbB1';
+  const PCS_BUSD_BTCB = '0xF45cd219aEF8618A92BAa7aD848364a158a24F33';
+  const PCS_BUSD_CAKE = '0x804678fa97d91B974ec2af3c843270886528a9E6';
+  const PCS_ETH_BTCB = '0xD171B26E4484402de70e3Ea256bE5A2630d7e88D';
+  const PCS_ETH_USDC = '0xEa26B78255Df2bBC31C1eBf60010D78670185bD0';
+  const PCS_USDT_CAKE = '0xA39Af17CE4a8eb807E076805Da1e2B8EA7D0755b';
+  const PCS_USDT_USDC = '0xEc6557348085Aa57C72514D67070dC863C0a5A8c';
+  const APE_MOR_BUSD = '0x33526eD690200663EAAbF28e1D8621e58898c5fd';
 
   {
     // CAKE strategies
     const addresses = [
       // 0 - stkCAKEv3
-      [0, '0xB50Acf6195F97177D33D132A3E5617b934C351d3'],
+      [0, '0xB50Acf6195F97177D33D132A3E5617b934C351d3', CAKE, CAKE],
       // 251 - stkBNB/CAKEv3
-      [251, '0xd8C76eF0de11f9cc9708EB966A87e25a7E6C7949'],
+      [251, '0xd8C76eF0de11f9cc9708EB966A87e25a7E6C7949', CAKE, PCS_BNB_CAKE],
       // 252 - stkBNB/BUSDv3
-      [252, '0x0170D4C58AD9A9D8ab031c0270353d7034B87f6F'],
+      [252, '0x0170D4C58AD9A9D8ab031c0270353d7034B87f6F', BNB, PCS_BNB_BUSD],
       // 258 - stkBUSD/USDTv3
-      [258, '0xd7A45F561189529de5975d522F0B5d7D4bfC94de'],
+      [258, '0xd7A45F561189529de5975d522F0B5d7D4bfC94de', BUSD, PCS_BUSD_USDT],
       // 261 - stkBNB/ETHv3
-      [261, '0xE487a3780D56F2ECD142201907dF16350bb09946'],
+      [261, '0xE487a3780D56F2ECD142201907dF16350bb09946', BNB, PCS_BNB_ETH],
       // 262 - stkBNB/BTCBv3
-      [262, '0x9Df7B409925cc93dE1BB4ADDfA9Aed2bcE913F08'],
+      [262, '0x9Df7B409925cc93dE1BB4ADDfA9Aed2bcE913F08', BNB, PCS_BNB_BTCB],
       // 264 - stkBNB/USDTv3
-      [264, '0x839289A22604857A9BdB3231d37Af569ACD8A3fe'],
+      [264, '0x839289A22604857A9BdB3231d37Af569ACD8A3fe', BNB, PCS_BNB_USDT],
       // 283 - stkBUSD/USDCv3
-      [283, '0x60CD286AF05A3e096C8Ace193950CffA5E8e3CE0'],
+      [283, '0x60CD286AF05A3e096C8Ace193950CffA5E8e3CE0', BUSD, PCS_BUSD_USDC],
       // 365 - stkBUSD/BTCBv3
-      [365, '0x26E0701F5881161043d56eb3Ddfde0b8c6772060'],
+      [365, '0x26E0701F5881161043d56eb3Ddfde0b8c6772060', BUSD, PCS_BUSD_BTCB],
       // 389 - stkBUSD/CAKEv3
-      [389, '0xFA6388B7980126C2d7d0c5FC02949a2fF40F95DE'],
+      [389, '0xFA6388B7980126C2d7d0c5FC02949a2fF40F95DE', CAKE, PCS_BUSD_CAKE],
       // 408 - stkETH/BTCBv3
-      [408, '0x9FDD69a473d2216c5D232510DDF2328272bC6847'],
+      [408, '0x9FDD69a473d2216c5D232510DDF2328272bC6847', ETH, PCS_ETH_BTCB],
       // 409 - stkETH/USDCv3
-      [409, '0xcAD2E1b2257795f0D580d49520741E93654fAaB5'],
+      [409, '0xcAD2E1b2257795f0D580d49520741E93654fAaB5', ETH, PCS_ETH_USDC],
       // 422 - stkUSDT/CAKEv3
-      [422, '0xC0c8C554069d85166B834b2Cb3541d66f53DC4f5'],
+      [422, '0xC0c8C554069d85166B834b2Cb3541d66f53DC4f5', CAKE, PCS_USDT_CAKE],
       // 423 - stkUSDT/USDCv3
-      [423, '0x01A50D26b9B40c92fa40CBC698DeB57c65b4B7e4'],
+      [423, '0x01A50D26b9B40c92fa40CBC698DeB57c65b4B7e4', USDT, PCS_USDT_USDC],
     ];
-    for (const [pid, address] of addresses) {
+    for (const [pid, address, routingToken, reserveToken] of addresses) {
+      await fixTwap(privateKey, network, address, CAKE_EXCHANGE, CAKE, routingToken, reserveToken);
       const amount1 = await getTokenBalance(privateKey, network, CAKE, address);
       const amount2 = await getPendingBalance(privateKey, network, CAKE_MASTERCHEF, pid, address);
       const MINIMUM_AMOUNT = 100000000000000000000n; // 100 CAKE
@@ -701,11 +766,12 @@ async function gulpAll(privateKey, network) {
     // BANANA strategies
     const addresses = [
       // 0 - stkBANANAv3
-      [0, '0x13e7A6691FE00DE975CF27868386f4aE9aed3cdC'],
+      [0, '0x13e7A6691FE00DE975CF27868386f4aE9aed3cdC', BANANA, BANANA],
       // 115 - stkMOR/BUSDv3
-      [115, '0xC2E8C3c427E0a5BaaF512A013516aECB65Bd75CB'],
+      [115, '0xC2E8C3c427E0a5BaaF512A013516aECB65Bd75CB', BUSD, APE_MOR_BUSD],
     ];
-    for (const [pid, address] of addresses) {
+    for (const [pid, address, routingToken, reserveToken] of addresses) {
+      await fixTwap(privateKey, network, address, BANANA_EXCHANGE, BANANA, routingToken, reserveToken);
       const amount1 = await getTokenBalance(privateKey, network, BANANA, address);
       const amount2 = await getPendingBalance(privateKey, network, BANANA_MASTERCHEF, pid, address);
       const MINIMUM_AMOUNT = 500000000000000000000n; // 500 BANANA
