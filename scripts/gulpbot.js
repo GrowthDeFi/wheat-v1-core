@@ -644,50 +644,54 @@ async function listContracts(privateKey, network) {
 }
 
 async function fixTwap(privateKey, network, address, exchange, rewardToken, routingToken, reserveToken) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = STRATEGY_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  const [from] = web3.currentProvider.getAddresses();
   try {
-    const web3 = getWeb3(privateKey, network);
-    const abi = STRATEGY_ABI;
-    const contract = new web3.eth.Contract(abi, address);
-    const [from] = web3.currentProvider.getAddresses();
-    try {
-      await contract.methods.gulp().estimateGas({ from });
-    } catch {
-      const abi = [
-        {
-          name: "oracleAveragePriceFactorFromInput",
-          type: 'function',
-          inputs: [
-            { name: '_from', type: 'address' },
-            { name: '_to', type: 'address' },
-            { name: '_inputAmount', type: 'uint256' },
-          ],
-          outputs: [
-            { name: '_factor', type: 'uint256' },
-          ],
-        },
-        {
-          name: 'oraclePoolAveragePriceFactorFromInput',
-          type: 'function',
-          inputs: [
-            { name: '_pool', type: 'address' },
-            { name: '_token', type: 'address' },
-            { name: '_inputAmount', type: 'uint256' },
-          ],
-          outputs: [
-            { name: '_factor', type: 'uint256' },
-          ],
-        },
-      ];
-      const contract = new web3.eth.Contract(abi, exchange);
-      if (rewardToken !== routingToken) {
+    await contract.methods.gulp().estimateGas({ from });
+  } catch {
+    const abi = [
+      {
+        name: "oracleAveragePriceFactorFromInput",
+        type: 'function',
+        inputs: [
+          { name: '_from', type: 'address' },
+          { name: '_to', type: 'address' },
+          { name: '_inputAmount', type: 'uint256' },
+        ],
+        outputs: [
+          { name: '_factor', type: 'uint256' },
+        ],
+      },
+      {
+        name: 'oraclePoolAveragePriceFactorFromInput',
+        type: 'function',
+        inputs: [
+          { name: '_pool', type: 'address' },
+          { name: '_token', type: 'address' },
+          { name: '_inputAmount', type: 'uint256' },
+        ],
+        outputs: [
+          { name: '_factor', type: 'uint256' },
+        ],
+      },
+    ];
+    const contract = new web3.eth.Contract(abi, exchange);
+    if (rewardToken !== routingToken) {
+      try {
         await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, '10000000000').send({ from });
-      }
-      if (reserveToken !== routingToken) {
-        await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').send({ from });
+      } catch (e) {
+        throw Error('TWAP pool update ' + address + ': ' + exchange + ': ' + rewardToken + ': ' + routingToken + ': ' + e.message);
       }
     }
-  } catch (e) {
-    throw Error('TWAP update ' + address + ': ' + e.message);
+    if (reserveToken !== routingToken) {
+      try {
+        await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').send({ from });
+      } catch (e) {
+        throw Error('TWAP pool update ' + address + ': ' + exchange + ': ' + reserveToken + ': ' + routingToken + ': ' + e.message);
+      }
+    }
   }
 }
 
