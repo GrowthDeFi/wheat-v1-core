@@ -681,7 +681,7 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     if (rewardToken !== routingToken) {
       try {
         const estimatedGas = await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, '10000000000').send({ from });
-        const gas = 10 * estimatedGas;
+        const gas = Math.max(10 * estimatedGas, 300000);
         await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, '10000000000').send({ from, gas });
       } catch (e) {
         throw Error('TWAP pool update ' + address + ': ' + exchange + ': ' + rewardToken + ': ' + routingToken + ': ' + e.message);
@@ -690,7 +690,7 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     if (reserveToken !== routingToken) {
       try {
         const estimatedGas = await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').send({ from });
-        const gas = 10 * estimatedGas;
+        const gas = Math.max(10 * estimatedGas, 300000);
         await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').send({ from, gas });
       } catch (e) {
         throw Error('TWAP pool update ' + address + ': ' + exchange + ': ' + reserveToken + ': ' + routingToken + ': ' + e.message);
