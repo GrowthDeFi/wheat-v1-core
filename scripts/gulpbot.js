@@ -778,6 +778,8 @@ async function gulpAll(privateKey, network) {
       [0, '0x13e7A6691FE00DE975CF27868386f4aE9aed3cdC', BANANA, BANANA],
       // 115 - stkMOR/BUSDv3
       [115, '0xC2E8C3c427E0a5BaaF512A013516aECB65Bd75CB', BUSD, APE_MOR_BUSD],
+      // 115 - stkMOR/BUSDv3
+      [115, '0xC8216C4ac63F3cAC4f7e74A82d2252B7658FA8b1', BUSD, APE_MOR_BUSD],
     ];
     for (const [pid, address, routingToken, reserveToken] of addresses) {
       await fixTwap(privateKey, network, address, BANANA_EXCHANGE, BANANA, routingToken, reserveToken);
