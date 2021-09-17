@@ -705,6 +705,8 @@ async function gulpAll(privateKey, network) {
   const BANANA = '0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95';
   const BANANA_MASTERCHEF = '0x5c8D727b265DBAfaba67E050f2f739cAeEB4A6F9';
   const BANANA_EXCHANGE = '0x39c54945C9B880d4B5F15b0BA3c8c17226C37d68';
+  const WHEAT = '0x3ab63309F85df5D4c3351ff8EACb87980E05Da4E';
+  const WHEAT_MASTERCHEF = '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448';
   const BNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
   const ETH = '0x2170Ed0880ac9A755fd29B2688956BD959F933F8';
   const BUSD = '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56';
@@ -791,6 +793,26 @@ async function gulpAll(privateKey, network) {
         if (tx !== null) {
           const name = await getTokenSymbol(privateKey, network, address);
           return { name, type: 'ApeSwapStrategy', address, tx };
+        }
+      }
+    }
+  }
+
+  {
+    // WHEAT strategies
+    const addresses = [
+      // 0 - stkWHEATv3
+      [0, '0x5a6D9e05C0Da125a2FB67a68ab5D427dA4629590', WHEAT, WHEAT],
+    ];
+    for (const [pid, address, routingToken, reserveToken] of addresses) {
+      const amount1 = await getTokenBalance(privateKey, network, WHEAT, address);
+      const amount2 = await getPendingBalance(privateKey, network, WHEAT_MASTERCHEF, pid, address);
+      const MINIMUM_AMOUNT = 1000000000000000000000n; // 1000 WHEAT
+      if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          const name = await getTokenSymbol(privateKey, network, address);
+          return { name, type: 'WheatStrategy', address, tx };
         }
       }
     }
