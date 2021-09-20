@@ -762,7 +762,7 @@ async function gulpAll(privateKey, network) {
       await fixTwap(privateKey, network, address, CAKE_EXCHANGE, CAKE, routingToken, reserveToken);
       const amount1 = await getTokenBalance(privateKey, network, CAKE, address);
       const amount2 = await getPendingBalance(privateKey, network, CAKE_MASTERCHEF, pid, address);
-      const MINIMUM_AMOUNT = 100000000000000000000n; // 100 CAKE
+      const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
       if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -822,7 +822,7 @@ async function gulpAll(privateKey, network) {
     // CAKE collector
     const address = '0x3C8337B4011bdbEfB41FACEdA52923099db4aAd8';
     const amount = await getTokenBalance(privateKey, network, CAKE, address);
-    const MINIMUM_AMOUNT = 100000000000000000000n; // 100 CAKE
+    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
@@ -848,7 +848,7 @@ async function gulpAll(privateKey, network) {
     // CAKE buyback
     const address = '0xcD22272873B681986cE984E719D22A790dfE9C4a';
     const amount = await getTokenBalance(privateKey, network, CAKE, address);
-    const MINIMUM_AMOUNT = 100000000000000000000n; // 100 CAKE
+    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
     if (BigInt(amount) >= MINIMUM_AMOUNT) {
       const tx = await safeGulp(privateKey, network, address);
       if (tx !== null) {
