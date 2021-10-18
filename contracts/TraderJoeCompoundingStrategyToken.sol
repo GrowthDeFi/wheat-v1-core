@@ -112,6 +112,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _routingToken The ERC-20 token address to be used as routing
 	 *                      token, must be either the reserve token itself
 	 *                      or one of the tokens that make up a liquidity pool.
+	 * @param _useBar Whether or not the underlying asset is JoeBar (xJOE)
 	 * @param _treasury The treasury address used to recover lost funds.
 	 * @param _collector The fee collector address to collect the performance fee.
 	 * @param _exchange The exchange contract used to convert funds.
@@ -218,7 +219,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		if (routingToken != reserveToken) {
 			if (useBar) {
 				uint256 _totalSupply = IERC20(reserveToken).totalSupply();
-				uint256 _totalReserve = IERC20(reserveToken).balanceOf(JoeBar(reserveToken).joe());
+				uint256 _totalReserve = IERC20(JoeBar(reserveToken).joe()).balanceOf(reserveToken);
 				_totalBalance = _totalSupply == 0 || _totalReserve == 0 ? _totalRouting : _totalRouting.mul(_totalSupply).div(_totalReserve);
 			} else {
 				require(exchange != address(0), "exchange not set");
