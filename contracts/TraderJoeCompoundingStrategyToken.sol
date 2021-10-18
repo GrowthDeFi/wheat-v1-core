@@ -42,6 +42,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	bool private immutable useBar;
 
 	// strategy token configuration
+	address private immutable bonusToken;
 	address private immutable rewardToken;
 	address private immutable routingToken;
 	address private immutable reserveToken;
@@ -70,6 +71,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		address _masterChef,
 		uint256 _pid,
 		bool _useBar,
+		address _bonusToken,
 		address _rewardToken,
 		address _routingToken,
 		address _reserveToken,
@@ -86,6 +88,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			masterChef,
 			pid,
 			useBar,
+			bonusToken,
 			rewardToken,
 			routingToken,
 			reserveToken,
@@ -120,7 +123,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
-		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
+		(address _reserveToken, address _rewardToken, address _bonusToken) = _getTokens(_masterChef, _pid);
 		if (_useBar) {
 			require(_routingToken == JoeBar(_reserveToken).joe(), "invalid token");
 		} else {
@@ -129,6 +132,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		masterChef = _masterChef;
 		pid = _pid;
 		useBar = _useBar;
+		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
@@ -290,13 +294,13 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	/// @dev Actual gulp implementation
 	function _gulp() internal returns (bool _success)
 	{
-		(uint256 _pendingReward, address _bonusToken, uint256 _pendingBonus) = _getPendingReward();
+		(uint256 _pendingReward, uint256 _pendingBonus) = _getPendingReward();
 		if (_pendingReward > 0 || _pendingBonus > 0) {
 			_withdraw(0);
 		}
-		if (_bonusToken != address(0)) {
-			uint256 _totalBonus = Transfers._getBalance(_bonusToken);
-			Transfers._pushFunds(_bonusToken, collector, _totalBonus);
+		if (bonusToken != address(0)) {
+			uint256 _totalBonus = Transfers._getBalance(bonusToken);
+			Transfers._pushFunds(bonusToken, collector, _totalBonus);
 		}
 		{
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
@@ -466,20 +470,21 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the MasterChef pool
-	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
+	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken, address _bonusToken)
 	{
 		uint256 _poolLength = MasterChefJoeV2(_masterChef).poolLength();
 		require(_pid < _poolLength, "invalid pid");
 		(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
 		_rewardToken = MasterChefJoeV2(_masterChef).joe();
-		return (_reserveToken, _rewardToken);
+		(_bonusToken,) = MasterChefJoeV2(_masterChef).rewarderBonusTokenInfo(_pid);
+		return (_reserveToken, _rewardToken, _bonusToken);
 	}
 
 	/// @dev Retrieves the current pending reward for the MasterChef pool
-	function _getPendingReward() internal view returns (uint256 _pendingReward, address _bonusToken, uint256 _pendingBonus)
+	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus)
 	{
-		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
-		return (_pendingReward, _bonusToken, _pendingBonus);
+		(_pendingReward,,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
+		return (_pendingReward, _pendingBonus);
 	}
 
 	/// @dev Retrieves the deposited reserve for the MasterChef pool
