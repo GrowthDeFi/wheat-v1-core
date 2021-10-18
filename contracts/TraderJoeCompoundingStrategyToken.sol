@@ -210,7 +210,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			if (barToken != address(0)) {
 				uint256 _totalSupply = IERC20(barToken).totalSupply();
 				uint256 _totalReserve = IERC20(reserveToken).balanceOf(barToken);
-				_totalBalance = _totalSupply == 0 || _totalReserve == 0 ? _amount : _amount.mul(_totalSupply).div(_totalReserve);
+				_totalBalance = _totalSupply == 0 || _totalReserve == 0 ? _totalRouting : _totalRouting.mul(_totalSupply).div(_totalReserve);
 			} else {
 				require(exchange != address(0), "exchange not set");
 				_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
