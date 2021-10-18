@@ -46,7 +46,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	address private immutable reserveToken;
 
 	// addresses receiving tokens
-	address private treasury;
+	// address private treasury;
 	address private collector;
 
 	// exchange contract address
@@ -72,7 +72,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		address _rewardToken,
 		address _routingToken,
 		address _reserveToken,
-		address _treasury,
+		// address _treasury,
 		address _collector,
 		address _exchange,
 		uint256 _minimalGulpFactor,
@@ -88,7 +88,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			rewardToken,
 			routingToken,
 			reserveToken,
-			treasury,
+			// treasury,
 			collector,
 			exchange,
 			minimalGulpFactor,
@@ -108,14 +108,14 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _routingToken The ERC-20 token address to be used as routing
 	 *                      token, must be either the reserve token itself
 	 *                      or one of the tokens that make up a liquidity pool.
-	 * @param _treasury The treasury address used to recover lost funds.
+	 * @ param _treasury The treasury address used to recover lost funds.
 	 * @param _collector The fee collector address to collect the performance fee.
 	 * @param _exchange The exchange contract used to convert funds.
 	 */
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
 		address _barToken,
-		address _treasury, address _collector, address _exchange)
+		/*address _treasury,*/ address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
@@ -127,7 +127,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
-		treasury = _treasury;
+		// treasury = _treasury;
 		collector = _collector;
 		exchange = _exchange;
 		_mint(address(1), 1); // avoids division by zero
@@ -502,7 +502,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// ----- END: underlying contract abstraction
 
 	// events emitted by this contract
-	event ChangeTreasury(address _oldTreasury, address _newTreasury);
+	// event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeExchange(address _oldExchange, address _newExchange);
 	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
