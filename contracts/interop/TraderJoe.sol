@@ -3,6 +3,8 @@ pragma solidity ^0.6.0;
 
 interface JoeBar
 {
+	function joe() external view returns (address _joe);
+
 	function enter(uint256 _amount) external;
 	function leave(uint256 _shares) external;
 }

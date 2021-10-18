@@ -39,7 +39,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	uint256 private immutable pid;
 
 	// additional contract configuration (xJOE)
-	address private immutable barToken;
+	bool private immutable useBar;
 
 	// strategy token configuration
 	address private immutable rewardToken;
@@ -69,7 +69,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	function state() external view returns (
 		address _masterChef,
 		uint256 _pid,
-		address _barToken,
+		bool _useBar,
 		address _rewardToken,
 		address _routingToken,
 		address _reserveToken,
@@ -85,7 +85,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		return (
 			masterChef,
 			pid,
-			barToken,
+			useBar,
 			rewardToken,
 			routingToken,
 			reserveToken,
@@ -115,16 +115,20 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 */
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _masterChef, uint256 _pid, address _routingToken,
-		address _barToken,
+		bool _useBar,
 		/*address _treasury,*/ address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
 		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
-		require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
+		if (_useBar) {
+			require(_routingToken == JoeBar(_reserveToken).joe(), "invalid token");
+		} else {
+			require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
+		}
 		masterChef = _masterChef;
 		pid = _pid;
-		barToken = _barToken;
+		useBar = _useBar;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
@@ -208,9 +212,9 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		}
 		uint256 _totalBalance = _totalRouting;
 		if (routingToken != reserveToken) {
-			if (barToken != address(0)) {
-				uint256 _totalSupply = IERC20(barToken).totalSupply();
-				uint256 _totalReserve = IERC20(reserveToken).balanceOf(barToken);
+			if (useBar) {
+				uint256 _totalSupply = IERC20(reserveToken).totalSupply();
+				uint256 _totalReserve = IERC20(reserveToken).balanceOf(JoeBar(reserveToken).joe());
 				_totalBalance = _totalSupply == 0 || _totalReserve == 0 ? _totalRouting : _totalRouting.mul(_totalSupply).div(_totalReserve);
 			} else {
 				require(exchange != address(0), "exchange not set");
@@ -310,9 +314,9 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		}
 		if (routingToken != reserveToken) {
 			uint256 _totalRouting = Transfers._getBalance(routingToken);
-			if (barToken != address(0)) {
-				Transfers._approveFunds(routingToken, barToken, _totalRouting);
-				JoeBar(barToken).enter(_totalRouting);
+			if (useBar) {
+				Transfers._approveFunds(routingToken, reserveToken, _totalRouting);
+				JoeBar(reserveToken).enter(_totalRouting);
 			} else {
 				require(exchange != address(0), "exchange not set");
 				uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
