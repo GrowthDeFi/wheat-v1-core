@@ -2,6 +2,7 @@
 pragma solidity ^0.6.0;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -178,7 +179,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	/*
 	function pendingPerformanceFee() external view returns (uint256 _feeReward)
 	{
-		uint256 _pendingReward = _getPendingReward();
+		(uint256 _pendingReward,,) = _getPendingReward();
 		uint256 _balanceReward = Transfers._getBalance(rewardToken);
 		uint256 _totalReward = _pendingReward.add(_balanceReward);
 		_feeReward = _totalReward.mul(performanceFee) / 1e18;
@@ -195,7 +196,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	/*
 	function pendingReward() external view returns (uint256 _rewardAmount)
 	{
-		uint256 _pendingReward = _getPendingReward();
+		(uint256 _pendingReward,,) = _getPendingReward();
 		uint256 _balanceReward = Transfers._getBalance(rewardToken);
 		uint256 _totalReward = _pendingReward.add(_balanceReward);
 		uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
@@ -285,9 +286,13 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	/// @dev Actual gulp implementation
 	function _gulp() internal returns (bool _success)
 	{
-		uint256 _pendingReward = _getPendingReward();
-		if (_pendingReward > 0) {
+		(uint256 _pendingReward, address _bonusToken, uint256 _pendingBonus) = _getPendingReward();
+		if (_pendingReward > 0 || _pendingBonus > 0) {
 			_withdraw(0);
+		}
+		if (_bonusToken != address(0)) {
+			uint256 _totalBonus = Transfers._getBalance(_bonusToken);
+			Transfers._pushFunds(_bonusToken, collector, _totalBonus);
 		}
 		{
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
@@ -467,10 +472,10 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	}
 
 	/// @dev Retrieves the current pending reward for the MasterChef pool
-	function _getPendingReward() internal view returns (uint256 _pendingReward)
+	function _getPendingReward() internal view returns (uint256 _pendingReward, address _bonusToken, uint256 _pendingBonus)
 	{
-		(_pendingReward,,,) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
-		return _pendingReward;
+		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
+		return (_pendingReward, _bonusToken, _pendingBonus);
 	}
 
 	/// @dev Retrieves the deposited reserve for the MasterChef pool
