@@ -520,3 +520,64 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
+
+contract TraderJoeCompoundingStrategyBridge
+{
+	using SafeMath for uint256;
+
+	address public immutable strategy;
+	address public immutable reserveToken;
+	address public immutable operatingToken;
+
+	constructor (address _strategy) public
+	{
+		(,, bool _useBar,,,, address _reserveToken,,,,,,,) = TraderJoeCompoundingStrategyToken(_strategy).state();
+		require(_useBar, "invalid strategy");
+		address _operatingToken = JoeBar(_reserveToken).joe();
+		strategy = _strategy;
+		reserveToken = _reserveToken;
+		operatingToken = _operatingToken;
+	}
+
+	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
+	{
+		uint256 _totalSupply = IERC20(reserveToken).totalSupply();
+		uint256 _totalReserve = IERC20(operatingToken).balanceOf(reserveToken);
+		uint256 _value = _amount.mul(_totalSupply).div(_totalReserve);
+		return TraderJoeCompoundingStrategyToken(strategy).calcSharesFromAmount(_value);
+	}
+
+	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
+	{
+		uint256 _totalSupply = IERC20(reserveToken).totalSupply();
+		uint256 _totalReserve = IERC20(operatingToken).balanceOf(reserveToken);
+		uint256 _value = TraderJoeCompoundingStrategyToken(strategy).calcAmountFromShares(_shares);
+		return _value.mul(_totalReserve).div(_totalSupply);
+	}
+
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external
+	{
+		address _from = msg.sender;
+		Transfers._pullFunds(operatingToken, _from, _amount);
+		Transfers._approveFunds(operatingToken, reserveToken, _amount);
+		JoeBar(reserveToken).enter(_amount);
+		uint256 _value = Transfers._getBalance(reserveToken);
+		Transfers._approveFunds(reserveToken, strategy, _value);
+		TraderJoeCompoundingStrategyToken(strategy).deposit(_value, 0, _execGulp);
+		uint256 _shares = Transfers._getBalance(strategy);
+		require(_shares >= _minShares, "high slippage");
+		Transfers._pushFunds(strategy, _from, _shares);
+	}
+
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external
+	{
+		address _from = msg.sender;
+		Transfers._pullFunds(strategy, _from, _shares);
+		TraderJoeCompoundingStrategyToken(strategy).withdraw(_shares, 0, _execGulp);
+		uint256 _value = Transfers._getBalance(reserveToken);
+		JoeBar(reserveToken).leave(_value);
+		uint256 _amount = Transfers._getBalance(operatingToken);
+		require(_amount >= _minAmount, "high slippage");
+		Transfers._pushFunds(operatingToken, _from, _amount);
+	}
+}
