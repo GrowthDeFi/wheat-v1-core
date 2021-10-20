@@ -31,8 +31,8 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
 
-	uint256 constant MAXIMUM_PERFORMANCE_FEE = 50e16; // 50%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 5e16; // 5%
+	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
+	uint256 constant DEFAULT_PERFORMANCE_FEE = 50e16; // 50%
 
 	// underlying contract configuration
 	address private immutable masterChef;
