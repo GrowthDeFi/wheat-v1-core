@@ -455,6 +455,8 @@ contract BakerJoeCompoundingStrategyBridge
 		Transfers._pushFunds(operatingToken, _from, _amount);
 	}
 
+	// ----- BEGIN: underlying contract abstraction
+
 	/// @dev Calculates the amount of jToken to be minted from underlying
 	function _calcDepositAmount(uint256 _amount) internal view returns (uint256 _value)
 	{
@@ -483,4 +485,6 @@ contract BakerJoeCompoundingStrategyBridge
 		uint256 _errorCode = JToken(reserveToken).redeem(_amount);
 		require(_errorCode == 0, "redeem unavailable");
 	}
+
+	// ----- END: underlying contract abstraction
 }

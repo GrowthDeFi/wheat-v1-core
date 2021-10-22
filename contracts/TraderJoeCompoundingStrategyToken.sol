@@ -576,6 +576,8 @@ contract TraderJoeCompoundingStrategyBridge
 		Transfers._pushFunds(operatingToken, _from, _amount);
 	}
 
+	// ----- BEGIN: underlying contract abstraction
+
 	/// @dev Calculates the amount of xJOE to be minted from JOE
 	function _calcDepositAmount(uint256 _amount) internal view returns (uint256 _value)
 	{
@@ -604,4 +606,6 @@ contract TraderJoeCompoundingStrategyBridge
 	{
 		JoeBar(reserveToken).leave(_amount);
 	}
+
+	// ----- END: underlying contract abstraction
 }
