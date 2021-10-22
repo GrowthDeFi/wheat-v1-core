@@ -11,9 +11,9 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
+import { Wrapping } from "./modules/Wrapping.sol";
 
-import { MasterChefJoeV2, JoeBar } from "./interop/TraderJoe.sol";
-import { Pair } from "./interop/UniswapV2.sol";
+import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol";
 
 /**
  * @notice This contract implements a compounding strategy for PancakeSwap MasterChef.
@@ -24,7 +24,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         to the fee collector contract. This contract also allows for charging a
  *         deposit fee deducted from deposited funds.
  */
-contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -33,13 +33,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 
 	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
 	uint256 constant DEFAULT_PERFORMANCE_FEE = 50e16; // 50%
-
-	// underlying contract configuration
-	address private immutable masterChef;
-	uint256 private immutable pid;
-
-	// additional contract configuration (xJOE)
-	bool private immutable useBar;
 
 	// strategy token configuration
 	address private immutable bonusToken;
@@ -63,14 +56,8 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// fee configuration
 	uint256 private performanceFee = DEFAULT_PERFORMANCE_FEE;
 
-	// emergency mode flag
-	bool private emergencyMode;
-
 	/// @dev Single public function to expose the private state, saves contract space
 	function state() external view returns (
-		address _masterChef,
-		uint256 _pid,
-		bool _useBar,
 		address _bonusToken,
 		address _rewardToken,
 		address _routingToken,
@@ -80,14 +67,10 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		address _exchange,
 		uint256 _minimalGulpFactor,
 		uint256 _forceGulpRatio,
-		uint256 _performanceFee,
-		bool _emergencyMode
+		uint256 _performanceFee
 	)
 	{
 		return (
-			masterChef,
-			pid,
-			useBar,
 			bonusToken,
 			rewardToken,
 			routingToken,
@@ -97,8 +80,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			exchange,
 			minimalGulpFactor,
 			forceGulpRatio,
-			performanceFee,
-			emergencyMode
+			performanceFee
 		);
 	}
 
@@ -107,32 +89,17 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _name The ERC-20 token name.
 	 * @param _symbol The ERC-20 token symbol.
 	 * @param _decimals The ERC-20 token decimals.
-	 * @param _masterChef The MasterChef contract address.
-	 * @param _pid The MasterChef Pool ID (pid).
-	 * @param _routingToken The ERC-20 token address to be used as routing
-	 *                      token, must be either the reserve token itself
-	 *                      or one of the tokens that make up a liquidity pool.
-	 * @param _useBar Whether or not the underlying asset is JoeBar (xJOE)
 	 * @param _treasury The treasury address used to recover lost funds.
 	 * @param _collector The fee collector address to collect the performance fee.
 	 * @param _exchange The exchange contract used to convert funds.
 	 */
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
-		address _masterChef, uint256 _pid, address _routingToken,
-		bool _useBar,
+		address _reserveToken, address _bonusToken,
 		address _treasury, address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
-		(address _reserveToken, address _rewardToken, address _bonusToken) = _getTokens(_masterChef, _pid);
-		if (_useBar) {
-			require(_routingToken == JoeBar(_reserveToken).joe(), "invalid token");
-		} else {
-			require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
-		}
-		masterChef = _masterChef;
-		pid = _pid;
-		useBar = _useBar;
+		(address _routingToken, address _rewardToken) = _getTokens(_reserveToken);
 		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
@@ -151,7 +118,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 */
 	function totalReserve() public view returns (uint256 _totalReserve)
 	{
-		_totalReserve = emergencyMode ? Transfers._getBalance(reserveToken) : _getReserveAmount();
+		_totalReserve = _getReserveAmount();
 		if (_totalReserve == uint256(-1)) return _totalReserve;
 		return _totalReserve + 1; // avoids division by zero
 	}
@@ -180,57 +147,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	}
 
 	/**
-	 * @notice Allows for the beforehand calculation of the amount of
-	 *         reward token to be collected as performance fee on the next
-	 *         gulp call.
-	 * @return _feeReward The amount of the reward token to be collected.
-	 */
-	/*
-	function pendingPerformanceFee() external view returns (uint256 _feeReward)
-	{
-		(uint256 _pendingReward,,) = _getPendingReward();
-		uint256 _balanceReward = Transfers._getBalance(rewardToken);
-		uint256 _totalReward = _pendingReward.add(_balanceReward);
-		_feeReward = _totalReward.mul(performanceFee) / 1e18;
-		return _feeReward;
-	}
-	*/
-
-	/**
-	 * @notice Allows for the beforehand calculation of the amount of
-	 *         reserve token, converted from the reward token accumulated,
-	 *         to be incorporated into the reserve on the next gulp call.
-	 * @return _rewardAmount The amount of the reserve token to be collected.
-	 */
-	/*
-	function pendingReward() external view returns (uint256 _rewardAmount)
-	{
-		(uint256 _pendingReward,,) = _getPendingReward();
-		uint256 _balanceReward = Transfers._getBalance(rewardToken);
-		uint256 _totalReward = _pendingReward.add(_balanceReward);
-		uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
-		uint256 _netReward = _totalReward - _feeReward;
-		uint256 _totalRouting = _netReward;
-		if (rewardToken != routingToken) {
-			require(exchange != address(0), "exchange not set");
-			_totalRouting = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _netReward);
-		}
-		uint256 _totalBalance = _totalRouting;
-		if (routingToken != reserveToken) {
-			if (useBar) {
-				uint256 _totalSupply = IERC20(reserveToken).totalSupply();
-				uint256 _totalReserve = IERC20(JoeBar(reserveToken).joe()).balanceOf(reserveToken);
-				_totalBalance = _totalSupply == 0 || _totalReserve == 0 ? _totalRouting : _totalRouting.mul(_totalSupply).div(_totalReserve);
-			} else {
-				require(exchange != address(0), "exchange not set");
-				_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
-			}
-		}
-		return _totalBalance;
-	}
-	*/
-
-	/**
 	 * @notice Performs the minting of shares upon the deposit of the
 	 *         reserve token. The actual number of shares being minted can
 	 *         be calculated using the calcSharesFromAmount function.
@@ -243,7 +159,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 */
 	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
-		require(!emergencyMode, "not allowed");
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
 			require(_gulp(), "unavailable");
 		}
@@ -251,7 +166,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		uint256 _shares = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
 		Transfers._pullFunds(reserveToken, _from, _amount);
-		_deposit(_amount);
 		_mint(_from, _shares);
 	}
 
@@ -267,16 +181,12 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
 		if (_execGulp) {
-			require(!emergencyMode, "not allowed");
 			require(_gulp(), "unavailable");
 		}
 		address _from = msg.sender;
 		uint256 _amount = _calcAmountFromShares(_shares);
 		require(_amount >= _minAmount, "high slippage");
 		_burn(_from, _shares);
-		if (!emergencyMode) {
-			_withdraw(_amount);
-		}
 		Transfers._pushFunds(reserveToken, _from, _amount);
 	}
 
@@ -288,18 +198,14 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 */
 	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
 	{
-		require(!emergencyMode, "not allowed");
 		require(_gulp(), "unavailable");
 	}
 
 	/// @dev Actual gulp implementation
 	function _gulp() internal returns (bool _success)
 	{
-		(uint256 _pendingReward, uint256 _pendingBonus) = _getPendingReward();
-		if (_pendingReward > 0 || _pendingBonus > 0) {
-			_withdraw(0);
-		}
-		if (bonusToken != address(0)) {
+		_claim();
+		{
 			uint256 _totalBonus = Transfers._getBalance(bonusToken);
 			Transfers._pushFunds(bonusToken, collector, _totalBonus);
 		}
@@ -317,35 +223,9 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
 			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
 		}
-		if (routingToken != reserveToken) {
-			uint256 _totalRouting = Transfers._getBalance(routingToken);
-			if (useBar) {
-				Transfers._approveFunds(routingToken, reserveToken, _totalRouting);
-				JoeBar(reserveToken).enter(_totalRouting);
-			} else {
-				require(exchange != address(0), "exchange not set");
-				uint256 _factor = IExchange(exchange).oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, _totalRouting);
-				if (_factor < minimalGulpFactor || _factor > 2e18 - minimalGulpFactor) return false;
-				Transfers._approveFunds(routingToken, exchange, _totalRouting);
-				IExchange(exchange).joinPoolFromInput(reserveToken, routingToken, _totalRouting, 1);
-			}
-		}
-		uint256 _totalBalance = Transfers._getBalance(reserveToken);
+		uint256 _totalBalance = Transfers._getBalance(routingToken);
 		_deposit(_totalBalance);
 		return true;
-	}
-
-	/**
-	 * @notice Allows withdrawing funds from the underlying protocol using
-	 *         the emergency withdrawal functionality. It halts the
-	 *         contract for deposits and gulp, only allowing withdrawals
-	 *         to take place.
-	 *         This is a privileged function.
-	 */
-	function enterEmergencyMode() external onlyOwner
-	{
-		emergencyMode = true;
-		_emergencyWithdraw();
 	}
 
 	/**
@@ -356,11 +236,12 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
-		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
 		require(_token != reserveToken, "invalid token");
 		require(_token != routingToken, "invalid token");
 		require(_token != rewardToken, "invalid token");
+		require(_token != bonusToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
@@ -371,7 +252,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _newTreasury The new treasury address.
 	 */
 	function setTreasury(address _newTreasury) external onlyOwner
-		// delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
+		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
 		require(_newTreasury != address(0), "invalid address");
 		address _oldTreasury = treasury;
@@ -385,7 +266,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _newCollector The new fee collector address.
 	 */
 	function setCollector(address _newCollector) external onlyOwner
-		// delayed(this.setCollector.selector, keccak256(abi.encode(_newCollector)))
+		delayed(this.setCollector.selector, keccak256(abi.encode(_newCollector)))
 	{
 		require(_newCollector != address(0), "invalid address");
 		address _oldCollector = collector;
@@ -466,51 +347,50 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 
 	// ----- BEGIN: underlying contract abstraction
 
-	/// @dev Lists the reserve and reward tokens of the MasterChef pool
-	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken, address _bonusToken)
+	/// @dev Lists the reserve and reward tokens of the lending pool
+	function _getTokens(address _reserveToken) internal view returns (address _routingToken, address _rewardToken)
 	{
-		uint256 _poolLength = MasterChefJoeV2(_masterChef).poolLength();
-		require(_pid < _poolLength, "invalid pid");
-		(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
-		_rewardToken = MasterChefJoeV2(_masterChef).joe();
-		(_bonusToken,) = MasterChefJoeV2(_masterChef).rewarderBonusTokenInfo(_pid);
-		return (_reserveToken, _rewardToken, _bonusToken);
-	}
-
-	/// @dev Retrieves the current pending reward for the MasterChef pool
-	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus)
-	{
-		(_pendingReward,,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
-		return (_pendingReward, _pendingBonus);
+		address _joetroller = JToken(_reserveToken).joetroller();
+		address _distributor = Joetroller(_joetroller).rewardDistributor();
+		_routingToken = JToken(_reserveToken).underlying();
+		_rewardToken = JRewardDistributor(_distributor).joeAddress();
+		return (_routingToken, _rewardToken);
 	}
 
 	/// @dev Retrieves the deposited reserve for the MasterChef pool
 	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
 	{
-		(_reserveAmount,) = MasterChefJoeV2(masterChef).userInfo(pid, address(this));
-		return _reserveAmount;
+		return Transfers._getBalance(reserveToken);
 	}
 
-	/// @dev Performs a deposit into the MasterChef pool
+	/// @dev Performs a deposit into the lending pool
 	function _deposit(uint256 _amount) internal
 	{
-		Transfers._approveFunds(reserveToken, masterChef, _amount);
-		MasterChefJoeV2(masterChef).deposit(pid, _amount);
+		Transfers._approveFunds(routingToken, reserveToken, _amount);
+		uint256 _errorCode = JToken(reserveToken).mint(_amount);
+		require(_errorCode == 0, "lend unavailable");
 	}
 
-	/// @dev Performs an withdrawal from the MasterChef pool
-	function _withdraw(uint256 _amount) internal
+	/// @dev Claims the current pending reward for the lending pool
+	function _claim() internal
 	{
-		MasterChefJoeV2(masterChef).withdraw(pid, _amount);
-	}
-
-	/// @dev Performs an emergency withdrawal from the MasterChef pool
-	function _emergencyWithdraw() internal
-	{
-		MasterChefJoeV2(masterChef).emergencyWithdraw(pid);
+		address _joetroller = JToken(reserveToken).joetroller();
+		address _distributor = Joetroller(_joetroller).rewardDistributor();
+		address payable[] memory _accounts = new address payable[](1);
+		_accounts[0] = address(this);
+		address[] memory _jtokens = new address[](1);
+		_jtokens[0] = reserveToken;
+		JRewardDistributor(_distributor).claimReward(0, _accounts, _jtokens, false, true);
+		JRewardDistributor(_distributor).claimReward(1, _accounts, _jtokens, false, true);
 	}
 
 	// ----- END: underlying contract abstraction
+
+	/// @dev Allows for receiving the native token
+	receive() external payable
+	{
+		Wrapping._wrap(bonusToken, address(this).balance);
+	}
 
 	// events emitted by this contract
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
@@ -521,19 +401,18 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
 
-contract TraderJoeCompoundingStrategyBridge
+contract BakerJoeCompoundingStrategyBridge
 {
 	using SafeMath for uint256;
 
-	address public immutable strategy;
+	address payable public immutable strategy;
 	address public immutable reserveToken;
 	address public immutable operatingToken;
 
-	constructor (address _strategy) public
+	constructor (address payable _strategy) public
 	{
-		(,,bool _useBar,,,, address _reserveToken,,,,,,,) = TraderJoeCompoundingStrategyToken(_strategy).state();
-		require(_useBar, "invalid strategy");
-		address _operatingToken = JoeBar(_reserveToken).joe();
+		(,,,address _reserveToken,,,,,,) = BankerJoeCompoundingStrategyToken(_strategy).state();
+		address _operatingToken = JToken(_reserveToken).underlying();
 		strategy = _strategy;
 		reserveToken = _reserveToken;
 		operatingToken = _operatingToken;
@@ -542,12 +421,12 @@ contract TraderJoeCompoundingStrategyBridge
 	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
 		uint256 _value = _calcDepositAmount(_amount);
-		return TraderJoeCompoundingStrategyToken(strategy).calcSharesFromAmount(_value);
+		return BankerJoeCompoundingStrategyToken(strategy).calcSharesFromAmount(_value);
 	}
 
 	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
 	{
-		uint256 _value = TraderJoeCompoundingStrategyToken(strategy).calcAmountFromShares(_shares);
+		uint256 _value = BankerJoeCompoundingStrategyToken(strategy).calcAmountFromShares(_shares);
 		return _calcWithdrawalAmount(_value);
 	}
 
@@ -558,7 +437,7 @@ contract TraderJoeCompoundingStrategyBridge
 		_deposit(_amount);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		Transfers._approveFunds(reserveToken, strategy, _value);
-		TraderJoeCompoundingStrategyToken(strategy).deposit(_value, 0, _execGulp);
+		BankerJoeCompoundingStrategyToken(strategy).deposit(_value, 0, _execGulp);
 		uint256 _shares = Transfers._getBalance(strategy);
 		require(_shares >= _minShares, "high slippage");
 		Transfers._pushFunds(strategy, _from, _shares);
@@ -568,7 +447,7 @@ contract TraderJoeCompoundingStrategyBridge
 	{
 		address _from = msg.sender;
 		Transfers._pullFunds(strategy, _from, _shares);
-		TraderJoeCompoundingStrategyToken(strategy).withdraw(_shares, 0, _execGulp);
+		BankerJoeCompoundingStrategyToken(strategy).withdraw(_shares, 0, _execGulp);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		_withdraw(_value);
 		uint256 _amount = Transfers._getBalance(operatingToken);
@@ -576,32 +455,32 @@ contract TraderJoeCompoundingStrategyBridge
 		Transfers._pushFunds(operatingToken, _from, _amount);
 	}
 
-	/// @dev Calculates the amount of xJOE to be minted from JOE
+	/// @dev Calculates the amount of jToken to be minted from underlying
 	function _calcDepositAmount(uint256 _amount) internal view returns (uint256 _value)
 	{
-		uint256 _totalSupply = IERC20(reserveToken).totalSupply();
-		uint256 _totalReserve = IERC20(operatingToken).balanceOf(reserveToken);
-		return _amount.mul(_totalSupply).div(_totalReserve);
+		uint256 _exchangeRate = JToken(reserveToken).exchangeRateStored();
+		return _amount.mul(1e18).div(_exchangeRate);
 	}
 
-	/// @dev Calculates the amount of received JOE upon burning xJOE
+	/// @dev Calculates the amount of underlying upon redeemeing jToken
 	function _calcWithdrawalAmount(uint256 _value) internal view returns (uint256 _amount)
 	{
-		uint256 _totalSupply = IERC20(reserveToken).totalSupply();
-		uint256 _totalReserve = IERC20(operatingToken).balanceOf(reserveToken);
-		return _value.mul(_totalReserve).div(_totalSupply);
+		uint256 _exchangeRate = JToken(reserveToken).exchangeRateStored();
+		return _value.mul(_exchangeRate).div(1e18);
 	}
 
-	/// @dev Mints xJOE from JOE
+	/// @dev Performs a deposit into the lending pool
 	function _deposit(uint256 _amount) internal
 	{
 		Transfers._approveFunds(operatingToken, reserveToken, _amount);
-		JoeBar(reserveToken).enter(_amount);
+		uint256 _errorCode = JToken(reserveToken).mint(_amount);
+		require(_errorCode == 0, "lend unavailable");
 	}
 
-	/// @dev Burns xJOE for JOE
+	/// @dev Performs a withdrawal from the lending pool
 	function _withdraw(uint256 _amount) internal
 	{
-		JoeBar(reserveToken).leave(_amount);
+		uint256 _errorCode = JToken(reserveToken).redeem(_amount);
+		require(_errorCode == 0, "redeem unavailable");
 	}
 }

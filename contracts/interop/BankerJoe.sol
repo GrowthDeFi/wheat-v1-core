@@ -17,10 +17,12 @@ interface Joetroller
 
 interface JToken is IERC20
 {
+	function exchangeRateStored() external view returns (uint256 _exchangeRate);
 	function joetroller() external view returns (address _joetroller);
 	function underlying() external view returns (address _token);
 
 	function balanceOfUnderlying(address _account) external returns (uint256 _amount);
 	function mint(uint256 _amount) external returns (uint256 _errorCode);
+	function redeem(uint256 _amount) external returns (uint256 _errorCode);
 	function redeemUnderlying(uint256 _amount) external returns (uint256 _errorCode);
 }
