@@ -89,6 +89,8 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 	 * @param _name The ERC-20 token name.
 	 * @param _symbol The ERC-20 token symbol.
 	 * @param _decimals The ERC-20 token decimals.
+	 * @param _reserveToken The jToken address to be used as reserve.
+	 * @param _bonusToken The token address to be collected as bonus.
 	 * @param _treasury The treasury address used to recover lost funds.
 	 * @param _collector The fee collector address to collect the performance fee.
 	 * @param _exchange The exchange contract used to convert funds.
@@ -100,6 +102,7 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 	{
 		_setupDecimals(_decimals);
 		(address _routingToken, address _rewardToken) = _getTokens(_reserveToken);
+		require(_decimals == ERC20(_reserveToken).decimals(), "invalid decimals");
 		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
