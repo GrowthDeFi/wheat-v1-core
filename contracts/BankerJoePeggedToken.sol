@@ -13,7 +13,7 @@ import { Wrapping } from "./modules/Wrapping.sol";
 import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol";
 import { PSM } from "./interop/Mor.sol";
 
-contract BankerJoePeggedStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	// strategy token configuration
 	address private immutable bonusToken;
