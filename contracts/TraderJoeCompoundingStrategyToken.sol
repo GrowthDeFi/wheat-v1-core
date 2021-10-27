@@ -16,13 +16,12 @@ import { MasterChefJoeV2, JoeBar } from "./interop/TraderJoe.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 /**
- * @notice This contract implements a compounding strategy for PancakeSwap MasterChef.
+ * @notice This contract implements a compounding strategy for TraderJoe MasterChef.
  *         It basically deposits and withdraws funds from MasterChef and collects the
- *         reward token (CAKE). The compounding happens by calling the gulp function;
+ *         reward token (JOE). The compounding happens by calling the gulp function;
  *         it converts the reward into more funds which are further deposited into
  *         MasterChef. A performance fee is deducted from the converted funds and sent
- *         to the fee collector contract. This contract also allows for charging a
- *         deposit fee deducted from deposited funds.
+ *         to the fee collector contract.
  */
 contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
@@ -42,7 +41,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	bool private immutable useBar;
 
 	// strategy token configuration
-	address private immutable bonusToken;
 	address private immutable rewardToken;
 	address private immutable routingToken;
 	address private immutable reserveToken;
@@ -71,7 +69,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		address _masterChef,
 		uint256 _pid,
 		bool _useBar,
-		address _bonusToken,
 		address _rewardToken,
 		address _routingToken,
 		address _reserveToken,
@@ -88,7 +85,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			masterChef,
 			pid,
 			useBar,
-			bonusToken,
 			rewardToken,
 			routingToken,
 			reserveToken,
@@ -123,17 +119,17 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		address _treasury, address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
-		_setupDecimals(_decimals);
-		(address _reserveToken, address _rewardToken, address _bonusToken) = _getTokens(_masterChef, _pid);
+		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
 		if (_useBar) {
 			require(_routingToken == JoeBar(_reserveToken).joe(), "invalid token");
 		} else {
 			require(_routingToken == _reserveToken || _routingToken == Pair(_reserveToken).token0() || _routingToken == Pair(_reserveToken).token1(), "invalid token");
 		}
+		require(_decimals == ERC20(_reserveToken).decimals(), "invalid decimals");
+		_setupDecimals(_decimals);
 		masterChef = _masterChef;
 		pid = _pid;
 		useBar = _useBar;
-		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
@@ -160,7 +156,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @notice Allows for the beforehand calculation of shares to be
 	 *         received/minted upon depositing to the contract.
 	 * @param _amount The amount of reserve token being deposited.
-	 * @return _shares The net amount of shares being received.
+	 * @return _shares The amount of shares being received.
 	 */
 	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
@@ -180,60 +176,9 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	}
 
 	/**
-	 * @notice Allows for the beforehand calculation of the amount of
-	 *         reward token to be collected as performance fee on the next
-	 *         gulp call.
-	 * @return _feeReward The amount of the reward token to be collected.
-	 */
-	/*
-	function pendingPerformanceFee() external view returns (uint256 _feeReward)
-	{
-		(uint256 _pendingReward,,) = _getPendingReward();
-		uint256 _balanceReward = Transfers._getBalance(rewardToken);
-		uint256 _totalReward = _pendingReward.add(_balanceReward);
-		_feeReward = _totalReward.mul(performanceFee) / 1e18;
-		return _feeReward;
-	}
-	*/
-
-	/**
-	 * @notice Allows for the beforehand calculation of the amount of
-	 *         reserve token, converted from the reward token accumulated,
-	 *         to be incorporated into the reserve on the next gulp call.
-	 * @return _rewardAmount The amount of the reserve token to be collected.
-	 */
-	/*
-	function pendingReward() external view returns (uint256 _rewardAmount)
-	{
-		(uint256 _pendingReward,,) = _getPendingReward();
-		uint256 _balanceReward = Transfers._getBalance(rewardToken);
-		uint256 _totalReward = _pendingReward.add(_balanceReward);
-		uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
-		uint256 _netReward = _totalReward - _feeReward;
-		uint256 _totalRouting = _netReward;
-		if (rewardToken != routingToken) {
-			require(exchange != address(0), "exchange not set");
-			_totalRouting = IExchange(exchange).calcConversionFromInput(rewardToken, routingToken, _netReward);
-		}
-		uint256 _totalBalance = _totalRouting;
-		if (routingToken != reserveToken) {
-			if (useBar) {
-				uint256 _totalSupply = IERC20(reserveToken).totalSupply();
-				uint256 _totalReserve = IERC20(JoeBar(reserveToken).joe()).balanceOf(reserveToken);
-				_totalBalance = _totalSupply == 0 || _totalReserve == 0 ? _totalRouting : _totalRouting.mul(_totalSupply).div(_totalReserve);
-			} else {
-				require(exchange != address(0), "exchange not set");
-				_totalBalance = IExchange(exchange).calcJoinPoolFromInput(reserveToken, routingToken, _totalRouting);
-			}
-		}
-		return _totalBalance;
-	}
-	*/
-
-	/**
 	 * @notice Performs the minting of shares upon the deposit of the
 	 *         reserve token. The actual number of shares being minted can
-	 *         be calculated using the calcSharesFromAmount function.
+	 *         be calculated using the calcSharesFromAmount() function.
 	 *         In every deposit, a portion of the shares is retained in
 	 *         terms of deposit fee and sent to the dev address.
 	 * @param _amount The amount of reserve token being deposited in the
@@ -259,7 +204,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @notice Performs the burning of shares upon the withdrawal of
 	 *         the reserve token. The actual amount of the reserve token to
 	 *         be received can be calculated using the
-	 *         calcAmountFromShares function.
+	 *         calcAmountFromShares() function.
 	 * @param _shares The amount of this shares being redeemed in the operation.
 	 * @param _minAmount The minimum amount of the reserve token expected
 	 *                   to be received in the operation.
@@ -295,13 +240,13 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	/// @dev Actual gulp implementation
 	function _gulp() internal returns (bool _success)
 	{
-		(uint256 _pendingReward, uint256 _pendingBonus) = _getPendingReward();
+		(uint256 _pendingReward, uint256 _pendingBonus, address _bonusToken) = _getPendingReward();
 		if (_pendingReward > 0 || _pendingBonus > 0) {
 			_withdraw(0);
 		}
-		if (bonusToken != address(0)) {
-			uint256 _totalBonus = Transfers._getBalance(bonusToken);
-			Transfers._pushFunds(bonusToken, collector, _totalBonus);
+		if (_bonusToken != address(0)) {
+			uint256 _totalBonus = Transfers._getBalance(_bonusToken);
+			Transfers._pushFunds(_bonusToken, collector, _totalBonus);
 		}
 		{
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
@@ -409,8 +354,8 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 
 	/**
 	 * @notice Updates the minimal gulp factor which defines the tolerance
-	 *         for gulping when below the average price. Default is 99%,
-	 *         which implies accepting up to 1% below the average price.
+	 *         for gulping when below the average price. Default is 80%,
+	 *         which implies accepting up to 20% below the average price.
 	 *         This is a privileged function.
 	 * @param _newMinimalGulpFactor The new minimal gulp factor.
 	 */
@@ -467,21 +412,20 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the MasterChef pool
-	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken, address _bonusToken)
+	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
 	{
 		uint256 _poolLength = MasterChefJoeV2(_masterChef).poolLength();
 		require(_pid < _poolLength, "invalid pid");
 		(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
 		_rewardToken = MasterChefJoeV2(_masterChef).joe();
-		(_bonusToken,) = MasterChefJoeV2(_masterChef).rewarderBonusTokenInfo(_pid);
-		return (_reserveToken, _rewardToken, _bonusToken);
+		return (_reserveToken, _rewardToken);
 	}
 
 	/// @dev Retrieves the current pending reward for the MasterChef pool
-	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus)
+	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus, address _bonusToken)
 	{
-		(_pendingReward,,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
-		return (_pendingReward, _pendingBonus);
+		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
+		return (_pendingReward, _pendingBonus, _bonusToken);
 	}
 
 	/// @dev Retrieves the deposited reserve for the MasterChef pool
@@ -521,59 +465,59 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
 
-contract TraderJoeCompoundingStrategyBridge
+contract TraderJoeCompoundingStrategyTokenBridge
 {
 	using SafeMath for uint256;
 
-	address public immutable strategy;
+	address public immutable strategyToken;
 	address public immutable reserveToken;
-	address public immutable operatingToken;
+	address public immutable underlyingToken;
 
-	constructor (address _strategy) public
+	constructor (address _strategyToken) public
 	{
-		(,,bool _useBar,,,, address _reserveToken,,,,,,,) = TraderJoeCompoundingStrategyToken(_strategy).state();
+		(,,bool _useBar,, address _routingToken, address _reserveToken,,,,,,,) = TraderJoeCompoundingStrategyToken(_strategyToken).state();
 		require(_useBar, "invalid strategy");
-		address _operatingToken = JoeBar(_reserveToken).joe();
-		strategy = _strategy;
+		address _underlyingToken = _routingToken;
+		strategyToken = _strategyToken;
 		reserveToken = _reserveToken;
-		operatingToken = _operatingToken;
+		underlyingToken = _underlyingToken;
 	}
 
 	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
 		uint256 _value = _calcDepositAmount(_amount);
-		return TraderJoeCompoundingStrategyToken(strategy).calcSharesFromAmount(_value);
+		return TraderJoeCompoundingStrategyToken(strategyToken).calcSharesFromAmount(_value);
 	}
 
 	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
 	{
-		uint256 _value = TraderJoeCompoundingStrategyToken(strategy).calcAmountFromShares(_shares);
+		uint256 _value = TraderJoeCompoundingStrategyToken(strategyToken).calcAmountFromShares(_shares);
 		return _calcWithdrawalAmount(_value);
 	}
 
 	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external
 	{
 		address _from = msg.sender;
-		Transfers._pullFunds(operatingToken, _from, _amount);
+		Transfers._pullFunds(underlyingToken, _from, _amount);
 		_deposit(_amount);
 		uint256 _value = Transfers._getBalance(reserveToken);
-		Transfers._approveFunds(reserveToken, strategy, _value);
-		TraderJoeCompoundingStrategyToken(strategy).deposit(_value, 0, _execGulp);
-		uint256 _shares = Transfers._getBalance(strategy);
+		Transfers._approveFunds(reserveToken, strategyToken, _value);
+		TraderJoeCompoundingStrategyToken(strategyToken).deposit(_value, 0, _execGulp);
+		uint256 _shares = Transfers._getBalance(strategyToken);
 		require(_shares >= _minShares, "high slippage");
-		Transfers._pushFunds(strategy, _from, _shares);
+		Transfers._pushFunds(strategyToken, _from, _shares);
 	}
 
 	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external
 	{
 		address _from = msg.sender;
-		Transfers._pullFunds(strategy, _from, _shares);
-		TraderJoeCompoundingStrategyToken(strategy).withdraw(_shares, 0, _execGulp);
+		Transfers._pullFunds(strategyToken, _from, _shares);
+		TraderJoeCompoundingStrategyToken(strategyToken).withdraw(_shares, 0, _execGulp);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		_withdraw(_value);
-		uint256 _amount = Transfers._getBalance(operatingToken);
+		uint256 _amount = Transfers._getBalance(underlyingToken);
 		require(_amount >= _minAmount, "high slippage");
-		Transfers._pushFunds(operatingToken, _from, _amount);
+		Transfers._pushFunds(underlyingToken, _from, _amount);
 	}
 
 	// ----- BEGIN: underlying contract abstraction
@@ -582,7 +526,7 @@ contract TraderJoeCompoundingStrategyBridge
 	function _calcDepositAmount(uint256 _amount) internal view returns (uint256 _value)
 	{
 		uint256 _totalSupply = IERC20(reserveToken).totalSupply();
-		uint256 _totalReserve = IERC20(operatingToken).balanceOf(reserveToken);
+		uint256 _totalReserve = IERC20(underlyingToken).balanceOf(reserveToken);
 		return _amount.mul(_totalSupply).div(_totalReserve);
 	}
 
@@ -590,14 +534,14 @@ contract TraderJoeCompoundingStrategyBridge
 	function _calcWithdrawalAmount(uint256 _value) internal view returns (uint256 _amount)
 	{
 		uint256 _totalSupply = IERC20(reserveToken).totalSupply();
-		uint256 _totalReserve = IERC20(operatingToken).balanceOf(reserveToken);
+		uint256 _totalReserve = IERC20(underlyingToken).balanceOf(reserveToken);
 		return _value.mul(_totalReserve).div(_totalSupply);
 	}
 
 	/// @dev Mints xJOE from JOE
 	function _deposit(uint256 _amount) internal
 	{
-		Transfers._approveFunds(operatingToken, reserveToken, _amount);
+		Transfers._approveFunds(underlyingToken, reserveToken, _amount);
 		JoeBar(reserveToken).enter(_amount);
 	}
 
