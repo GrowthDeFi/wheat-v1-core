@@ -31,6 +31,7 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	address private immutable bonusToken;
 	address private immutable rewardToken;
 	address private immutable reserveToken;
+	address private immutable underlyingToken;
 
 	// addresses receiving tokens
 	address private treasury;
@@ -41,6 +42,7 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 		address _bonusToken,
 		address _rewardToken,
 		address _reserveToken,
+		address _underlyingToken,
 		address _treasury,
 		address _collector
 	)
@@ -49,6 +51,7 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 			bonusToken,
 			rewardToken,
 			reserveToken,
+			underlyingToken,
 			treasury,
 			collector
 		);
@@ -71,10 +74,11 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	{
 		require(_decimals == ERC20(_reserveToken).decimals(), "invalid decimals");
 		_setupDecimals(_decimals);
-		(,address _rewardToken) = _getTokens(_reserveToken);
+		(address _underlyingToken,address _rewardToken) = _getTokens(_reserveToken);
 		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
 		reserveToken = _reserveToken;
+		underlyingToken = _underlyingToken;
 		treasury = _treasury;
 		collector = _collector;
 	}
@@ -189,8 +193,8 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
-		require(_token != rewardToken, "invalid token");
 		require(_token != bonusToken, "invalid token");
+		require(_token != rewardToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		if (_token == reserveToken) {
 			_balance -= totalReserve();
@@ -229,13 +233,13 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the lending pool
-	function _getTokens(address _reserveToken) internal view returns (address _routingToken, address _rewardToken)
+	function _getTokens(address _reserveToken) internal view returns (address _underlyingToken, address _rewardToken)
 	{
 		address _joetroller = JToken(_reserveToken).joetroller();
 		address _distributor = Joetroller(_joetroller).rewardDistributor();
-		_routingToken = JToken(_reserveToken).underlying();
+		_underlyingToken = JToken(_reserveToken).underlying();
 		_rewardToken = JRewardDistributor(_distributor).joeAddress();
-		return (_routingToken, _rewardToken);
+		return (_underlyingToken, _rewardToken);
 	}
 
 	/// @dev Retrieves the current pending reward for the lending pool
@@ -285,8 +289,7 @@ contract BankerJoeWrappingTokenBridge
 
 	constructor (address payable _strategyToken) public
 	{
-		(address _bonusToken,,address _reserveToken,,) = BankerJoeWrappingToken(_strategyToken).state();
-		address _underlyingToken = JToken(_reserveToken).underlying();
+		(address _bonusToken,,address _reserveToken, address _underlyingToken,,) = BankerJoeWrappingToken(_strategyToken).state();
 		strategyToken = _strategyToken;
 		bonusToken = _bonusToken;
 		reserveToken = _reserveToken;
