@@ -22,7 +22,7 @@
     "build": "truffle compile",
     "deploy": "truffle migrate",
     "deploy:bscmain": "npm run set:bscmain && truffle migrate --network bscmain",
-    "source": "truffle-flattener contracts/BankerJoeCompoundingStrategyToken.sol | sed '/^.*SPDX-License-Identifier:.*$/d' | sed '1s/^/\\/\\/ SPDX-License-Identifier: GPL-3.0-only\\n\\n/' > Contracts.sol",
+    "source": "truffle-flattener contracts/*.sol | sed '/^.*SPDX-License-Identifier:.*$/d' | sed '1s/^/\\/\\/ SPDX-License-Identifier: GPL-3.0-only\\n\\n/' > Contracts.sol",
     "test": "GAS_LIMIT=30000000 truffle test"
   },
   "repository": {
