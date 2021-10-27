@@ -23,7 +23,6 @@ interface JToken is IERC20
 	function underlying() external view returns (address _token);
 
 	function balanceOfUnderlying(address _account) external returns (uint256 _amount);
-	function mint() external payable;
 	function mint(uint256 _amount) external returns (uint256 _errorCode);
 	function redeem(uint256 _amount) external returns (uint256 _errorCode);
 	function redeemUnderlying(uint256 _amount) external returns (uint256 _errorCode);

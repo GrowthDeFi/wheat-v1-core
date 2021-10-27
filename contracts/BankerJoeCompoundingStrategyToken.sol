@@ -380,14 +380,9 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	/// @dev Performs a deposit into the lending pool
 	function _deposit(uint256 _amount) internal
 	{
-		if (routingToken == bonusToken) {
-			Wrapping._unwrap(bonusToken, _amount);
-			JToken(reserveToken).mint{value: _amount}();
-		} else {
-			Transfers._approveFunds(routingToken, reserveToken, _amount);
-			uint256 _errorCode = JToken(reserveToken).mint(_amount);
-			require(_errorCode == 0, "lend unavailable");
-		}
+		Transfers._approveFunds(routingToken, reserveToken, _amount);
+		uint256 _errorCode = JToken(reserveToken).mint(_amount);
+		require(_errorCode == 0, "lend unavailable");
 	}
 
 	/// @dev Claims the current pending reward for the lending pool
@@ -475,6 +470,35 @@ contract BakerJoeCompoundingStrategyBridge
 		Transfers._pushFunds(routingToken, _from, _amount);
 	}
 
+	function depositNative(uint256 _minShares, bool _execGulp) external payable
+	{
+		address _from = msg.sender;
+		uint256 _amount = msg.value;
+		require(routingToken == bonusToken, "invalid operation");
+		Wrapping._wrap(bonusToken, _amount);
+		_deposit(_amount);
+		uint256 _value = Transfers._getBalance(reserveToken);
+		Transfers._approveFunds(reserveToken, strategy, _value);
+		BankerJoeCompoundingStrategyToken(strategy).deposit(_value, 0, _execGulp);
+		uint256 _shares = Transfers._getBalance(strategy);
+		require(_shares >= _minShares, "high slippage");
+		Transfers._pushFunds(strategy, _from, _shares);
+	}
+
+	function withdrawNative(uint256 _shares, uint256 _minAmount, bool _execGulp) external
+	{
+		address payable _from = msg.sender;
+		require(routingToken == bonusToken, "invalid operation");
+		Transfers._pullFunds(strategy, _from, _shares);
+		BankerJoeCompoundingStrategyToken(strategy).withdraw(_shares, 0, _execGulp);
+		uint256 _value = Transfers._getBalance(reserveToken);
+		_withdraw(_value);
+		uint256 _amount = Transfers._getBalance(routingToken);
+		require(_amount >= _minAmount, "high slippage");
+		Wrapping._unwrap(bonusToken, _amount);
+		_from.transfer(_amount);
+	}
+
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Calculates the amount of jToken to be minted from underlying
@@ -494,14 +518,9 @@ contract BakerJoeCompoundingStrategyBridge
 	/// @dev Performs a deposit into the lending pool
 	function _deposit(uint256 _amount) internal
 	{
-		if (routingToken == bonusToken) {
-			Wrapping._unwrap(bonusToken, _amount);
-			JToken(reserveToken).mint{value: _amount}();
-		} else {
-			Transfers._approveFunds(routingToken, reserveToken, _amount);
-			uint256 _errorCode = JToken(reserveToken).mint(_amount);
-			require(_errorCode == 0, "lend unavailable");
-		}
+		Transfers._approveFunds(routingToken, reserveToken, _amount);
+		uint256 _errorCode = JToken(reserveToken).mint(_amount);
+		require(_errorCode == 0, "lend unavailable");
 	}
 
 	/// @dev Performs a withdrawal from the lending pool
