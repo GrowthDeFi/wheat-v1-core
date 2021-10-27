@@ -31,9 +31,9 @@ contract BankerJoePeggedStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuar
 		address _psm, address _treasury, address _collector)
 		ERC20(_name, _symbol) public
 	{
-		_setupDecimals(_decimals);
 		(address _reserveToken, address _rewardToken) = _getTokens(_stakingToken);
 		require(_decimals == ERC20(_reserveToken).decimals(), "invalid decimals");
+		_setupDecimals(_decimals);
 		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
 		reserveToken = _reserveToken;
@@ -173,10 +173,9 @@ contract BankerJoePeggedStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuar
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
-		require(_token != stakingToken, "invalid token");
-		require(_token != reserveToken, "invalid token");
-		require(_token != rewardToken, "invalid token");
 		require(_token != bonusToken, "invalid token");
+		require(_token != rewardToken, "invalid token");
+		require(_token != stakingToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
@@ -266,6 +265,7 @@ contract BankerJoePeggedStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuar
 		_jtokens[0] = stakingToken;
 		JRewardDistributor(_distributor).claimReward(0, _accounts, _jtokens, false, true);
 		JRewardDistributor(_distributor).claimReward(1, _accounts, _jtokens, false, true);
+		Wrapping._wrap(bonusToken, address(this).balance);
 	}
 
 	// ----- END: underlying contract abstraction
@@ -273,7 +273,6 @@ contract BankerJoePeggedStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuar
 	/// @dev Allows for receiving the native token
 	receive() external payable
 	{
-		Wrapping._wrap(bonusToken, address(this).balance);
 	}
 
 	// events emitted by this contract
