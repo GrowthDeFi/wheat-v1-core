@@ -415,7 +415,7 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
 
-contract BakerJoeCompoundingStrategyBridge
+contract BakerJoeCompoundingStrategyTokenBridge
 {
 	using SafeMath for uint256;
 
