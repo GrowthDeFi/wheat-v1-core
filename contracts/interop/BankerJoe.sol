@@ -6,7 +6,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface JRewardDistributor
 {
 	function joeAddress() external view returns (address _joe);
-	function rewardAccrued(uint8 _rewardType, address _account) external view returns (uint256 _rewardAccrued);
 
 	function claimReward(uint8 _rewardType, address payable[] memory _accounts, address[] memory _jtokens, bool _borrowers, bool _suppliers) external payable;
 }

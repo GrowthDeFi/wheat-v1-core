@@ -118,16 +118,6 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	}
 
 	/**
-	 * @notice Returns the amount of reward/bonus tokens pending collection.
-	 * @return _rewardAmount The amount of the reward token to be collected.
-	 * @return _bonusAmount The amount of the bonus token to be collected.
-	 */
-	function pendingReward() external view returns (uint256 _rewardAmount, uint256 _bonusAmount)
-	{
-		return _getPendingReward();
-	}
-
-	/**
 	 * @notice Performs the minting of shares upon the deposit of the
 	 *         reserve token. The actual number of shares being minted can
 	 *         be calculated using the calcSharesFromAmount() function.
@@ -240,16 +230,6 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 		_underlyingToken = JToken(_reserveToken).underlying();
 		_rewardToken = JRewardDistributor(_distributor).joeAddress();
 		return (_underlyingToken, _rewardToken);
-	}
-
-	/// @dev Retrieves the current pending reward for the lending pool
-	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus)
-	{
-		address _joetroller = JToken(reserveToken).joetroller();
-		address _distributor = Joetroller(_joetroller).rewardDistributor();
-		_pendingReward = JRewardDistributor(_distributor).rewardAccrued(0, address(this));
-		_pendingBonus = JRewardDistributor(_distributor).rewardAccrued(1, address(this));
-		return (_pendingReward, _pendingBonus);
 	}
 
 	/// @dev Claims the current pending reward for the lending pool
