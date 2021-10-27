@@ -16,15 +16,14 @@ import { Wrapping } from "./modules/Wrapping.sol";
 import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol";
 
 /**
- * @notice This contract implements a compounding strategy for PancakeSwap MasterChef.
- *         It basically deposits and withdraws funds from MasterChef and collects the
- *         reward token (CAKE). The compounding happens by calling the gulp function;
- *         it converts the reward into more funds which are further deposited into
- *         MasterChef. A performance fee is deducted from the converted funds and sent
- *         to the fee collector contract. This contract also allows for charging a
- *         deposit fee deducted from deposited funds.
+ * @notice This contract implements a compounding strategy for BankerJoe.
+ *         It basically allows depositing and withdrawing jToken funds and
+ *         collects the reward/bonus token (JOE/AVAX). Rewards are converted
+ *         to more of the jToken and incorporated into the reserve, after a
+ *         performance fee is deducted. The bonus is also deducted in full as
+ *         performance fee.
  */
-abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -90,7 +89,7 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 	 * @param _symbol The ERC-20 token symbol.
 	 * @param _decimals The ERC-20 token decimals.
 	 * @param _reserveToken The jToken address to be used as reserve.
-	 * @param _bonusToken The token address to be collected as bonus.
+	 * @param _bonusToken The token address to be collected as bonus (WAVAX).
 	 * @param _treasury The treasury address used to recover lost funds.
 	 * @param _collector The fee collector address to collect the performance fee.
 	 * @param _exchange The exchange contract used to convert funds.
@@ -130,7 +129,7 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 	 * @notice Allows for the beforehand calculation of shares to be
 	 *         received/minted upon depositing to the contract.
 	 * @param _amount The amount of reserve token being deposited.
-	 * @return _shares The net amount of shares being received.
+	 * @return _shares The amount of shares being received.
 	 */
 	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
@@ -152,13 +151,14 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 	/**
 	 * @notice Performs the minting of shares upon the deposit of the
 	 *         reserve token. The actual number of shares being minted can
-	 *         be calculated using the calcSharesFromAmount function.
-	 *         In every deposit, a portion of the shares is retained in
-	 *         terms of deposit fee and sent to the dev address.
+	 *         be calculated using the calcSharesFromAmount() function.
 	 * @param _amount The amount of reserve token being deposited in the
 	 *                operation.
 	 * @param _minShares The minimum number of shares expected to be
 	 *                   received in the operation.
+	 * @param _execGulp Whether or not gulp() is called prior to the deposit.
+	 *                  If the deposit is percentually larger than forceGulpRatio,
+	 *                  gulp() execution is compulsory.
 	 */
 	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
@@ -176,10 +176,11 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 	 * @notice Performs the burning of shares upon the withdrawal of
 	 *         the reserve token. The actual amount of the reserve token to
 	 *         be received can be calculated using the
-	 *         calcAmountFromShares function.
+	 *         calcAmountFromShares() function.
 	 * @param _shares The amount of this shares being redeemed in the operation.
 	 * @param _minAmount The minimum amount of the reserve token expected
 	 *                   to be received in the operation.
+	 * @param _execGulp Whether or not gulp() is called prior to the withdrawal.
 	 */
 	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
@@ -293,8 +294,8 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 
 	/**
 	 * @notice Updates the minimal gulp factor which defines the tolerance
-	 *         for gulping when below the average price. Default is 99%,
-	 *         which implies accepting up to 1% below the average price.
+	 *         for gulping when below the average price. Default is 80%,
+	 *         which implies accepting up to 20% below the average price.
 	 *         This is a privileged function.
 	 * @param _newMinimalGulpFactor The new minimal gulp factor.
 	 */
@@ -360,7 +361,7 @@ abstract contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /
 		return (_routingToken, _rewardToken);
 	}
 
-	/// @dev Retrieves the deposited reserve for the MasterChef pool
+	/// @dev Retrieves the deposited reserve for the lengding pool
 	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
 	{
 		return Transfers._getBalance(reserveToken);
