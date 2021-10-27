@@ -179,8 +179,6 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @notice Performs the minting of shares upon the deposit of the
 	 *         reserve token. The actual number of shares being minted can
 	 *         be calculated using the calcSharesFromAmount() function.
-	 *         In every deposit, a portion of the shares is retained in
-	 *         terms of deposit fee and sent to the dev address.
 	 * @param _amount The amount of reserve token being deposited in the
 	 *                operation.
 	 * @param _minShares The minimum number of shares expected to be
