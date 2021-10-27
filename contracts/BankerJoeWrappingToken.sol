@@ -23,63 +23,34 @@ import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol"
  *         performance fee is deducted. The bonus is also deducted in full as
  *         performance fee.
  */
-contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	using SafeMath for uint256;
-
-	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
-	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
-
-	uint256 constant MAXIMUM_PERFORMANCE_FEE = 100e16; // 100%
-	uint256 constant DEFAULT_PERFORMANCE_FEE = 50e16; // 50%
 
 	// strategy token configuration
 	address private immutable bonusToken;
 	address private immutable rewardToken;
-	address private immutable routingToken;
 	address private immutable reserveToken;
 
 	// addresses receiving tokens
 	address private treasury;
 	address private collector;
 
-	// exchange contract address
-	address private exchange;
-
-	// minimal gulp factor
-	uint256 private minimalGulpFactor = DEFAULT_MINIMAL_GULP_FACTOR;
-
-	// force gulp ratio
-	uint256 private forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
-
-	// fee configuration
-	uint256 private performanceFee = DEFAULT_PERFORMANCE_FEE;
-
 	/// @dev Single public function to expose the private state, saves contract space
 	function state() external view returns (
 		address _bonusToken,
 		address _rewardToken,
-		address _routingToken,
 		address _reserveToken,
 		address _treasury,
-		address _collector,
-		address _exchange,
-		uint256 _minimalGulpFactor,
-		uint256 _forceGulpRatio,
-		uint256 _performanceFee
+		address _collector
 	)
 	{
 		return (
 			bonusToken,
 			rewardToken,
-			routingToken,
 			reserveToken,
 			treasury,
-			collector,
-			exchange,
-			minimalGulpFactor,
-			forceGulpRatio,
-			performanceFee
+			collector
 		);
 	}
 
@@ -92,24 +63,20 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _bonusToken The token address to be collected as bonus (WAVAX).
 	 * @param _treasury The treasury address used to recover lost funds.
 	 * @param _collector The fee collector address to collect the performance fee.
-	 * @param _exchange The exchange contract used to convert funds.
 	 */
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _reserveToken, address _bonusToken,
-		address _treasury, address _collector, address _exchange)
+		address _treasury, address _collector)
 		ERC20(_name, _symbol) public
 	{
-		_setupDecimals(_decimals);
-		(address _routingToken, address _rewardToken) = _getTokens(_reserveToken);
 		require(_decimals == ERC20(_reserveToken).decimals(), "invalid decimals");
+		_setupDecimals(_decimals);
+		(,address _rewardToken) = _getTokens(_reserveToken);
 		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
-		routingToken = _routingToken;
 		reserveToken = _reserveToken;
 		treasury = _treasury;
 		collector = _collector;
-		exchange = _exchange;
-		_mint(address(1), 1); // avoids division by zero
 	}
 
 	/**
@@ -120,9 +87,7 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 */
 	function totalReserve() public view returns (uint256 _totalReserve)
 	{
-		_totalReserve = _getReserveAmount();
-		if (_totalReserve == uint256(-1)) return _totalReserve;
-		return _totalReserve + 1; // avoids division by zero
+		return totalSupply();
 	}
 
 	/**
@@ -131,9 +96,9 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _amount The amount of reserve token being deposited.
 	 * @return _shares The amount of shares being received.
 	 */
-	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
+	function calcSharesFromAmount(uint256 _amount) external pure returns (uint256 _shares)
 	{
-		return _calcSharesFromAmount(_amount);
+		return _amount;
 	}
 
 	/**
@@ -143,9 +108,19 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _shares The amount of shares to provide.
 	 * @return _amount The amount of the reserve token to be received.
 	 */
-	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
+	function calcAmountFromShares(uint256 _shares) external pure returns (uint256 _amount)
 	{
-		return _calcAmountFromShares(_shares);
+		return _shares;
+	}
+
+	/**
+	 * @notice Returns the amount of reward/bonus tokens pending collection.
+	 * @return _rewardAmount The amount of the reward token to be collected.
+	 * @return _bonusAmount The amount of the bonus token to be collected.
+	 */
+	function pendingReward() external view returns (uint256 _rewardAmount, uint256 _bonusAmount)
+	{
+		return _getPendingReward();
 	}
 
 	/**
@@ -154,20 +129,11 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 *         be calculated using the calcSharesFromAmount() function.
 	 * @param _amount The amount of reserve token being deposited in the
 	 *                operation.
-	 * @param _minShares The minimum number of shares expected to be
-	 *                   received in the operation.
-	 * @param _execGulp Whether or not gulp() is called prior to the deposit.
-	 *                  If the deposit is percentually larger than forceGulpRatio,
-	 *                  gulp() execution is compulsory.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function deposit(uint256 _amount) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
-		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
-			require(_gulp(), "unavailable");
-		}
 		address _from = msg.sender;
-		uint256 _shares = _calcSharesFromAmount(_amount);
-		require(_shares >= _minShares, "high slippage");
+		uint256 _shares = _amount;
 		Transfers._pullFunds(reserveToken, _from, _amount);
 		_mint(_from, _shares);
 	}
@@ -178,18 +144,11 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 *         be received can be calculated using the
 	 *         calcAmountFromShares() function.
 	 * @param _shares The amount of this shares being redeemed in the operation.
-	 * @param _minAmount The minimum amount of the reserve token expected
-	 *                   to be received in the operation.
-	 * @param _execGulp Whether or not gulp() is called prior to the withdrawal.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function withdraw(uint256 _shares) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
-		if (_execGulp) {
-			require(_gulp(), "unavailable");
-		}
 		address _from = msg.sender;
-		uint256 _amount = _calcAmountFromShares(_shares);
-		require(_amount >= _minAmount, "high slippage");
+		uint256 _amount = _shares;
 		_burn(_from, _shares);
 		Transfers._pushFunds(reserveToken, _from, _amount);
 	}
@@ -215,20 +174,8 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		}
 		{
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
-			if (_totalReward == 0) return true;
-			uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
-			Transfers._pushFunds(rewardToken, collector, _feeReward);
+			Transfers._pushFunds(rewardToken, collector, _totalReward);
 		}
-		if (rewardToken != routingToken) {
-			require(exchange != address(0), "exchange not set");
-			uint256 _totalReward = Transfers._getBalance(rewardToken);
-			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
-			if (_factor < minimalGulpFactor) return false;
-			Transfers._approveFunds(rewardToken, exchange, _totalReward);
-			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
-		}
-		uint256 _totalBalance = Transfers._getBalance(routingToken);
-		_deposit(_totalBalance);
 		return true;
 	}
 
@@ -240,13 +187,14 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _token The address of the token to be recovered.
 	 */
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
-		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
-		require(_token != reserveToken, "invalid token");
-		require(_token != routingToken, "invalid token");
 		require(_token != rewardToken, "invalid token");
 		require(_token != bonusToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
+		if (_token == reserveToken) {
+			_balance -= totalReserve();
+		}
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
@@ -278,77 +226,6 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		emit ChangeCollector(_oldCollector, _newCollector);
 	}
 
-	/**
-	 * @notice Updates the exchange address used to convert funds. A zero
-	 *         address can be used to temporarily pause conversions.
-	 *         This is a privileged function.
-	 * @param _newExchange The new exchange address.
-	 */
-	function setExchange(address _newExchange) external onlyOwner
-		delayed(this.setExchange.selector, keccak256(abi.encode(_newExchange)))
-	{
-		address _oldExchange = exchange;
-		exchange = _newExchange;
-		emit ChangeExchange(_oldExchange, _newExchange);
-	}
-
-	/**
-	 * @notice Updates the minimal gulp factor which defines the tolerance
-	 *         for gulping when below the average price. Default is 80%,
-	 *         which implies accepting up to 20% below the average price.
-	 *         This is a privileged function.
-	 * @param _newMinimalGulpFactor The new minimal gulp factor.
-	 */
-	function setMinimalGulpFactor(uint256 _newMinimalGulpFactor) external onlyOwner
-		delayed(this.setMinimalGulpFactor.selector, keccak256(abi.encode(_newMinimalGulpFactor)))
-	{
-		require(_newMinimalGulpFactor <= 1e18, "invalid factor");
-		uint256 _oldMinimalGulpFactor = minimalGulpFactor;
-		minimalGulpFactor = _newMinimalGulpFactor;
-		emit ChangeMinimalGulpFactor(_oldMinimalGulpFactor, _newMinimalGulpFactor);
-	}
-
-	/**
-	 * @notice Updates the force gulp ratio. Any deposit larger then the
-	 *         ratio, relative to the reserve, forces gulp.
-	 *         This is a privileged function.
-	 * @param _newForceGulpRatio The new force gulp ratio.
-	 */
-	function setForceGulpRatio(uint256 _newForceGulpRatio) external onlyOwner
-		delayed(this.setForceGulpRatio.selector, keccak256(abi.encode(_newForceGulpRatio)))
-	{
-		require(_newForceGulpRatio <= 1e18, "invalid rate");
-		uint256 _oldForceGulpRatio = forceGulpRatio;
-		forceGulpRatio = _newForceGulpRatio;
-		emit ChangeForceGulpRatio(_oldForceGulpRatio, _newForceGulpRatio);
-	}
-
-	/**
-	 * @notice Updates the performance fee rate.
-	 *         This is a privileged function.
-	 * @param _newPerformanceFee The new performance fee rate.
-	 */
-	function setPerformanceFee(uint256 _newPerformanceFee) external onlyOwner
-		delayed(this.setPerformanceFee.selector, keccak256(abi.encode(_newPerformanceFee)))
-	{
-		require(_newPerformanceFee <= MAXIMUM_PERFORMANCE_FEE, "invalid rate");
-		uint256 _oldPerformanceFee = performanceFee;
-		performanceFee = _newPerformanceFee;
-		emit ChangePerformanceFee(_oldPerformanceFee, _newPerformanceFee);
-	}
-
-	/// @dev Calculation of shares from amount given the share price (ratio between reserve and supply)
-	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _shares)
-	{
-		return _amount.mul(totalSupply()) / totalReserve();
-	}
-
-	/// @dev Calculation of amount from shares given the share price (ratio between reserve and supply)
-	function _calcAmountFromShares(uint256 _shares) internal view returns (uint256 _amount)
-	{
-		return _shares.mul(totalReserve()) / totalSupply();
-	}
-
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the lending pool
@@ -369,20 +246,6 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		_pendingReward = JRewardDistributor(_distributor).rewardAccrued(0, address(this));
 		_pendingBonus = JRewardDistributor(_distributor).rewardAccrued(1, address(this));
 		return (_pendingReward, _pendingBonus);
-	}
-
-	/// @dev Retrieves the deposited reserve for the lengding pool
-	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
-	{
-		return Transfers._getBalance(reserveToken);
-	}
-
-	/// @dev Performs a deposit into the lending pool
-	function _deposit(uint256 _amount) internal
-	{
-		Transfers._approveFunds(routingToken, reserveToken, _amount);
-		uint256 _errorCode = JToken(reserveToken).mint(_amount);
-		require(_errorCode == 0, "lend unavailable");
 	}
 
 	/// @dev Claims the current pending reward for the lending pool
@@ -409,13 +272,9 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// events emitted by this contract
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
-	event ChangeExchange(address _oldExchange, address _newExchange);
-	event ChangeMinimalGulpFactor(uint256 _oldMinimalGulpFactor, uint256 _newMinimalGulpFactor);
-	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
-	event ChangePerformanceFee(uint256 _oldPerformanceFee, uint256 _newPerformanceFee);
 }
 
-contract BakerJoeCompoundingStrategyBridge
+contract BakerJoeWrappingBridge
 {
 	using SafeMath for uint256;
 
@@ -426,7 +285,7 @@ contract BakerJoeCompoundingStrategyBridge
 
 	constructor (address payable _strategyToken) public
 	{
-		(address _bonusToken,,,address _reserveToken,,,,,,) = BankerJoeCompoundingStrategyToken(_strategyToken).state();
+		(address _bonusToken,,address _reserveToken,,) = BankerJoeWrappingToken(_strategyToken).state();
 		address _underlyingToken = JToken(_reserveToken).underlying();
 		strategyToken = _strategyToken;
 		bonusToken = _bonusToken;
@@ -436,34 +295,32 @@ contract BakerJoeCompoundingStrategyBridge
 
 	function calcSharesFromAmount(uint256 _amount) external view returns (uint256 _shares)
 	{
-		uint256 _value = _calcDepositAmount(_amount);
-		return BankerJoeCompoundingStrategyToken(strategyToken).calcSharesFromAmount(_value);
+		return _calcDepositAmount(_amount);
 	}
 
 	function calcAmountFromShares(uint256 _shares) external view returns (uint256 _amount)
 	{
-		uint256 _value = BankerJoeCompoundingStrategyToken(strategyToken).calcAmountFromShares(_shares);
-		return _calcWithdrawalAmount(_value);
+		return _calcWithdrawalAmount(_shares);
 	}
 
-	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external
+	function deposit(uint256 _amount, uint256 _minShares) external
 	{
 		address _from = msg.sender;
 		Transfers._pullFunds(underlyingToken, _from, _amount);
 		_deposit(_amount);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		Transfers._approveFunds(reserveToken, strategyToken, _value);
-		BankerJoeCompoundingStrategyToken(strategyToken).deposit(_value, 0, _execGulp);
+		BankerJoeWrappingToken(strategyToken).deposit(_value);
 		uint256 _shares = Transfers._getBalance(strategyToken);
 		require(_shares >= _minShares, "high slippage");
 		Transfers._pushFunds(strategyToken, _from, _shares);
 	}
 
-	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external
+	function withdraw(uint256 _shares, uint256 _minAmount) external
 	{
 		address _from = msg.sender;
 		Transfers._pullFunds(strategyToken, _from, _shares);
-		BankerJoeCompoundingStrategyToken(strategyToken).withdraw(_shares, 0, _execGulp);
+		BankerJoeWrappingToken(strategyToken).withdraw(_shares);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		_withdraw(_value);
 		uint256 _amount = Transfers._getBalance(underlyingToken);
@@ -471,7 +328,7 @@ contract BakerJoeCompoundingStrategyBridge
 		Transfers._pushFunds(underlyingToken, _from, _amount);
 	}
 
-	function depositNative(uint256 _minShares, bool _execGulp) external payable
+	function depositNative(uint256 _minShares) external payable
 	{
 		address _from = msg.sender;
 		uint256 _amount = msg.value;
@@ -480,18 +337,18 @@ contract BakerJoeCompoundingStrategyBridge
 		_deposit(_amount);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		Transfers._approveFunds(reserveToken, strategyToken, _value);
-		BankerJoeCompoundingStrategyToken(strategyToken).deposit(_value, 0, _execGulp);
+		BankerJoeWrappingToken(strategyToken).deposit(_value);
 		uint256 _shares = Transfers._getBalance(strategyToken);
 		require(_shares >= _minShares, "high slippage");
 		Transfers._pushFunds(strategyToken, _from, _shares);
 	}
 
-	function withdrawNative(uint256 _shares, uint256 _minAmount, bool _execGulp) external
+	function withdrawNative(uint256 _shares, uint256 _minAmount) external
 	{
 		address payable _from = msg.sender;
 		require(underlyingToken == bonusToken, "invalid operation");
 		Transfers._pullFunds(strategyToken, _from, _shares);
-		BankerJoeCompoundingStrategyToken(strategyToken).withdraw(_shares, 0, _execGulp);
+		BankerJoeWrappingToken(strategyToken).withdraw(_shares);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		_withdraw(_value);
 		uint256 _amount = Transfers._getBalance(underlyingToken);
