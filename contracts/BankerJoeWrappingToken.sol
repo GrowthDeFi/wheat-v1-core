@@ -274,7 +274,7 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	event ChangeCollector(address _oldCollector, address _newCollector);
 }
 
-contract BakerJoeWrappingTokenBridge
+contract BankerJoeWrappingTokenBridge
 {
 	using SafeMath for uint256;
 
