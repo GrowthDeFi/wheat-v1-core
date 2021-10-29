@@ -49,26 +49,36 @@ const ankrApikeyBsctest = process.env['ANKR_APIKEY_BSCTEST'] || '';
 const NETWORK_ID = {
   'bscmain': 56,
   'bsctest': 97,
+  'avaxmain': 43114,
+  'avaxtest': 43113,
 };
 
 const NETWORK_NAME = {
   56: 'bscmain',
   97: 'bsctest',
+  43114: 'avaxmain',
+  43113: 'avaxtest',
 };
 
 const ADDRESS_URL_PREFIX = {
   'bscmain': 'https://bscscan.com/address/',
   'bsctest': 'https://testnet.bscscan.com/address/',
+  'avaxmain': 'https://cchain.explorer.avax.network/address/',
+  'avaxtest': 'https://cchain.explorer.avax-test.network/address/',
 };
 
 const TX_URL_PREFIX = {
   'bscmain': 'https://bscscan.com/tx/',
   'bsctest': 'https://testnet.bscscan.com/tx/',
+  'avaxmain': 'https://cchain.explorer.avax.network/tx/',
+  'avaxtest': 'https://cchain.explorer.avax-test.network/tx/',
 };
 
 const NATIVE_SYMBOL = {
   'bscmain': 'BNB',
   'bsctest': 'BNB',
+  'avaxmain': 'AVAX',
+  'avaxtest': 'AVAX',
 };
 
 const HTTP_PROVIDER_URLS = {
@@ -97,6 +107,12 @@ const HTTP_PROVIDER_URLS = {
     'https://data-seed-prebsc-2-s3.binance.org:8545/',
     'https://apis.ankr.com/' + ankrApikeyBsctest + '/' + ankrProjectId + '/binance/full/test',
   ],
+  'avaxmain': [
+    'https://api.avax.network/ext/bc/C/rpc',
+  ],
+  'avaxtest': [
+    'https://api.avax-test.network/ext/bc/C/rpc',
+  ],
 };
 
 const web3Cache = {};
@@ -120,8 +136,10 @@ const MASTERCHEF_ABI = require('../build/contracts/CustomMasterChef.json').abi;
 const PAIR_ABI = require('../build/contracts/Pair.json').abi;
 
 const MASTERCHEF_ADDRESS = {
-  'bscmain': '0x73feaa1eE314F8c655E354234017bE2193C9E24E',
+  'bscmain': '0x73feaa1eE314F8c655E354234017bE2193C9E24E', // pancakeswap
   'bsctest': '0x7C83Cab4B208A0cD5a1b222D8e6f9099C8F37897',
+  'avaxmain': '0xd6a4F121CA35509aF06A0Be99093d08462f53052', // traderjoe
+  'avaxtest': '0x0000000000000000000000000000000000000000',
 };
 
 async function main(args) {
