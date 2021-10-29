@@ -26,7 +26,6 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	uint256 private immutable pid;
 
 	// strategy token configuration
-	address public immutable bonusToken;
 	address public immutable rewardToken;
 	address public immutable reserveToken;
 
@@ -46,10 +45,9 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	constructor (address _masterChef, uint256 _pid,
 		address _treasury, address _buyback, address _collector) public
 	{
-		(address _reserveToken, address _rewardToken, address _bonusToken) = _getTokens(_masterChef, _pid);
+		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
 		masterChef = _masterChef;
 		pid = _pid;
-		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
 		reserveToken = _reserveToken;
 		treasury = _treasury;
@@ -70,16 +68,16 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	/// @dev Actual gulp implementation
 	function _gulp() internal returns (bool _success)
 	{
+		(uint256 _pendingReward, uint256 _pendingBonus, address _bonusToken) = _getPendingReward();
 		{
 			uint256 _totalBalance = Transfers._getBalance(reserveToken);
-			(uint256 _pendingReward, uint256 _pendingBonus) = _getPendingReward();
 			if (_totalBalance > 0 || _pendingReward > 0 || _pendingBonus > 0) {
 				_deposit(_totalBalance);
 			}
 		}
 		{
-			uint256 _totalBonus = Transfers._getBalance(bonusToken);
-			Transfers._pushFunds(bonusToken, collector, _totalBonus);
+			uint256 _totalBonus = Transfers._getBalance(_bonusToken);
+			Transfers._pushFunds(_bonusToken, collector, _totalBonus);
 		}
 		{
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
@@ -98,7 +96,6 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
-		require(_token != bonusToken, "invalid token");
 		require(_token != rewardToken, "invalid token");
 		require(_token != reserveToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
@@ -184,21 +181,20 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the MasterChef pool
-	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken, address _bonusToken)
+	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
 	{
 		uint256 _poolLength = MasterChefJoeV2(_masterChef).poolLength();
 		require(_pid < _poolLength, "invalid pid");
 		(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
 		_rewardToken = MasterChefJoeV2(_masterChef).joe();
-		(_bonusToken,) = MasterChefJoeV2(_masterChef).rewarderBonusTokenInfo(_pid);
-		return (_reserveToken, _rewardToken, _bonusToken);
+		return (_reserveToken, _rewardToken);
 	}
 
 	/// @dev Retrieves the current pending reward for the MasterChef pool
-	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus)
+	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus, address _bonusToken)
 	{
-		(_pendingReward,,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
-		return (_pendingReward, _pendingBonus);
+		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
+		return (_pendingReward, _pendingBonus, _bonusToken);
 	}
 
 	/// @dev Retrieves the deposited reserve for the MasterChef pool
