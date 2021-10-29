@@ -12,10 +12,10 @@ import { Wrapping } from "./modules/Wrapping.sol";
 import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol";
 
 /**
- * @notice This contract implements a fee collector strategy for PancakeSwap MasterChef.
- *         It accumulates the reward token sent from strategies (CAKE) and converts it
- *         into reserve funds which are deposited into MasterChef. The rewards accumulated
- *         on MasterChed from reserve funds are, on the other hand, collected and sent to
+ * @notice This contract implements a fee collector strategy for BankerJoe.
+ *         It accumulates the token sent from strategies and converts it
+ *         into reserve funds which are deposited into BankerJoe. The rewards accumulated
+ *         on BankerJoe from reserve funds are, on the other hand, collected and sent to
  *         the buyback contract. These operations happen via the gulp function.
  */
 contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
@@ -191,6 +191,7 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 		_jtokens[0] = reserveToken;
 		JRewardDistributor(_distributor).claimReward(0, _accounts, _jtokens, false, true);
 		JRewardDistributor(_distributor).claimReward(1, _accounts, _jtokens, false, true);
+		Wrapping._wrap(bonusToken, address(this).balance);
 	}
 
 	// ----- END: underlying contract abstraction
@@ -198,7 +199,6 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	/// @dev Allows for receiving the native token
 	receive() external payable
 	{
-		Wrapping._wrap(bonusToken, address(this).balance);
 	}
 
 	// events emitted by this contract
