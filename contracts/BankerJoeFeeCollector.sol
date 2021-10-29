@@ -23,8 +23,8 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	// strategy token configuration
 	address public immutable bonusToken;
 	address public immutable rewardToken;
-	address public immutable routingToken;
 	address public immutable reserveToken;
+	address public immutable underlyingToken;
 
 	// addresses receiving tokens
 	address public treasury;
@@ -42,11 +42,11 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	constructor (address _reserveToken, address _bonusToken,
 		address _treasury, address _buyback, address _collector) public
 	{
-		(address _routingToken, address _rewardToken) = _getTokens(_reserveToken);
+		(address _underlyingToken, address _rewardToken) = _getTokens(_reserveToken);
 		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
-		routingToken = _routingToken;
 		reserveToken = _reserveToken;
+		underlyingToken = _underlyingToken;
 		treasury = _treasury;
 		buyback = _buyback;
 		collector = _collector;
@@ -66,7 +66,7 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	function _gulp() internal returns (bool _success)
 	{
 		{
-			uint256 _totalBalance = Transfers._getBalance(routingToken);
+			uint256 _totalBalance = Transfers._getBalance(underlyingToken);
 			_deposit(_totalBalance);
 		}
 		_claim();
@@ -93,8 +93,8 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	{
 		require(_token != bonusToken, "invalid token");
 		require(_token != rewardToken, "invalid token");
-		require(_token != routingToken, "invalid token");
 		require(_token != reserveToken, "invalid token");
+		require(_token != underlyingToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
@@ -163,19 +163,19 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the lending pool
-	function _getTokens(address _reserveToken) internal view returns (address _routingToken, address _rewardToken)
+	function _getTokens(address _reserveToken) internal view returns (address _underlyingToken, address _rewardToken)
 	{
 		address _joetroller = JToken(_reserveToken).joetroller();
 		address _distributor = Joetroller(_joetroller).rewardDistributor();
-		_routingToken = JToken(_reserveToken).underlying();
+		_underlyingToken = JToken(_reserveToken).underlying();
 		_rewardToken = JRewardDistributor(_distributor).joeAddress();
-		return (_routingToken, _rewardToken);
+		return (_underlyingToken, _rewardToken);
 	}
 
 	/// @dev Performs a deposit into the lending pool
 	function _deposit(uint256 _amount) internal
 	{
-		Transfers._approveFunds(routingToken, reserveToken, _amount);
+		Transfers._approveFunds(underlyingToken, reserveToken, _amount);
 		uint256 _errorCode = JToken(reserveToken).mint(_amount);
 		require(_errorCode == 0, "lend unavailable");
 	}

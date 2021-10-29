@@ -36,8 +36,8 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// strategy token configuration
 	address private immutable bonusToken;
 	address private immutable rewardToken;
-	address private immutable routingToken;
 	address private immutable reserveToken;
+	address private immutable underlyingToken;
 
 	// addresses receiving tokens
 	address private treasury;
@@ -59,8 +59,8 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	function state() external view returns (
 		address _bonusToken,
 		address _rewardToken,
-		address _routingToken,
 		address _reserveToken,
+		address _underlyingToken,
 		address _treasury,
 		address _collector,
 		address _exchange,
@@ -72,8 +72,8 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		return (
 			bonusToken,
 			rewardToken,
-			routingToken,
 			reserveToken,
+			underlyingToken,
 			treasury,
 			collector,
 			exchange,
@@ -100,11 +100,11 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		ERC20(_name, _symbol) public
 	{
 		_setupDecimals(_decimals);
-		(address _routingToken, address _rewardToken) = _getTokens(_reserveToken);
+		(address _underlyingToken, address _rewardToken) = _getTokens(_reserveToken);
 		require(_decimals == ERC20(_reserveToken).decimals(), "invalid decimals");
 		bonusToken = _bonusToken;
 		rewardToken = _rewardToken;
-		routingToken = _routingToken;
+		underlyingToken = _underlyingToken;
 		reserveToken = _reserveToken;
 		treasury = _treasury;
 		collector = _collector;
@@ -219,15 +219,15 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			uint256 _feeReward = _totalReward.mul(performanceFee) / 1e18;
 			Transfers._pushFunds(rewardToken, collector, _feeReward);
 		}
-		if (rewardToken != routingToken) {
+		if (rewardToken != underlyingToken) {
 			require(exchange != address(0), "exchange not set");
 			uint256 _totalReward = Transfers._getBalance(rewardToken);
-			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, routingToken, _totalReward);
+			uint256 _factor = IExchange(exchange).oracleAveragePriceFactorFromInput(rewardToken, underlyingToken, _totalReward);
 			if (_factor < minimalGulpFactor) return false;
 			Transfers._approveFunds(rewardToken, exchange, _totalReward);
-			IExchange(exchange).convertFundsFromInput(rewardToken, routingToken, _totalReward, 1);
+			IExchange(exchange).convertFundsFromInput(rewardToken, underlyingToken, _totalReward, 1);
 		}
-		uint256 _totalBalance = Transfers._getBalance(routingToken);
+		uint256 _totalBalance = Transfers._getBalance(underlyingToken);
 		_deposit(_totalBalance);
 		return true;
 	}
@@ -242,10 +242,10 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		// delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
-		require(_token != reserveToken, "invalid token");
-		require(_token != routingToken, "invalid token");
-		require(_token != rewardToken, "invalid token");
 		require(_token != bonusToken, "invalid token");
+		require(_token != rewardToken, "invalid token");
+		require(_token != reserveToken, "invalid token");
+		require(_token != underlyingToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
@@ -352,13 +352,13 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the lending pool
-	function _getTokens(address _reserveToken) internal view returns (address _routingToken, address _rewardToken)
+	function _getTokens(address _reserveToken) internal view returns (address _underlyingToken, address _rewardToken)
 	{
 		address _joetroller = JToken(_reserveToken).joetroller();
 		address _distributor = Joetroller(_joetroller).rewardDistributor();
-		_routingToken = JToken(_reserveToken).underlying();
+		_underlyingToken = JToken(_reserveToken).underlying();
 		_rewardToken = JRewardDistributor(_distributor).joeAddress();
-		return (_routingToken, _rewardToken);
+		return (_underlyingToken, _rewardToken);
 	}
 
 	/// @dev Retrieves the deposited reserve for the lengding pool
@@ -370,7 +370,7 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	/// @dev Performs a deposit into the lending pool
 	function _deposit(uint256 _amount) internal
 	{
-		Transfers._approveFunds(routingToken, reserveToken, _amount);
+		Transfers._approveFunds(underlyingToken, reserveToken, _amount);
 		uint256 _errorCode = JToken(reserveToken).mint(_amount);
 		require(_errorCode == 0, "lend unavailable");
 	}
@@ -416,8 +416,7 @@ contract BankerJoeCompoundingStrategyTokenBridge
 
 	constructor (address payable _strategyToken) public
 	{
-		(address _bonusToken,,,address _reserveToken,,,,,,) = BankerJoeCompoundingStrategyToken(_strategyToken).state();
-		address _underlyingToken = JToken(_reserveToken).underlying();
+		(address _bonusToken,, address _reserveToken, address _underlyingToken,,,,,,) = BankerJoeCompoundingStrategyToken(_strategyToken).state();
 		strategyToken = _strategyToken;
 		bonusToken = _bonusToken;
 		reserveToken = _reserveToken;
