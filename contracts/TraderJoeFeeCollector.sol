@@ -9,7 +9,7 @@ import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
-import { MasterChefJoeV2, JoeBar } from "./interop/TraderJoe.sol";
+import { MasterChefJoe, MasterChefJoeV2, MasterChefJoeV3, JoeBar } from "./interop/TraderJoe.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 /**
@@ -38,14 +38,15 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	 * @dev Constructor for this fee collector contract.
 	 * @param _masterChef The MasterChef contract address.
 	 * @param _pid The MasterChef Pool ID (pid).
+	 * @param _version The MasterChef Version, either v2 or v3.
 	 * @param _treasury The treasury address used to recover lost funds.
 	 * @param _buyback The buyback contract address to send collected rewards.
 	 * @param _collector The fee collector contract to send collected bonus.
 	 */
-	constructor (address _masterChef, uint256 _pid,
+	constructor (address _masterChef, uint256 _pid, bytes32 _version,
 		address _treasury, address _buyback, address _collector) public
 	{
-		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
+		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid, _version);
 		masterChef = _masterChef;
 		pid = _pid;
 		rewardToken = _rewardToken;
@@ -181,26 +182,36 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the MasterChef pool
-	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
+	function _getTokens(address _masterChef, uint256 _pid, bytes32 _version) internal view returns (address _reserveToken, address _rewardToken)
 	{
-		uint256 _poolLength = MasterChefJoeV2(_masterChef).poolLength();
+		uint256 _poolLength = MasterChefJoe(_masterChef).poolLength();
 		require(_pid < _poolLength, "invalid pid");
-		(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
-		_rewardToken = MasterChefJoeV2(_masterChef).joe();
+		if (_version == "v2") {
+			(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
+			_rewardToken = MasterChefJoeV2(_masterChef).joe();
+		}
+		else
+		if (_version == "v3") {
+			(_reserveToken,,,,) = MasterChefJoeV3(_masterChef).poolInfo(_pid);
+			_rewardToken = MasterChefJoeV3(_masterChef).JOE();
+		}
+		else {
+			require(false, "invalid version");
+		}
 		return (_reserveToken, _rewardToken);
 	}
 
 	/// @dev Retrieves the current pending reward for the MasterChef pool
 	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus, address _bonusToken)
 	{
-		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
+		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoe(masterChef).pendingTokens(pid, address(this));
 		return (_pendingReward, _pendingBonus, _bonusToken);
 	}
 
 	/// @dev Retrieves the deposited reserve for the MasterChef pool
 	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
 	{
-		(_reserveAmount,) = MasterChefJoeV2(masterChef).userInfo(pid, address(this));
+		(_reserveAmount,) = MasterChefJoe(masterChef).userInfo(pid, address(this));
 		return _reserveAmount;
 	}
 
@@ -208,19 +219,19 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	function _deposit(uint256 _amount) internal
 	{
 		Transfers._approveFunds(reserveToken, masterChef, _amount);
-		MasterChefJoeV2(masterChef).deposit(pid, _amount);
+		MasterChefJoe(masterChef).deposit(pid, _amount);
 	}
 
 	/// @dev Performs an withdrawal from the MasterChef pool
 	function _withdraw(uint256 _amount) internal
 	{
-		MasterChefJoeV2(masterChef).withdraw(pid, _amount);
+		MasterChefJoe(masterChef).withdraw(pid, _amount);
 	}
 
 	/// @dev Performs an emergency withdrawal from the MasterChef pool
 	function _emergencyWithdraw() internal
 	{
-		MasterChefJoeV2(masterChef).emergencyWithdraw(pid);
+		MasterChefJoe(masterChef).emergencyWithdraw(pid);
 	}
 
 	// ----- END: underlying contract abstraction

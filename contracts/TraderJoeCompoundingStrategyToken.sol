@@ -12,7 +12,7 @@ import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
-import { MasterChefJoeV2, JoeBar } from "./interop/TraderJoe.sol";
+import { MasterChefJoe, MasterChefJoeV2, MasterChefJoeV3, JoeBar } from "./interop/TraderJoe.sol";
 import { Pair } from "./interop/UniswapV2.sol";
 
 /**
@@ -105,6 +105,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _decimals The ERC-20 token decimals.
 	 * @param _masterChef The MasterChef contract address.
 	 * @param _pid The MasterChef Pool ID (pid).
+	 * @param _version The MasterChef Version, either v2 or v3.
 	 * @param _routingToken The ERC-20 token address to be used as routing
 	 *                      token, must be either the reserve token itself
 	 *                      or one of the tokens that make up a liquidity pool.
@@ -114,12 +115,12 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _exchange The exchange contract used to convert funds.
 	 */
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
-		address _masterChef, uint256 _pid, address _routingToken,
+		address _masterChef, uint256 _pid, bytes32 _version, address _routingToken,
 		bool _useBar,
 		address _treasury, address _collector, address _exchange)
 		ERC20(_name, _symbol) public
 	{
-		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid);
+		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid, _version);
 		if (_useBar) {
 			require(_routingToken == JoeBar(_reserveToken).joe(), "invalid token");
 		} else {
@@ -410,26 +411,36 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	// ----- BEGIN: underlying contract abstraction
 
 	/// @dev Lists the reserve and reward tokens of the MasterChef pool
-	function _getTokens(address _masterChef, uint256 _pid) internal view returns (address _reserveToken, address _rewardToken)
+	function _getTokens(address _masterChef, uint256 _pid, bytes32 _version) internal view returns (address _reserveToken, address _rewardToken)
 	{
-		uint256 _poolLength = MasterChefJoeV2(_masterChef).poolLength();
+		uint256 _poolLength = MasterChefJoe(_masterChef).poolLength();
 		require(_pid < _poolLength, "invalid pid");
-		(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
-		_rewardToken = MasterChefJoeV2(_masterChef).joe();
+		if (_version == "v2") {
+			(_reserveToken,,,,) = MasterChefJoeV2(_masterChef).poolInfo(_pid);
+			_rewardToken = MasterChefJoeV2(_masterChef).joe();
+		}
+		else
+		if (_version == "v3") {
+			(_reserveToken,,,,) = MasterChefJoeV3(_masterChef).poolInfo(_pid);
+			_rewardToken = MasterChefJoeV3(_masterChef).JOE();
+		}
+		else {
+			require(false, "invalid version");
+		}
 		return (_reserveToken, _rewardToken);
 	}
 
 	/// @dev Retrieves the current pending reward for the MasterChef pool
 	function _getPendingReward() internal view returns (uint256 _pendingReward, uint256 _pendingBonus, address _bonusToken)
 	{
-		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoeV2(masterChef).pendingTokens(pid, address(this));
+		(_pendingReward, _bonusToken,, _pendingBonus) = MasterChefJoe(masterChef).pendingTokens(pid, address(this));
 		return (_pendingReward, _pendingBonus, _bonusToken);
 	}
 
 	/// @dev Retrieves the deposited reserve for the MasterChef pool
 	function _getReserveAmount() internal view returns (uint256 _reserveAmount)
 	{
-		(_reserveAmount,) = MasterChefJoeV2(masterChef).userInfo(pid, address(this));
+		(_reserveAmount,) = MasterChefJoe(masterChef).userInfo(pid, address(this));
 		return _reserveAmount;
 	}
 
@@ -437,19 +448,19 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	function _deposit(uint256 _amount) internal
 	{
 		Transfers._approveFunds(reserveToken, masterChef, _amount);
-		MasterChefJoeV2(masterChef).deposit(pid, _amount);
+		MasterChefJoe(masterChef).deposit(pid, _amount);
 	}
 
 	/// @dev Performs an withdrawal from the MasterChef pool
 	function _withdraw(uint256 _amount) internal
 	{
-		MasterChefJoeV2(masterChef).withdraw(pid, _amount);
+		MasterChefJoe(masterChef).withdraw(pid, _amount);
 	}
 
 	/// @dev Performs an emergency withdrawal from the MasterChef pool
 	function _emergencyWithdraw() internal
 	{
-		MasterChefJoeV2(masterChef).emergencyWithdraw(pid);
+		MasterChefJoe(masterChef).emergencyWithdraw(pid);
 	}
 
 	// ----- END: underlying contract abstraction
