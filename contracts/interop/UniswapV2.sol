@@ -28,7 +28,6 @@ interface Pair is PoolToken
 
 interface Router01
 {
-	function WETH() external pure returns (address _token);
 	function factory() external pure returns (address _factory);
 	function getAmountOut(uint256 _amountIn, uint256 _reserveIn, uint256 _reserveOut) external pure returns (uint256 _amountOut);
 	function getAmountsIn(uint256 _amountOut, address[] calldata _path) external view returns (uint[] memory _amounts);

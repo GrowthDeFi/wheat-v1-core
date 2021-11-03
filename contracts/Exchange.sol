@@ -23,6 +23,8 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
+	address immutable public wtoken;
+
 	address public router;
 	address public oracle;
 	address public treasury;
@@ -32,8 +34,9 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 	 * @param _router The Uniswap V2 compatible router address to be used for operations.
 	 * @param _treasury The treasury address used to recover lost funds.
 	 */
-	constructor (address _router, address _oracle, address _treasury) public
+	constructor (address _wtoken, address _router, address _oracle, address _treasury) public
 	{
+		wtoken = _wtoken;
 		router = _router;
 		oracle = _oracle;
 		treasury = _treasury;
@@ -49,7 +52,7 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 	 */
 	function calcConversionFromInput(address _from, address _to, uint256 _inputAmount) external view override returns (uint256 _outputAmount)
 	{
-		return UniswapV2ExchangeAbstraction._calcConversionFromInput(router, _from, _to, _inputAmount);
+		return UniswapV2ExchangeAbstraction._calcConversionFromInput(router, wtoken, _from, _to, _inputAmount);
 	}
 
 	/**
@@ -62,7 +65,7 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 	 */
 	function calcConversionFromOutput(address _from, address _to, uint256 _outputAmount) external view override returns (uint256 _inputAmount)
 	{
-		return UniswapV2ExchangeAbstraction._calcConversionFromOutput(router, _from, _to, _outputAmount);
+		return UniswapV2ExchangeAbstraction._calcConversionFromOutput(router, wtoken, _from, _to, _outputAmount);
 	}
 
 	/**
@@ -91,7 +94,7 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 		address _sender = msg.sender;
 		Transfers._pullFunds(_from, _sender, _inputAmount);
 		_inputAmount = Math._min(_inputAmount, Transfers._getBalance(_from)); // deals with potential transfer tax
-		_outputAmount = UniswapV2ExchangeAbstraction._convertFundsFromInput(router, _from, _to, _inputAmount, _minOutputAmount);
+		_outputAmount = UniswapV2ExchangeAbstraction._convertFundsFromInput(router, wtoken, _from, _to, _inputAmount, _minOutputAmount);
 		_outputAmount = Math._min(_outputAmount, Transfers._getBalance(_to)); // deals with potential transfer tax
 		Transfers._pushFunds(_to, _sender, _outputAmount);
 		return _outputAmount;
@@ -110,7 +113,7 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 		address _sender = msg.sender;
 		Transfers._pullFunds(_from, _sender, _maxInputAmount);
 		_maxInputAmount = Math._min(_maxInputAmount, Transfers._getBalance(_from)); // deals with potential transfer tax
-		_inputAmount = UniswapV2ExchangeAbstraction._convertFundsFromOutput(router, _from, _to, _outputAmount, _maxInputAmount);
+		_inputAmount = UniswapV2ExchangeAbstraction._convertFundsFromOutput(router, wtoken, _from, _to, _outputAmount, _maxInputAmount);
 		uint256 _refundAmount = _maxInputAmount - _inputAmount;
 		_refundAmount = Math._min(_refundAmount, Transfers._getBalance(_from)); // deals with potential transfer tax
 		Transfers._pushFunds(_from, _sender, _refundAmount);
@@ -141,9 +144,8 @@ contract Exchange is IExchange, ReentrancyGuard, DelayedActionGuard
 	function oracleAveragePriceFactorFromInput(address _from, address _to, uint256 _inputAmount) external override returns (uint256 _factor)
 	{
 		require(_inputAmount > 0, "invalid amount");
-		address _WBNB = Router02(router).WETH();
 		address _factory = Router02(router).factory();
-		address[] memory _path = UniswapV2ExchangeAbstraction._buildPath(_from, _WBNB, _to);
+		address[] memory _path = UniswapV2ExchangeAbstraction._buildPath(_from, wtoken, _to);
 		_factor = 1e18;
 		uint256 _amount = _inputAmount;
 		for (uint256 _i = 1; _i < _path.length; _i++) {
