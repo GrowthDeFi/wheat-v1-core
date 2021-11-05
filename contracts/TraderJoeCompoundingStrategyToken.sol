@@ -248,9 +248,9 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		if (_pendingReward > 0 || _pendingBonus > 0) {
 			_withdraw(0);
 		}
+		Wrapping._wrap(wrappedToken, address(this).balance);
 		if (_bonusToken == address(0)) {
 			_bonusToken = wrappedToken;
-			Wrapping._wrap(_bonusToken, address(this).balance);
 		}
 		{
 			uint256 _totalBonus = Transfers._getBalance(_bonusToken);

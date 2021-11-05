@@ -79,9 +79,9 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 				_deposit(_totalBalance);
 			}
 		}
+		Wrapping._wrap(wrappedToken, address(this).balance);
 		if (_bonusToken == address(0)) {
 			_bonusToken = wrappedToken;
-			Wrapping._wrap(_bonusToken, address(this).balance);
 		}
 		{
 			uint256 _totalBonus = Transfers._getBalance(_bonusToken);
