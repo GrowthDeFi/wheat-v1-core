@@ -11,6 +11,7 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
+import { Wrapping } from "./modules/Wrapping.sol";
 
 import { MasterChefJoe, MasterChefJoeV2, MasterChefJoeV3, JoeBar } from "./interop/TraderJoe.sol";
 import { Pair } from "./interop/UniswapV2.sol";
@@ -44,6 +45,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	address private immutable rewardToken;
 	address private immutable routingToken;
 	address private immutable reserveToken;
+	address private immutable wrappedToken;
 
 	// addresses receiving tokens
 	address private treasury;
@@ -72,6 +74,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		address _rewardToken,
 		address _routingToken,
 		address _reserveToken,
+		address _wrappedToken,
 		address _treasury,
 		address _collector,
 		address _exchange,
@@ -88,6 +91,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 			rewardToken,
 			routingToken,
 			reserveToken,
+			wrappedToken,
 			treasury,
 			collector,
 			exchange,
@@ -115,7 +119,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _exchange The exchange contract used to convert funds.
 	 */
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
-		address _masterChef, uint256 _pid, bytes32 _version, address _routingToken,
+		address _masterChef, uint256 _pid, bytes32 _version, address _routingToken, address _wrappedToken,
 		bool _useBar,
 		address _treasury, address _collector, address _exchange)
 		ERC20(_name, _symbol) public
@@ -134,6 +138,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		rewardToken = _rewardToken;
 		routingToken = _routingToken;
 		reserveToken = _reserveToken;
+		wrappedToken = _wrappedToken;
 		treasury = _treasury;
 		collector = _collector;
 		exchange = _exchange;
@@ -243,7 +248,11 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 		if (_pendingReward > 0 || _pendingBonus > 0) {
 			_withdraw(0);
 		}
-		if (_bonusToken != address(0)) {
+		if (_bonusToken == address(0)) {
+			_bonusToken = wrappedToken;
+			Wrapping._wrap(_bonusToken, address(this).balance);
+		}
+		{
 			uint256 _totalBonus = Transfers._getBalance(_bonusToken);
 			Transfers._pushFunds(_bonusToken, collector, _totalBonus);
 		}
@@ -374,7 +383,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _newForceGulpRatio The new force gulp ratio.
 	 */
 	function setForceGulpRatio(uint256 _newForceGulpRatio) external onlyOwner
-		delayed(this.setForceGulpRatio.selector, keccak256(abi.encode(_newForceGulpRatio)))
+		// delayed(this.setForceGulpRatio.selector, keccak256(abi.encode(_newForceGulpRatio)))
 	{
 		require(_newForceGulpRatio <= 1e18, "invalid rate");
 		uint256 _oldForceGulpRatio = forceGulpRatio;
@@ -465,6 +474,12 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 
 	// ----- END: underlying contract abstraction
 
+
+	/// @dev Allows for receiving the native token
+	receive() external payable
+	{
+	}
+
 	// events emitted by this contract
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
@@ -478,13 +493,13 @@ contract TraderJoeCompoundingStrategyTokenBridge
 {
 	using SafeMath for uint256;
 
-	address public immutable strategyToken;
+	address payable public immutable strategyToken;
 	address public immutable reserveToken;
 	address public immutable underlyingToken;
 
-	constructor (address _strategyToken) public
+	constructor (address payable _strategyToken) public
 	{
-		(,,bool _useBar,, address _routingToken, address _reserveToken,,,,,,,) = TraderJoeCompoundingStrategyToken(_strategyToken).state();
+		(,,bool _useBar,, address _routingToken, address _reserveToken,,,,,,,,) = TraderJoeCompoundingStrategyToken(_strategyToken).state();
 		require(_useBar, "invalid strategy");
 		address _underlyingToken = _routingToken;
 		strategyToken = _strategyToken;

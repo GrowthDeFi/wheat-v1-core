@@ -7,6 +7,7 @@ import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
+import { Wrapping } from "./modules/Wrapping.sol";
 
 import { MasterChefJoe, MasterChefJoeV2, MasterChefJoeV3, JoeBar } from "./interop/TraderJoe.sol";
 import { Pair } from "./interop/UniswapV2.sol";
@@ -27,6 +28,7 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	// strategy token configuration
 	address public immutable rewardToken;
 	address public immutable reserveToken;
+	address public immutable wrappedToken;
 
 	// addresses receiving tokens
 	address public treasury;
@@ -43,6 +45,7 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	 * @param _collector The fee collector contract to send collected bonus.
 	 */
 	constructor (address _masterChef, uint256 _pid, bytes32 _version,
+		address _wrappedToken,
 		address _treasury, address _buyback, address _collector) public
 	{
 		(address _reserveToken, address _rewardToken) = _getTokens(_masterChef, _pid, _version);
@@ -50,6 +53,7 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 		pid = _pid;
 		rewardToken = _rewardToken;
 		reserveToken = _reserveToken;
+		wrappedToken = _wrappedToken;
 		treasury = _treasury;
 		buyback = _buyback;
 		collector = _collector;
@@ -74,6 +78,10 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 			if (_totalBalance > 0 || _pendingReward > 0 || _pendingBonus > 0) {
 				_deposit(_totalBalance);
 			}
+		}
+		if (_bonusToken == address(0)) {
+			_bonusToken = wrappedToken;
+			Wrapping._wrap(_bonusToken, address(this).balance);
 		}
 		{
 			uint256 _totalBonus = Transfers._getBalance(_bonusToken);
@@ -234,6 +242,11 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	}
 
 	// ----- END: underlying contract abstraction
+
+	/// @dev Allows for receiving the native token
+	receive() external payable
+	{
+	}
 
 	// events emitted by this contract
 	event ChangeBuyback(address _oldBuyback, address _newBuyback);
