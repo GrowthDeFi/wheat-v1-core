@@ -519,24 +519,24 @@ contract TraderJoeCompoundingStrategyTokenBridge
 		return _calcWithdrawalAmount(_value);
 	}
 
-	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external
+	function deposit(uint256 _amount, uint256 _minShares) external
 	{
 		address _from = msg.sender;
 		Transfers._pullFunds(underlyingToken, _from, _amount);
 		_deposit(_amount);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		Transfers._approveFunds(reserveToken, strategyToken, _value);
-		TraderJoeCompoundingStrategyToken(strategyToken).deposit(_value, 0, _execGulp);
+		TraderJoeCompoundingStrategyToken(strategyToken).deposit(_value, 0, false);
 		uint256 _shares = Transfers._getBalance(strategyToken);
 		require(_shares >= _minShares, "high slippage");
 		Transfers._pushFunds(strategyToken, _from, _shares);
 	}
 
-	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external
+	function withdraw(uint256 _shares, uint256 _minAmount) external
 	{
 		address _from = msg.sender;
 		Transfers._pullFunds(strategyToken, _from, _shares);
-		TraderJoeCompoundingStrategyToken(strategyToken).withdraw(_shares, 0, _execGulp);
+		TraderJoeCompoundingStrategyToken(strategyToken).withdraw(_shares, 0, true);
 		uint256 _value = Transfers._getBalance(reserveToken);
 		_withdraw(_value);
 		uint256 _amount = Transfers._getBalance(underlyingToken);
