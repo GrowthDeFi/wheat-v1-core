@@ -2,6 +2,7 @@
 pragma solidity ^0.6.0;
 
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { WhitelistGuard } from "./WhitelistGuard.sol";
@@ -279,4 +280,50 @@ contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Del
 	event ChangePsm(address _oldPsm, address _newPsm);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
+}
+
+contract BankerJoePeggedTokenPSMBridge is PSM
+{
+	address payable public immutable strategyToken;
+	address public immutable reserveToken;
+	address public immutable psm;
+	address public immutable override dai;
+	address public immutable override gemJoin;
+
+	constructor (address payable _strategyToken) public
+	{
+		(,,address _reserveToken,, address _psm,,) = BankerJoePeggedToken(_strategyToken).state();
+		address _dai = PSM(_psm).dai();
+		address _gemJoin = PSM(_psm).gemJoin();
+		strategyToken = _strategyToken;
+		reserveToken = _reserveToken;
+		psm = _psm;
+		dai = _dai;
+		gemJoin = _gemJoin;
+	}
+
+	function sellGem(address _to, uint256 _amount) external override
+	{
+		address _from = msg.sender;
+		Transfers._pullFunds(reserveToken, _from, _amount);
+		Transfers._approveFunds(reserveToken, strategyToken, _amount);
+		BankerJoePeggedToken(strategyToken).deposit(_amount);
+		Transfers._approveFunds(strategyToken, gemJoin, _amount);
+		PSM(psm).sellGem(_to, _amount);
+	}
+
+	function buyGem(address _to, uint256 _amount) external override
+	{
+		address _from = msg.sender;
+		uint256 _daiAmount = IERC20(dai).balanceOf(_from);
+		uint256 _daiAllowance = IERC20(dai).allowance(_from, address(this));
+		if (_daiAllowance < _daiAmount) _daiAmount = _daiAllowance;
+		Transfers._pullFunds(dai, _from, _daiAmount);
+		Transfers._approveFunds(dai, psm, _daiAmount);
+		PSM(psm).buyGem(address(this), _amount);
+		Transfers._approveFunds(dai, psm, 0);
+		Transfers._pushFunds(dai, _from, Transfers._getBalance(dai));
+		BankerJoePeggedToken(strategyToken).withdraw(_amount);		
+		Transfers._pushFunds(reserveToken, _to, _amount);
+	}
 }
