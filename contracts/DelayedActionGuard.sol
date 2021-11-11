@@ -32,7 +32,7 @@ contract DelayedActionGuard is Ownable
 	{
 		(uint64 _wait, uint64 _open) = _defaultIntervalParams();
 		Interval storage interval = intervals[_selector];
-		require(interval.end == 0, "ongoing action");
+		// require(interval.end == 0, "ongoing action");
 		interval.hash = keccak256(_params);
 		interval.start = now + _wait;
 		interval.end = interval.start + _open;
