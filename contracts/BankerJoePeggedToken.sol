@@ -148,7 +148,7 @@ contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Del
 				_mint(treasury, _excess);
 			} else {
 				_mint(address(this), _excess);
-				Transfers._approveFunds(address(this), psm, _excess);
+				Transfers._approveFunds(address(this), PSM(psm).gemJoin(), _excess);
 				PSM(psm).sellGem(treasury, _excess);
 			}
 		}
