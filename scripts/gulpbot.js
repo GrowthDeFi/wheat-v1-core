@@ -738,6 +738,8 @@ async function gulpAll(privateKey, network) {
     const JOE_MASTERCHEF_V2 = '0xd6a4F121CA35509aF06A0Be99093d08462f53052';
     const JOE_MASTERCHEF_V3 = '0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00';
     const WAVAX = '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7';
+    const WETH = '0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB';
+    const WBTC = '0x50b7545627a5162F82A992c33b87aDc75187B218';
     const XJOE = '0x57319d41F71E81F3c65F2a47CA4e001EbAFd4F33';
     const JOE_EXCHANGE = '0xB85B290B99B10dCd78189317b5bF965854bdc952';
     const TDJ_AVAX_JOE = '0x454E67025631C065d3cFAD6d71E6892f74487a15';
@@ -750,6 +752,7 @@ async function gulpAll(privateKey, network) {
     const TDJ_AVAX_MIM = '0x781655d802670bbA3c89aeBaaEa59D3182fD755D';
     const TDJ_USDC_JOE = '0x67926d973cD8eE876aD210fAaf7DFfA99E414aCf';
     const TDJ_USDT_JOE = '0x1643de2efB8e35374D796297a9f95f64C082a8ce';
+    const stkUSDCv3 = '0xdC4D358B34619e4fE7feb28bE301B2FBe4F3aFf9';
 
     {
       // JOE strategies
@@ -808,6 +811,97 @@ async function gulpAll(privateKey, network) {
             const name = await getTokenSymbol(privateKey, network, address);
             return { name, type: 'WheatStrategy', address, tx };
           }
+        }
+      }
+    }
+
+    {
+      // JOE SPLITTING ADAPTER
+      const address = '0x67E5830CCef2Dc38aebEf4eC7D06baD5b5957D44';
+      const amount = await getTokenBalance(privateKey, network, JOE, address);
+      const MINIMUM_AMOUNT = 500000000000000000000n; // 500 JOE
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'JOE', type: 'SplittingAdapter', address, tx };
+        }
+      }
+    }
+
+    {
+      // PSM INJECTOR
+      const address = '0x5622C4A8F6B245aFdddA6c32748055837A2616Cc';
+      const amount = await getTokenBalance(privateKey, network, stkUSDCv3, address);
+      const MINIMUM_AMOUNT = 100000000n; // 100 stkUSDCv3
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'stkUSDCv3', type: 'PsmInjector', address, tx };
+        }
+      }
+    }
+
+    {
+      // AVAX/JOE collector
+      const address = '0xa6E48716e4426ba51C2459c890aDd6604f96404F';
+      const amount = await getTokenBalance(privateKey, network, TDJ_AVAX_JOE, address);
+      const MINIMUM_AMOUNT = 1000000000000000000n; // 1 AVAX/JOE
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'AVAX/JOE', type: 'TraderJoeCollector', address, tx };
+        }
+      }
+    }
+
+    {
+      // WAVAX collector
+      const address = '0xa8FDF216A180A798ED783e14EE71557E613C52bf';
+      const amount = await getTokenBalance(privateKey, network, WAVAX, address);
+      const MINIMUM_AMOUNT = 5000000000000000000n; // 5 WAVAX
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'WAVAX', type: 'TraderJoeCollector', address, tx };
+        }
+      }
+    }
+
+    {
+      // WETH collector
+      const address = '0x42C03f6d6c00f0D5603080a3475903195e9F6CEc';
+      const amount = await getTokenBalance(privateKey, network, WETH, address);
+      const MINIMUM_AMOUNT = 10000000000000000n; // 0.01 WETH
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'WETH', type: 'TraderJoeCollector', address, tx };
+        }
+      }
+    }
+
+    {
+      // WBTC collector
+      const address = '0xCfc7E18096C96Bf33203CCc2781E1D1f8fe77Ceb';
+      const amount = await getTokenBalance(privateKey, network, WBTC, address);
+      const MINIMUM_AMOUNT = 1000000000000000n; // 0.001 WBTC
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'WBTC', type: 'TraderJoeCollector', address, tx };
+        }
+      }
+    }
+
+    {
+      // JOE buyback
+      const address = '0xae35A19F1DAc62AD3794773D5f0983f05073D0f2';
+      const amount = await getTokenBalance(privateKey, network, JOE, address);
+      const MINIMUM_AMOUNT = 50000000000000000000n; // 50 JOE
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'JOE', type: 'TraderJoeBuyback', address, tx };
         }
       }
     }
