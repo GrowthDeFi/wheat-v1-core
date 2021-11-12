@@ -186,7 +186,7 @@ async function sendTelegramMessage(message, key = '') {
 
 const IERC20_ABI = require('../build/contracts/IERC20.json').abi;
 const MASTERCHEF_ABI = require('../build/contracts/CustomMasterChef.json').abi;
-const MASTERCHEFJOE_ABI = require('../build/contracts/MasterChefJoe.json');
+const MASTERCHEFJOE_ABI = require('../build/contracts/MasterChefJoe.json').abi;
 const STRATEGY_ABI = require('../build/contracts/RewardCompoundingStrategyToken.json').abi;
 const COLLECTOR_ADAPTER_ABI = require('../build/contracts/AutoFarmFeeCollectorAdapter.json').abi;
 const COLLECTOR_ABI = require('../build/contracts/FeeCollector.json').abi;
