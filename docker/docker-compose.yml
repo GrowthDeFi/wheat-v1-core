@@ -4,7 +4,6 @@ x-gulpbot: &gulpbot
   image: node:14-alpine
   working_dir: /repo/
   command: node /repo/scripts/gulpbot.js
-  # command: node /repo/scripts/gulpbot.js bsctest
   volumes: [ "../:/repo/" ]
   environment:
     ANKR_PROJECT_ID: ${ANKR_PROJECT_ID}
@@ -15,8 +14,15 @@ x-gulpbot: &gulpbot
   restart: always
 
 services:
-  gulpbot:
+  gulpbot-bscmain:
     <<: *gulpbot
-    container_name: gulpbot
+    container_name: gulpbot-bscmain
+    command: node /repo/scripts/gulpbot.js bscmain
+    environment:
+      PRIVATE_KEY: ${GULPBOT_PRIVATE_KEY}
+  gulpbot-avaxmain:
+    <<: *gulpbot
+    container_name: gulpbot-avaxmain
+    command: node /repo/scripts/gulpbot.js avaxmain
     environment:
       PRIVATE_KEY: ${GULPBOT_PRIVATE_KEY}
