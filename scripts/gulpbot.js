@@ -70,29 +70,39 @@ const ankrProjectId = process.env['ANKR_PROJECT_ID'] || '';
 const ankrApikeyBscmain = process.env['ANKR_APIKEY_BSCMAIN'] || '';
 const ankrApikeyBsctest = process.env['ANKR_APIKEY_BSCTEST'] || '';
 
-const NETWORK_ID = {
+const CHAIN_ID = {
   'bscmain': 56,
   'bsctest': 97,
+  'avaxmain': 43114,
+  'avaxtest': 43113,
 };
 
 const NETWORK_NAME = {
   56: 'bscmain',
   97: 'bsctest',
+  43114: 'avaxmain',
+  43113: 'avaxtest',
 };
 
 const ADDRESS_URL_PREFIX = {
   'bscmain': 'https://bscscan.com/address/',
   'bsctest': 'https://testnet.bscscan.com/address/',
+  'avaxmain': 'https://snowtrace.io/address/',
+  'avaxtest': 'https://testnet.snowtrace.io/address/',
 };
 
 const TX_URL_PREFIX = {
   'bscmain': 'https://bscscan.com/tx/',
   'bsctest': 'https://testnet.bscscan.com/tx/',
+  'avaxmain': 'https://snowtrace.io/tx/',
+  'avaxtest': 'https://testnet.snowtrace.io/tx/',
 };
 
 const NATIVE_SYMBOL = {
   'bscmain': 'BNB',
   'bsctest': 'BNB',
+  'avaxmain': 'AVAX',
+  'avaxtest': 'AVAX',
 };
 
 const HTTP_PROVIDER_URLS = {
@@ -120,6 +130,12 @@ const HTTP_PROVIDER_URLS = {
     'https://data-seed-prebsc-1-s3.binance.org:8545/',
     'https://data-seed-prebsc-2-s3.binance.org:8545/',
     'https://apis.ankr.com/' + ankrApikeyBsctest + '/' + ankrProjectId + '/binance/full/test',
+  ],
+  'avaxmain': [
+    'https://api.avax.network/ext/bc/C/rpc',
+  ],
+  'avaxtest': [
+    'https://api.avax-test.network/ext/bc/C/rpc',
   ],
 };
 
@@ -179,6 +195,8 @@ const UNIVERSAL_BUYBACK_ABI = require('../build/contracts/UniversalBuyback.json'
 const MASTERCHEF_ADDRESS = {
   'bscmain': '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448',
   'bsctest': '0xF4748df5D63F6AB01e276065E6bD098Ce8dEA98a',
+  'avaxmain': '0x5818388B1d756090FF1545D943fF9D1F6Ea13ce3',
+  'avaxtest': '0x0000000000000000000000000000000000000000',
 };
 
 function getDefaultAccount(privateKey, network) {
@@ -602,12 +620,12 @@ async function readBuyback(privateKey, network, collector) {
 
 let lastGulp = {};
 
-function readLastGulp() {
-  try { lastGulp = JSON.parse(fs.readFileSync('gulpbot.json')); } catch (e) { }
+function readLastGulp(network) {
+  try { lastGulp = JSON.parse(fs.readFileSync('gulpbot-' + network + '.json')); } catch (e) { }
 }
 
-function writeLastGulp() {
-  try { fs.writeFileSync('gulpbot.json', JSON.stringify(lastGulp, undefined, 2)); } catch (e) { }
+function writeLastGulp(network) {
+  try { fs.writeFileSync('gulpbot-' + network + '.json', JSON.stringify(lastGulp, undefined, 2)); } catch (e) { }
 }
 
 async function safeGulp(privateKey, network, address) {
@@ -627,7 +645,7 @@ async function safeGulp(privateKey, network, address) {
     throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
-    writeLastGulp();
+    writeLastGulp(network);
   }
 }
 
@@ -698,354 +716,441 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
 
 async function gulpAll(privateKey, network) {
 
-  // NEW SYSTEM v3
-  const CAKE = '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82';
-  const CAKE_MASTERCHEF = '0x73feaa1eE314F8c655E354234017bE2193C9E24E';
-  const CAKE_EXCHANGE = '0xf31366e709C8d75BCC6e3Bc172E46831D6A4C2B3';
-  const BANANA = '0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95';
-  const BANANA_MASTERCHEF = '0x5c8D727b265DBAfaba67E050f2f739cAeEB4A6F9';
-  const BANANA_EXCHANGE = '0x39c54945C9B880d4B5F15b0BA3c8c17226C37d68';
-  const WHEAT = '0x3ab63309F85df5D4c3351ff8EACb87980E05Da4E';
-  const WHEAT_MASTERCHEF = '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448';
-  const BNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
-  const ETH = '0x2170Ed0880ac9A755fd29B2688956BD959F933F8';
-  const BUSD = '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56';
-  const USDT = '0x55d398326f99059fF775485246999027B3197955';
-  const PCS_BNB_CAKE = '0x0eD7e52944161450477ee417DE9Cd3a859b14fD0';
-  const PCS_BNB_BUSD = '0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16';
-  const PCS_BUSD_USDT = '0x7EFaEf62fDdCCa950418312c6C91Aef321375A00';
-  const PCS_BNB_ETH = '0x74E4716E431f45807DCF19f284c7aA99F18a4fbc';
-  const PCS_BNB_BTCB = '0x61EB789d75A95CAa3fF50ed7E47b96c132fEc082';
-  const PCS_BNB_USDT = '0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE';
-  const PCS_BUSD_USDC = '0x2354ef4DF11afacb85a5C7f98B624072ECcddbB1';
-  const PCS_BUSD_BTCB = '0xF45cd219aEF8618A92BAa7aD848364a158a24F33';
-  const PCS_BUSD_CAKE = '0x804678fa97d91B974ec2af3c843270886528a9E6';
-  const PCS_ETH_BTCB = '0xD171B26E4484402de70e3Ea256bE5A2630d7e88D';
-  const PCS_ETH_USDC = '0xEa26B78255Df2bBC31C1eBf60010D78670185bD0';
-  const PCS_USDT_CAKE = '0xA39Af17CE4a8eb807E076805Da1e2B8EA7D0755b';
-  const PCS_USDT_USDC = '0xEc6557348085Aa57C72514D67070dC863C0a5A8c';
-  const APE_MOR_BUSD = '0x33526eD690200663EAAbF28e1D8621e58898c5fd';
+  if (network === 'avaxmain') {
 
-  {
-    // CAKE strategies
-    const addresses = [
-      // 0 - stkCAKEv3
-      [0, '0xB50Acf6195F97177D33D132A3E5617b934C351d3', CAKE, CAKE],
-      // 251 - stkBNB/CAKEv3
-      [251, '0xd8C76eF0de11f9cc9708EB966A87e25a7E6C7949', CAKE, PCS_BNB_CAKE],
-      // 252 - stkBNB/BUSDv3
-      [252, '0x0170D4C58AD9A9D8ab031c0270353d7034B87f6F', BNB, PCS_BNB_BUSD],
-      // 258 - stkBUSD/USDTv3
-      [258, '0xd7A45F561189529de5975d522F0B5d7D4bfC94de', BUSD, PCS_BUSD_USDT],
-      // 261 - stkBNB/ETHv3
-      [261, '0xE487a3780D56F2ECD142201907dF16350bb09946', BNB, PCS_BNB_ETH],
-      // 262 - stkBNB/BTCBv3
-      [262, '0x9Df7B409925cc93dE1BB4ADDfA9Aed2bcE913F08', BNB, PCS_BNB_BTCB],
-      // 264 - stkBNB/USDTv3
-      [264, '0x839289A22604857A9BdB3231d37Af569ACD8A3fe', BNB, PCS_BNB_USDT],
-      // 283 - stkBUSD/USDCv3
-      [283, '0x60CD286AF05A3e096C8Ace193950CffA5E8e3CE0', BUSD, PCS_BUSD_USDC],
-      // 365 - stkBUSD/BTCBv3
-      [365, '0x26E0701F5881161043d56eb3Ddfde0b8c6772060', BUSD, PCS_BUSD_BTCB],
-      // 389 - stkBUSD/CAKEv3
-      [389, '0xFA6388B7980126C2d7d0c5FC02949a2fF40F95DE', CAKE, PCS_BUSD_CAKE],
-      // 408 - stkETH/BTCBv3
-      [408, '0x9FDD69a473d2216c5D232510DDF2328272bC6847', ETH, PCS_ETH_BTCB],
-      // 409 - stkETH/USDCv3
-      [409, '0xcAD2E1b2257795f0D580d49520741E93654fAaB5', ETH, PCS_ETH_USDC],
-      // 422 - stkUSDT/CAKEv3
-      [422, '0xC0c8C554069d85166B834b2Cb3541d66f53DC4f5', CAKE, PCS_USDT_CAKE],
-      // 423 - stkUSDT/USDCv3
-      [423, '0x01A50D26b9B40c92fa40CBC698DeB57c65b4B7e4', USDT, PCS_USDT_USDC],
-    ];
-    for (const [pid, address, routingToken, reserveToken] of addresses) {
-      await fixTwap(privateKey, network, address, CAKE_EXCHANGE, CAKE, routingToken, reserveToken);
-      const amount1 = await getTokenBalance(privateKey, network, CAKE, address);
-      const amount2 = await getPendingBalance(privateKey, network, CAKE_MASTERCHEF, pid, address);
+    const WHEAT = '0x1A51686Fb42861AA7E38c1CF8868877F43F82aA4';
+    const WHEAT_MASTERCHEF = '0x5818388B1d756090FF1545D943fF9D1F6Ea13ce3';
+    const JOE = '0x6e84a6216eA6dACC71eE8E6b0a5B7322EEbC0fDd';
+    const JOE_MASTERCHEF_V2 = '0xd6a4F121CA35509aF06A0Be99093d08462f53052';
+    const JOE_MASTERCHEF_V3 = '0x188bED1968b795d5c9022F6a0bb5931Ac4c18F00';
+    const XJOE = '0x57319d41F71E81F3c65F2a47CA4e001EbAFd4F33';
+    const JOE_EXCHANGE = '0xB85B290B99B10dCd78189317b5bF965854bdc952';
+    const TDJ_AVAX_JOE = '0x454E67025631C065d3cFAD6d71E6892f74487a15';
+    const TDJ_AVAX_WETH = '0xFE15c2695F1F920da45C30AAE47d11dE51007AF9';
+    const TDJ_AVAX_WBTC = '0xd5a37dC5C9A396A03dd1136Fc76A1a02B1c88Ffa';
+    const TDJ_AVAX_DAI = '0x87Dee1cC9FFd464B79e058ba20387c1984aed86a';
+    const TDJ_AVAX_USDC = '0xA389f9430876455C36478DeEa9769B7Ca4E3DDB1';
+    const TDJ_AVAX_USDT = '0xeD8CBD9F0cE3C6986b22002F03c6475CEb7a6256';
+    const TDJ_AVAX_LINK = '0x6F3a0C89f611Ef5dC9d96650324ac633D02265D3';
+    const TDJ_AVAX_MIM = '0x781655d802670bbA3c89aeBaaEa59D3182fD755D';
+    const TDJ_USDC_JOE = '0x67926d973cD8eE876aD210fAaf7DFfA99E414aCf';
+    const TDJ_USDT_JOE = '0x1643de2efB8e35374D796297a9f95f64C082a8ce';
+
+    {
+      // JOE strategies
+      const addresses = [
+        // 24 - xJOE
+        [24, '0x2E53F47a807F0c45c61C899e62504336B0b5dBDf', JOE, XJOE, JOE_MASTERCHEF_V2],
+        // 0 - stkAVAX/JOEv3
+        [0, '0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62', JOE, TDJ_AVAX_JOE, JOE_MASTERCHEF_V3],
+        // 26 - stkAVAX/WETHv3
+        [26, '0xE70aA236f2c2dABC346e193F606986Bb843bA3d9', WAVAX, TDJ_AVAX_WETH, JOE_MASTERCHEF_V2],
+        // 27 - stkAVAX/WBTCv3
+        [27, '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB', WAVAX, TDJ_AVAX_WBTC, JOE_MASTERCHEF_V2],
+        // 37 - stkAVAX/DAIv3
+        [37, '0xe46a3E475dd4D18A7D2A009b7FA1B113f2bd2903', WAVAX, TDJ_AVAX_DAI, JOE_MASTERCHEF_V2],
+        // 39 - stkAVAX/USDCv3
+        [39, '0xed98897f99F0Bb8732afF727f3DBD01bA95D25b4', WAVAX, TDJ_AVAX_USDC, JOE_MASTERCHEF_V2],
+        // 28 - stkAVAX/USDTv3
+        [28, '0x38fBF8e6ADbfa44072688BeBd921Fdc6b4b6f328', WAVAX, TDJ_AVAX_USDT, JOE_MASTERCHEF_V2],
+        // 29 - stkAVAX/LINKv3
+        [29, '0x235B1E29dc44bA33d0A6518a62A998bCFd8D62e9', WAVAX, TDJ_AVAX_LINK, JOE_MASTERCHEF_V2],
+        // 43 - stkAVAX/MIMv3
+        [43, '0xAFe0d419658dEbEF3f8eDc23b011877770594360', WAVAX, TDJ_AVAX_MIM, JOE_MASTERCHEF_V2],
+        // 58 - stkUSDC/JOEv3
+        [58, '0x0A0E72c79b5559B9266deD694bccf91d7C60c300', JOE, TDJ_USDC_JOE, JOE_MASTERCHEF_V2],
+        // 30 - stkUSDT/JOEv3
+        [30, '0x731010369d41147523e6ae65aD3dB4Dea1Eb13ff', JOE, TDJ_USDT_JOE, JOE_MASTERCHEF_V2],
+      ];
+      for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
+        await fixTwap(privateKey, network, address, JOE_EXCHANGE, JOE, routingToken, reserveToken);
+        const amount1 = await getTokenBalance(privateKey, network, JOE, address);
+        const amount2 = await getPendingBalance(privateKey, network, masterChef, pid, address);
+        const MINIMUM_AMOUNT = 500000000000000000000n; // 500 JOE
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'TraderJoeStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
+      // WHEAT strategies
+      const addresses = [
+        // 0 - stkWHEATv3
+        [0, '0x01d1c4eC99D0A7D8f4141D42D1624fffa054D7Ae', WHEAT, WHEAT],
+      ];
+      for (const [pid, address, routingToken, reserveToken] of addresses) {
+        const amount1 = await getTokenBalance(privateKey, network, WHEAT, address);
+        const amount2 = await getPendingBalance(privateKey, network, WHEAT_MASTERCHEF, pid, address);
+        const MINIMUM_AMOUNT = 1000000000000000000000n; // 1000 WHEAT
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'WheatStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  if (network === 'bscmain') {
+
+    // NEW SYSTEM v3
+    const CAKE = '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82';
+    const CAKE_MASTERCHEF = '0x73feaa1eE314F8c655E354234017bE2193C9E24E';
+    const CAKE_EXCHANGE = '0xf31366e709C8d75BCC6e3Bc172E46831D6A4C2B3';
+    const BANANA = '0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95';
+    const BANANA_MASTERCHEF = '0x5c8D727b265DBAfaba67E050f2f739cAeEB4A6F9';
+    const BANANA_EXCHANGE = '0x39c54945C9B880d4B5F15b0BA3c8c17226C37d68';
+    const WHEAT = '0x3ab63309F85df5D4c3351ff8EACb87980E05Da4E';
+    const WHEAT_MASTERCHEF = '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448';
+    const BNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
+    const ETH = '0x2170Ed0880ac9A755fd29B2688956BD959F933F8';
+    const BUSD = '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56';
+    const USDT = '0x55d398326f99059fF775485246999027B3197955';
+    const PCS_BNB_CAKE = '0x0eD7e52944161450477ee417DE9Cd3a859b14fD0';
+    const PCS_BNB_BUSD = '0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16';
+    const PCS_BUSD_USDT = '0x7EFaEf62fDdCCa950418312c6C91Aef321375A00';
+    const PCS_BNB_ETH = '0x74E4716E431f45807DCF19f284c7aA99F18a4fbc';
+    const PCS_BNB_BTCB = '0x61EB789d75A95CAa3fF50ed7E47b96c132fEc082';
+    const PCS_BNB_USDT = '0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE';
+    const PCS_BUSD_USDC = '0x2354ef4DF11afacb85a5C7f98B624072ECcddbB1';
+    const PCS_BUSD_BTCB = '0xF45cd219aEF8618A92BAa7aD848364a158a24F33';
+    const PCS_BUSD_CAKE = '0x804678fa97d91B974ec2af3c843270886528a9E6';
+    const PCS_ETH_BTCB = '0xD171B26E4484402de70e3Ea256bE5A2630d7e88D';
+    const PCS_ETH_USDC = '0xEa26B78255Df2bBC31C1eBf60010D78670185bD0';
+    const PCS_USDT_CAKE = '0xA39Af17CE4a8eb807E076805Da1e2B8EA7D0755b';
+    const PCS_USDT_USDC = '0xEc6557348085Aa57C72514D67070dC863C0a5A8c';
+    const APE_MOR_BUSD = '0x33526eD690200663EAAbF28e1D8621e58898c5fd';
+
+    {
+      // CAKE strategies
+      const addresses = [
+        // 0 - stkCAKEv3
+        [0, '0xB50Acf6195F97177D33D132A3E5617b934C351d3', CAKE, CAKE],
+        // 251 - stkBNB/CAKEv3
+        [251, '0xd8C76eF0de11f9cc9708EB966A87e25a7E6C7949', CAKE, PCS_BNB_CAKE],
+        // 252 - stkBNB/BUSDv3
+        [252, '0x0170D4C58AD9A9D8ab031c0270353d7034B87f6F', BNB, PCS_BNB_BUSD],
+        // 258 - stkBUSD/USDTv3
+        [258, '0xd7A45F561189529de5975d522F0B5d7D4bfC94de', BUSD, PCS_BUSD_USDT],
+        // 261 - stkBNB/ETHv3
+        [261, '0xE487a3780D56F2ECD142201907dF16350bb09946', BNB, PCS_BNB_ETH],
+        // 262 - stkBNB/BTCBv3
+        [262, '0x9Df7B409925cc93dE1BB4ADDfA9Aed2bcE913F08', BNB, PCS_BNB_BTCB],
+        // 264 - stkBNB/USDTv3
+        [264, '0x839289A22604857A9BdB3231d37Af569ACD8A3fe', BNB, PCS_BNB_USDT],
+        // 283 - stkBUSD/USDCv3
+        [283, '0x60CD286AF05A3e096C8Ace193950CffA5E8e3CE0', BUSD, PCS_BUSD_USDC],
+        // 365 - stkBUSD/BTCBv3
+        [365, '0x26E0701F5881161043d56eb3Ddfde0b8c6772060', BUSD, PCS_BUSD_BTCB],
+        // 389 - stkBUSD/CAKEv3
+        [389, '0xFA6388B7980126C2d7d0c5FC02949a2fF40F95DE', CAKE, PCS_BUSD_CAKE],
+        // 408 - stkETH/BTCBv3
+        [408, '0x9FDD69a473d2216c5D232510DDF2328272bC6847', ETH, PCS_ETH_BTCB],
+        // 409 - stkETH/USDCv3
+        [409, '0xcAD2E1b2257795f0D580d49520741E93654fAaB5', ETH, PCS_ETH_USDC],
+        // 422 - stkUSDT/CAKEv3
+        [422, '0xC0c8C554069d85166B834b2Cb3541d66f53DC4f5', CAKE, PCS_USDT_CAKE],
+        // 423 - stkUSDT/USDCv3
+        [423, '0x01A50D26b9B40c92fa40CBC698DeB57c65b4B7e4', USDT, PCS_USDT_USDC],
+      ];
+      for (const [pid, address, routingToken, reserveToken] of addresses) {
+        await fixTwap(privateKey, network, address, CAKE_EXCHANGE, CAKE, routingToken, reserveToken);
+        const amount1 = await getTokenBalance(privateKey, network, CAKE, address);
+        const amount2 = await getPendingBalance(privateKey, network, CAKE_MASTERCHEF, pid, address);
+        const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'PancakeSwapStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
+      // BANANA strategies
+      const addresses = [
+        // 0 - stkBANANAv3
+        [0, '0x13e7A6691FE00DE975CF27868386f4aE9aed3cdC', BANANA, BANANA],
+        // 115 - stkMOR/BUSDv3
+        [115, '0xC2E8C3c427E0a5BaaF512A013516aECB65Bd75CB', BUSD, APE_MOR_BUSD],
+        // 115 - stkMOR/BUSDv3
+        [115, '0xC8216C4ac63F3cAC4f7e74A82d2252B7658FA8b1', BUSD, APE_MOR_BUSD],
+      ];
+      for (const [pid, address, routingToken, reserveToken] of addresses) {
+        await fixTwap(privateKey, network, address, BANANA_EXCHANGE, BANANA, routingToken, reserveToken);
+        const amount1 = await getTokenBalance(privateKey, network, BANANA, address);
+        const amount2 = await getPendingBalance(privateKey, network, BANANA_MASTERCHEF, pid, address);
+        const MINIMUM_AMOUNT = 500000000000000000000n; // 500 BANANA
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'ApeSwapStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
+      // WHEAT strategies
+      const addresses = [
+        // 0 - stkWHEATv3
+        [0, '0x5a6D9e05C0Da125a2FB67a68ab5D427dA4629590', WHEAT, WHEAT],
+      ];
+      for (const [pid, address, routingToken, reserveToken] of addresses) {
+        const amount1 = await getTokenBalance(privateKey, network, WHEAT, address);
+        const amount2 = await getPendingBalance(privateKey, network, WHEAT_MASTERCHEF, pid, address);
+        const MINIMUM_AMOUNT = 1000000000000000000000n; // 1000 WHEAT
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'WheatStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
+      // CAKE collector
+      const address = '0x3C8337B4011bdbEfB41FACEdA52923099db4aAd8';
+      const amount = await getTokenBalance(privateKey, network, CAKE, address);
       const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
-      if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
-          const name = await getTokenSymbol(privateKey, network, address);
-          return { name, type: 'PancakeSwapStrategy', address, tx };
+          return { name: 'CAKE', type: 'PancakeSwapCollector', address, tx };
         }
       }
     }
-  }
 
-  {
-    // BANANA strategies
-    const addresses = [
-      // 0 - stkBANANAv3
-      [0, '0x13e7A6691FE00DE975CF27868386f4aE9aed3cdC', BANANA, BANANA],
-      // 115 - stkMOR/BUSDv3
-      [115, '0xC2E8C3c427E0a5BaaF512A013516aECB65Bd75CB', BUSD, APE_MOR_BUSD],
-      // 115 - stkMOR/BUSDv3
-      [115, '0xC8216C4ac63F3cAC4f7e74A82d2252B7658FA8b1', BUSD, APE_MOR_BUSD],
-    ];
-    for (const [pid, address, routingToken, reserveToken] of addresses) {
-      await fixTwap(privateKey, network, address, BANANA_EXCHANGE, BANANA, routingToken, reserveToken);
-      const amount1 = await getTokenBalance(privateKey, network, BANANA, address);
-      const amount2 = await getPendingBalance(privateKey, network, BANANA_MASTERCHEF, pid, address);
+    {
+      // BANANA collector
+      const address = '0xe13e62830D300C6Fa64287F7dDEf3af6894B4868';
+      const amount = await getTokenBalance(privateKey, network, BANANA, address);
       const MINIMUM_AMOUNT = 500000000000000000000n; // 500 BANANA
-      if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
-          const name = await getTokenSymbol(privateKey, network, address);
-          return { name, type: 'ApeSwapStrategy', address, tx };
+          return { name: 'BANANA', type: 'ApeSwapCollector', address, tx };
         }
       }
     }
-  }
 
-  {
-    // WHEAT strategies
-    const addresses = [
-      // 0 - stkWHEATv3
-      [0, '0x5a6D9e05C0Da125a2FB67a68ab5D427dA4629590', WHEAT, WHEAT],
-    ];
-    for (const [pid, address, routingToken, reserveToken] of addresses) {
-      const amount1 = await getTokenBalance(privateKey, network, WHEAT, address);
-      const amount2 = await getPendingBalance(privateKey, network, WHEAT_MASTERCHEF, pid, address);
-      const MINIMUM_AMOUNT = 1000000000000000000000n; // 1000 WHEAT
-      if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+    {
+      // CAKE buyback
+      const address = '0xcD22272873B681986cE984E719D22A790dfE9C4a';
+      const amount = await getTokenBalance(privateKey, network, CAKE, address);
+      const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
-          const name = await getTokenSymbol(privateKey, network, address);
-          return { name, type: 'WheatStrategy', address, tx };
+          return { name: 'CAKE', type: 'PancakeSwapBuyback', address, tx };
         }
       }
     }
-  }
 
-  {
-    // CAKE collector
-    const address = '0x3C8337B4011bdbEfB41FACEdA52923099db4aAd8';
-    const amount = await getTokenBalance(privateKey, network, CAKE, address);
-    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'CAKE', type: 'PancakeSwapCollector', address, tx };
+    {
+      // BANANA buyback
+      const address = '0x889c56ABcc2606e77B3733E8703E9e040655b8E5';
+      const amount = await getTokenBalance(privateKey, network, BANANA, address);
+      const MINIMUM_AMOUNT = 500000000000000000000n; // 500 BANANA
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'BANANA', type: 'ApeSwapBuyback', address, tx };
+        }
       }
     }
-  }
 
-  {
-    // BANANA collector
-    const address = '0xe13e62830D300C6Fa64287F7dDEf3af6894B4868';
-    const amount = await getTokenBalance(privateKey, network, BANANA, address);
-    const MINIMUM_AMOUNT = 500000000000000000000n; // 500 BANANA
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'BANANA', type: 'ApeSwapCollector', address, tx };
+    // OLD SYSTEM v2
+
+    {
+      // 5 - stkCAKE
+      const address = '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C';
+      const amount = await pendingReward(privateKey, network, address);
+      const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          const name = await getTokenSymbol(privateKey, network, address);
+          return { name, type: 'PancakeStrategy', address, tx };
+        }
       }
     }
-  }
 
-  {
-    // CAKE buyback
-    const address = '0xcD22272873B681986cE984E719D22A790dfE9C4a';
-    const amount = await getTokenBalance(privateKey, network, CAKE, address);
-    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'CAKE', type: 'PancakeSwapBuyback', address, tx };
+    {
+      // AUTO strategies
+      const addresses = [
+        // 33 - stkBNB/CAKEv2
+        '0x86c15Efe94320Cd139eA4875b7ceF336e1F91f16',
+        // 34 - stkBNB/BUSDv2
+        '0xd5ffd8318b1c82FDE321f7BC1a553462A13A2E14',
+        // 35 - stkBNB/USDTv2
+        '0x7259CeBc6D8f84afdce4B81a3a33D53A526521F8',
+        // 36 - stkBNB/BTCBv2
+        '0x074fD0f3289cF3F5E0E80c969F62B21cB38Ad3b5',
+        // 37 - stkBNB/ETHv2
+        '0x15B310c8D9d0Ac9aefB94BF492e7eAbC43B4f93e',
+        // 38 - stkBUSD/USDTv2
+        '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f',
+        // 39 - stkBUSD/VAIv2
+        '0xC8daDd57BD9342b7ba9449B952DBE11B4f3D1648',
+        // 40 - stkBNB/DOTv2
+        '0x5C96941B28B824c3E9d01E5cb2D77B3f7801560e',
+        // 41 - stkBNB/LINKv2
+        '0x501382584a3DBF1471918Cd4ee0fd3bE23FfDF29',
+        // 42 - stkBNB/UNIv2
+        '0x0900a05910E7d4811f9FC17843120D6412df2968',
+        // 43 - stkBNB/DODOv2
+        '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875',
+        // 44 - stkBNB/ALPHAv2
+        '0x6C6d105066462EE9b5Cfc7628e2edB1000e887F1',
+        // 45 - stkBNB/ADAv2
+        '0x73099318dfBB1C59e473322F29C215132A14Ab86',
+        // 46 - stkBUSD/USTv2
+        '0xB2b5dba919Da2E06d6cDd15dF17bA4b99D3eB1bD',
+        // 47 - stkBUSD/BTCBv2
+        '0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352',
+        // 48 - stkbeltBNBv2
+        '0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A',
+        // 49 - stkbeltBTCv2
+        '0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62',
+        // 50 - stkbeltETHv2
+        '0xE70aA236f2c2dABC346e193F606986Bb843bA3d9',
+        // 51 - stk4BELTv2
+        '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB',
+      ];
+      for (const address of addresses) {
+        const fee = await performanceFee(privateKey, network, address);
+        const feeAmount = await pendingPerformanceFee(privateKey, network, address);
+        const MINIMUM_AMOUNT = 1000000000000000000n; // 1 AUTO
+        if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'AutoFarmStrategy', address, tx };
+          }
+        }
       }
     }
-  }
 
-  {
-    // BANANA buyback
-    const address = '0x889c56ABcc2606e77B3733E8703E9e040655b8E5';
-    const amount = await getTokenBalance(privateKey, network, BANANA, address);
-    const MINIMUM_AMOUNT = 500000000000000000000n; // 500 BANANA
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'BANANA', type: 'ApeSwapBuyback', address, tx };
+  /*
+    {
+      // PANTHER strategies
+      const addresses = [
+        // - stkBNB/BUSDv2
+        '0x4046492479a5bA18c2a947A1db75f4f1ef227BF1',
+        // - stkBNB/BTCBv2
+        '0xc1d3F1dB60DE17afD7770464BAb05c58129d7Ee0',
+        // - stkBNB/ETHv2
+        '0x9C009595F330CA8070e78b889183e7b8a96cB962',
+        // - stkBNB/CAKEv2
+        '0x1f48dCbCE7fC91180492a7b083472924b4e8a44b',
+        // - stkBUSD/USDCv2
+        '0xd802621F65Bd96D76e84E49EecdED49C5acb105d',
+        // - stkBNB/USDTv2
+        '0xE0327dA3f94Efe600569Ca68Aa02e6921FD89Bfa',
+        // - stkBNB/PANTHERv2
+        '0x358582CEeeB0F008495C06206973F5F6e495accd',
+        // - stkBUSD/PANTHERv2
+        '0x1A51686Fb42861AA7E38c1CF8868877F43F82aA4',
+      ];
+      for (const address of addresses) {
+        const fee = await performanceFee(privateKey, network, address);
+        const feeAmount = await pendingPerformanceFee(privateKey, network, address);
+        const MINIMUM_AMOUNT = 6000000000000000000000n; // 6000 PANTHER
+        if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'PantherStrategy', address, tx };
+          }
+        }
       }
     }
-  }
+  */
 
-  // OLD SYSTEM v2
-
-  {
-    // 5 - stkCAKE
-    const address = '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C';
-    const amount = await pendingReward(privateKey, network, address);
-    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        const name = await getTokenSymbol(privateKey, network, address);
-        return { name, type: 'PancakeStrategy', address, tx };
+    {
+      // CAKE collector
+      const address = '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36';
+      const amount = await pendingReward(privateKey, network, address);
+      const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'CAKE', type: 'PancakeCollector', address, tx };
+        }
       }
     }
-  }
 
-  {
-    // AUTO strategies
-    const addresses = [
-      // 33 - stkBNB/CAKEv2
-      '0x86c15Efe94320Cd139eA4875b7ceF336e1F91f16',
-      // 34 - stkBNB/BUSDv2
-      '0xd5ffd8318b1c82FDE321f7BC1a553462A13A2E14',
-      // 35 - stkBNB/USDTv2
-      '0x7259CeBc6D8f84afdce4B81a3a33D53A526521F8',
-      // 36 - stkBNB/BTCBv2
-      '0x074fD0f3289cF3F5E0E80c969F62B21cB38Ad3b5',
-      // 37 - stkBNB/ETHv2
-      '0x15B310c8D9d0Ac9aefB94BF492e7eAbC43B4f93e',
-      // 38 - stkBUSD/USDTv2
-      '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f',
-      // 39 - stkBUSD/VAIv2
-      '0xC8daDd57BD9342b7ba9449B952DBE11B4f3D1648',
-      // 40 - stkBNB/DOTv2
-      '0x5C96941B28B824c3E9d01E5cb2D77B3f7801560e',
-      // 41 - stkBNB/LINKv2
-      '0x501382584a3DBF1471918Cd4ee0fd3bE23FfDF29',
-      // 42 - stkBNB/UNIv2
-      '0x0900a05910E7d4811f9FC17843120D6412df2968',
-      // 43 - stkBNB/DODOv2
-      '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875',
-      // 44 - stkBNB/ALPHAv2
-      '0x6C6d105066462EE9b5Cfc7628e2edB1000e887F1',
-      // 45 - stkBNB/ADAv2
-      '0x73099318dfBB1C59e473322F29C215132A14Ab86',
-      // 46 - stkBUSD/USTv2
-      '0xB2b5dba919Da2E06d6cDd15dF17bA4b99D3eB1bD',
-      // 47 - stkBUSD/BTCBv2
-      '0xf30D01da4257c696e537E2fdF0a2Ce6C9D627352',
-      // 48 - stkbeltBNBv2
-      '0xeC97D2e53e34Aa8E5C6a843D9cd74641E645681A',
-      // 49 - stkbeltBTCv2
-      '0x04abDB55DCd0167BFcE8FA0fA125F102c4734C62',
-      // 50 - stkbeltETHv2
-      '0xE70aA236f2c2dABC346e193F606986Bb843bA3d9',
-      // 51 - stk4BELTv2
-      '0xeB8e1c316694742E7042882be1ac55ebbD2bCEbB',
-    ];
-    for (const address of addresses) {
-      const fee = await performanceFee(privateKey, network, address);
-      const feeAmount = await pendingPerformanceFee(privateKey, network, address);
+    {
+      // AUTO/CAKE collector adapter
+      const address = '0x626E98ef225A6f79523C9004E8731B793dfd0F68';
+      const amount = await pendingSource(privateKey, network, address);
       const MINIMUM_AMOUNT = 1000000000000000000n; // 1 AUTO
-      if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
-          const name = await getTokenSymbol(privateKey, network, address);
-          return { name, type: 'AutoFarmStrategy', address, tx };
+          return { name: 'AUTO/CAKE', type: 'AutoFarmCollectorAdapter', address, tx };
         }
       }
     }
-  }
 
-/*
-  {
-    // PANTHER strategies
-    const addresses = [
-      // - stkBNB/BUSDv2
-      '0x4046492479a5bA18c2a947A1db75f4f1ef227BF1',
-      // - stkBNB/BTCBv2
-      '0xc1d3F1dB60DE17afD7770464BAb05c58129d7Ee0',
-      // - stkBNB/ETHv2
-      '0x9C009595F330CA8070e78b889183e7b8a96cB962',
-      // - stkBNB/CAKEv2
-      '0x1f48dCbCE7fC91180492a7b083472924b4e8a44b',
-      // - stkBUSD/USDCv2
-      '0xd802621F65Bd96D76e84E49EecdED49C5acb105d',
-      // - stkBNB/USDTv2
-      '0xE0327dA3f94Efe600569Ca68Aa02e6921FD89Bfa',
-      // - stkBNB/PANTHERv2
-      '0x358582CEeeB0F008495C06206973F5F6e495accd',
-      // - stkBUSD/PANTHERv2
-      '0x1A51686Fb42861AA7E38c1CF8868877F43F82aA4',
-    ];
-    for (const address of addresses) {
-      const fee = await performanceFee(privateKey, network, address);
-      const feeAmount = await pendingPerformanceFee(privateKey, network, address);
-      const MINIMUM_AMOUNT = 6000000000000000000000n; // 6000 PANTHER
-      if (BigInt(feeAmount) * 1000000000000000000n / BigInt(fee) >= MINIMUM_AMOUNT) {
+  /*
+    {
+      // PANTHER buyback adapter
+      const address = '0x495089390569d47807F1Db83F14e053002DB25b4';
+      const amount = await pendingSource(privateKey, network, address);
+      const MINIMUM_AMOUNT = 2000000000000000000000n; // 2000 PANTHER
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
-          const name = await getTokenSymbol(privateKey, network, address);
-          return { name, type: 'PantherStrategy', address, tx };
+          return { name: 'PANTHER/BNB', type: 'PantherBuybackAdapter', address, tx };
         }
       }
     }
-  }
-*/
+  */
 
-  {
-    // CAKE collector
-    const address = '0x14bAc5f216337F8da5f41Bb920514Af98ef62c36';
-    const amount = await pendingReward(privateKey, network, address);
-    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'CAKE', type: 'PancakeCollector', address, tx };
+    {
+      // CAKE buyback
+      const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
+      const amount = await pendingBuyback(privateKey, network, address);
+      const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'CAKE', type: 'PancakeBuyback', address, tx };
+        }
       }
     }
-  }
 
-  {
-    // AUTO/CAKE collector adapter
-    const address = '0x626E98ef225A6f79523C9004E8731B793dfd0F68';
-    const amount = await pendingSource(privateKey, network, address);
-    const MINIMUM_AMOUNT = 1000000000000000000n; // 1 AUTO
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'AUTO/CAKE', type: 'AutoFarmCollectorAdapter', address, tx };
+    {
+      // universal buyback
+      const address = '0x01d1c4eC99D0A7D8f4141D42D1624fffa054D7Ae';
+      const amount = await pendingBuyback(privateKey, network, address);
+      const MINIMUM_AMOUNT = 1000000000000000000n; // 1 BNB
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'BNB', type: 'UniversalBuyback', address, tx };
+        }
       }
     }
-  }
 
-/*
-  {
-    // PANTHER buyback adapter
-    const address = '0x495089390569d47807F1Db83F14e053002DB25b4';
-    const amount = await pendingSource(privateKey, network, address);
-    const MINIMUM_AMOUNT = 2000000000000000000000n; // 2000 PANTHER
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'PANTHER/BNB', type: 'PantherBuybackAdapter', address, tx };
-      }
-    }
+    return false;
   }
-*/
-
-  {
-    // CAKE buyback
-    const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
-    const amount = await pendingBuyback(privateKey, network, address);
-    const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'CAKE', type: 'PancakeBuyback', address, tx };
-      }
-    }
-  }
-
-  {
-    // universal buyback
-    const address = '0x01d1c4eC99D0A7D8f4141D42D1624fffa054D7Ae';
-    const amount = await pendingBuyback(privateKey, network, address);
-    const MINIMUM_AMOUNT = 1000000000000000000n; // 1 BNB
-    if (BigInt(amount) >= MINIMUM_AMOUNT) {
-      const tx = await safeGulp(privateKey, network, address);
-      if (tx !== null) {
-        return { name: 'BNB', type: 'UniversalBuyback', address, tx };
-      }
-    }
-  }
-
-  return false;
 
 /*
   const length = await poolLength(privateKey, network);
@@ -1129,7 +1234,7 @@ async function main(args) {
   // await listContracts(privateKey, network);
   // return;
 
-  readLastGulp();
+  readLastGulp(network);
 
   await sendTelegramMessage('<i>GulpBot (' + network + ') Initiated</i>');
 
