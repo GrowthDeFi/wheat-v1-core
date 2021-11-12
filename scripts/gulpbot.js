@@ -186,6 +186,7 @@ async function sendTelegramMessage(message, key = '') {
 
 const IERC20_ABI = require('../build/contracts/IERC20.json').abi;
 const MASTERCHEF_ABI = require('../build/contracts/CustomMasterChef.json').abi;
+const MASTERCHEFJOE_ABI = require('../build/contracts/MasterChefJoe.json');
 const STRATEGY_ABI = require('../build/contracts/RewardCompoundingStrategyToken.json').abi;
 const COLLECTOR_ADAPTER_ABI = require('../build/contracts/AutoFarmFeeCollectorAdapter.json').abi;
 const COLLECTOR_ABI = require('../build/contracts/FeeCollector.json').abi;
@@ -259,6 +260,19 @@ async function getPendingBalance(privateKey, network, address, pid, account = nu
   if (account === null) [account] = web3.currentProvider.getAddresses();
   try {
     const amount = await contract.methods.pendingCake(pid, account).call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function getPendingBalanceJoe(privateKey, network, address, pid, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = MASTERCHEFJOE_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const { _pendingJoe: amount } = await contract.methods.pendingTokens(pid, account).call();
     return amount;
   } catch (e) {
     throw new Error(e.message);
@@ -766,7 +780,7 @@ async function gulpAll(privateKey, network) {
       for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
         await fixTwap(privateKey, network, address, JOE_EXCHANGE, JOE, routingToken, reserveToken);
         const amount1 = await getTokenBalance(privateKey, network, JOE, address);
-        const amount2 = await getPendingBalance(privateKey, network, masterChef, pid, address);
+        const amount2 = await getPendingBalanceJoe(privateKey, network, masterChef, pid, address);
         const MINIMUM_AMOUNT = 500000000000000000000n; // 500 JOE
         if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
           const tx = await safeGulp(privateKey, network, address);
