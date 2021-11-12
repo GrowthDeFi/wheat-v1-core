@@ -11,6 +11,7 @@ x-gulpbot: &gulpbot
     ANKR_APIKEY_BSCTEST: ${ANKR_APIKEY_BSCTEST}
     TELEGRAM_BOT_API_KEY: ${TELEGRAM_BOT_API_KEY}
     TELEGRAM_BOT_CHAT_ID: ${TELEGRAM_BOT_CHAT_ID}
+    PRIVATE_KEY: ${GULPBOT_PRIVATE_KEY}
   restart: always
 
 services:
@@ -18,11 +19,7 @@ services:
     <<: *gulpbot
     container_name: gulpbot-bscmain
     command: node /repo/scripts/gulpbot.js bscmain
-    environment:
-      PRIVATE_KEY: ${GULPBOT_PRIVATE_KEY}
   gulpbot-avaxmain:
     <<: *gulpbot
     container_name: gulpbot-avaxmain
     command: node /repo/scripts/gulpbot.js avaxmain
-    environment:
-      PRIVATE_KEY: ${GULPBOT_PRIVATE_KEY}
