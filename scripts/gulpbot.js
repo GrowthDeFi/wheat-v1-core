@@ -784,7 +784,7 @@ async function gulpAll(privateKey, network) {
         await fixTwap(privateKey, network, address, JOE_EXCHANGE, JOE, routingToken, reserveToken);
         const amount1 = await getTokenBalance(privateKey, network, JOE, address);
         const amount2 = await getPendingBalanceJoe(privateKey, network, masterChef, pid, address);
-        const MINIMUM_AMOUNT = 500000000000000000000n; // 500 JOE
+        const MINIMUM_AMOUNT = 250000000000000000000n; // 250 JOE
         if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
           const tx = await safeGulp(privateKey, network, address);
           if (tx !== null) {
@@ -819,7 +819,7 @@ async function gulpAll(privateKey, network) {
       // JOE SPLITTING ADAPTER
       const address = '0x67E5830CCef2Dc38aebEf4eC7D06baD5b5957D44';
       const amount = await getTokenBalance(privateKey, network, JOE, address);
-      const MINIMUM_AMOUNT = 500000000000000000000n; // 500 JOE
+      const MINIMUM_AMOUNT = 250000000000000000000n; // 250 JOE
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -897,7 +897,7 @@ async function gulpAll(privateKey, network) {
       // JOE buyback
       const address = '0xae35A19F1DAc62AD3794773D5f0983f05073D0f2';
       const amount = await getTokenBalance(privateKey, network, JOE, address);
-      const MINIMUM_AMOUNT = 50000000000000000000n; // 50 JOE
+      const MINIMUM_AMOUNT = 250000000000000000000n; // 250 JOE
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
