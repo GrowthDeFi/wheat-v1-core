@@ -1337,6 +1337,7 @@ async function gulpAll(privateKey, network) {
 
 async function reportError(e, type, detail) {
   const message = e instanceof Error ? e.message : String(e);
+  if (message === 'header not found') return;
   if (message === 'Could not find block') return;
   if (message.includes('message: \'ESOCKETTIMEDOUT\'')) return;
   if (message.includes('message: \'header not found\'')) return;
