@@ -1335,6 +1335,15 @@ async function gulpAll(privateKey, network) {
 */
 }
 
+async function reportError(e, type, detail) {
+  const message = e instanceof Error ? e.message : String(e);
+  if (message === 'Could not find block') return;
+  if (message.includes('message: \'ESOCKETTIMEDOUT\'')) return;
+  if (message.includes('message: \'header not found\'')) return;
+  if (message.includes('message: \'cannot query unfinalized data\'')) return;
+  await sendTelegramMessage('<i>GulpBot (' + escapeHTML(detail) + ') ' + escapeHTML(type) + ' (' + escapeHTML(message) + ')</i>');
+}
+
 async function main(args) {
   let [binary, script, network] = args;
   network = network || 'bscmain';
@@ -1351,16 +1360,16 @@ async function main(args) {
   interrupt(async (e) => {
     if (!interrupted) {
       interrupted = true;
-      console.error('error', e, e instanceof Error ? e.stack : undefined);
-      const message = e instanceof Error ? e.message : String(e);
-      await sendTelegramMessage('<i>GulpBot (' + network + ') Interrupted (' + escapeHTML(message) + ')</i>');
+      await reportError(e, 'Interrupted', network);
       exit();
     }
   });
+
   while (true) {
     await sleep(MONITORING_INTERVAL * 1000);
-    const lines = [];
+
     try {
+      const lines = [];
       const account = getDefaultAccount(privateKey, network);
       const accountUrl = ADDRESS_URL_PREFIX[network] + account;
       const value = await getNativeBalance(privateKey, network);
@@ -1374,12 +1383,10 @@ async function main(args) {
       const txUrl = TX_URL_PREFIX[network] + tx;
       const txPrefix = tx.substr(0, 6);
       lines.push('<a href="' + url + '">' + type + '</a>.gulp() at <a href="' + txUrl + '">' + txPrefix + '</a> for ' + name);
+      await sendTelegramMessage(lines.join('\n'));
     } catch (e) {
-      console.error('error', e, e instanceof Error ? e.stack : undefined);
-      const message = e instanceof Error ? e.message : String(e);
-      lines.push('<i>GulpBot (' + network + ') Failure (' + escapeHTML(message) + ')</i>');
+      await reportError(e, 'Failure', network);
     }
-    await sendTelegramMessage(lines.join('\n'));
   }
 }
 
