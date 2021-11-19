@@ -819,7 +819,7 @@ async function gulpAll(privateKey, network) {
       // JOE SPLITTING ADAPTER
       const address = '0x67E5830CCef2Dc38aebEf4eC7D06baD5b5957D44';
       const amount = await getTokenBalance(privateKey, network, JOE, address);
-      const MINIMUM_AMOUNT = 250000000000000000000n; // 250 JOE
+      const MINIMUM_AMOUNT = 1000000000000000000000n; // 1000 JOE
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -832,7 +832,7 @@ async function gulpAll(privateKey, network) {
       // PSM INJECTOR
       const address = '0x5622C4A8F6B245aFdddA6c32748055837A2616Cc';
       const amount = await getTokenBalance(privateKey, network, stkUSDCv3, address);
-      const MINIMUM_AMOUNT = 100000000n; // 100 stkUSDCv3
+      const MINIMUM_AMOUNT = 5000000000n; // 5000 stkUSDCv3
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -845,7 +845,7 @@ async function gulpAll(privateKey, network) {
       // AVAX/JOE collector
       const address = '0xa6E48716e4426ba51C2459c890aDd6604f96404F';
       const amount = await getTokenBalance(privateKey, network, TDJ_AVAX_JOE, address);
-      const MINIMUM_AMOUNT = 1000000000000000000n; // 1 AVAX/JOE
+      const MINIMUM_AMOUNT = 100000000000000000000n; // 100 AVAX/JOE
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -858,7 +858,7 @@ async function gulpAll(privateKey, network) {
       // WAVAX collector
       const address = '0xa8FDF216A180A798ED783e14EE71557E613C52bf';
       const amount = await getTokenBalance(privateKey, network, WAVAX, address);
-      const MINIMUM_AMOUNT = 5000000000000000000n; // 5 WAVAX
+      const MINIMUM_AMOUNT = 25000000000000000000n; // 25 WAVAX
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -871,7 +871,7 @@ async function gulpAll(privateKey, network) {
       // WETH collector
       const address = '0x42C03f6d6c00f0D5603080a3475903195e9F6CEc';
       const amount = await getTokenBalance(privateKey, network, WETH, address);
-      const MINIMUM_AMOUNT = 10000000000000000n; // 0.01 WETH
+      const MINIMUM_AMOUNT = 500000000000000000n; // 0.5 WETH
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
@@ -884,7 +884,7 @@ async function gulpAll(privateKey, network) {
       // WBTC collector
       const address = '0xCfc7E18096C96Bf33203CCc2781E1D1f8fe77Ceb';
       const amount = await getTokenBalance(privateKey, network, WBTC, address);
-      const MINIMUM_AMOUNT = 1000000000000000n; // 0.001 WBTC
+      const MINIMUM_AMOUNT = 50000000000000000n; // 0.05 WBTC
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
