@@ -105,6 +105,13 @@ const NATIVE_SYMBOL = {
   'avaxtest': 'AVAX',
 };
 
+const LIMIT_GASPRICE = {
+  'bscmain': '5000000000',
+  'bsctest': '10000000000',
+  'avaxmain': '100000000000',
+  'avaxtest': '100000000000',
+};
+
 const HTTP_PROVIDER_URLS = {
   'bscmain': [
     'https://bsc-dataseed.binance.org/',
@@ -418,6 +425,10 @@ async function gulp0(privateKey, network, address, nonce) {
   try {
     const estimatedGas = await contract.methods.gulp().estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
+    const gasPrice = await web3.eth.getGasPrice();
+    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+      throw new Error('Gas price beyond the set limit');
+    }
     await contract.methods.gulp().send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
@@ -438,6 +449,10 @@ async function gulp1(privateKey, network, address, amount, nonce) {
   try {
     const estimatedGas = await contract.methods.gulp(amount).estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
+    const gasPrice = await web3.eth.getGasPrice();
+    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+      throw new Error('Gas price beyond the set limit');
+    }
     await contract.methods.gulp(amount).send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
@@ -458,6 +473,10 @@ async function gulp2(privateKey, network, address, amount1, amount2, nonce) {
   try {
     const estimatedGas = await contract.methods.gulp(amount1, amount2).estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
+    const gasPrice = await web3.eth.getGasPrice();
+    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+      throw new Error('Gas price beyond the set limit');
+    }
     await contract.methods.gulp(amount1, amount2).send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
         txId = hash;
@@ -713,6 +732,10 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     const contract = new web3.eth.Contract(abi, exchange, { from, gas });
     if (rewardToken !== routingToken) {
       try {
+        const gasPrice = await web3.eth.getGasPrice();
+        if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+          throw new Error('Gas price beyond the set limit');
+        }
         await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, '10000000000').send();
       } catch (e) {
         throw Error('TWAP pool update ' + address + ': ' + exchange + ': ' + rewardToken + ': ' + routingToken + ': ' + e.message);
@@ -720,6 +743,10 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     }
     if (reserveToken !== routingToken) {
       try {
+        const gasPrice = await web3.eth.getGasPrice();
+        if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+          throw new Error('Gas price beyond the set limit');
+        }
         await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').send();
       } catch (e) {
         throw Error('TWAP pool update ' + address + ': ' + exchange + ': ' + reserveToken + ': ' + routingToken + ': ' + e.message);
