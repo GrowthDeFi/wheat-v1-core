@@ -1336,9 +1336,10 @@ async function gulpAll(privateKey, network) {
 }
 
 async function reportError(e, type, detail) {
-  const message = e instanceof Error ? e.message : String(e);
+  const message = typeof e === 'object' && e !== null && 'message' in e ? e.message : String(e);
   if (message.includes('ESOCKETTIMEDOUT')) return;
   if (message.includes('header not found')) return;
+  if (message.includes('Too Many Requests')) return;
   if (message.includes('Could not find block')) return;
   if (message.includes('cannot query unfinalized data')) return;
   await sendTelegramMessage('<i>GulpBot (' + escapeHTML(detail) + ') ' + escapeHTML(type) + ' (' + escapeHTML(message) + ')</i>');
