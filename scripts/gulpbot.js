@@ -127,7 +127,7 @@ const HTTP_PROVIDER_URLS = {
     'https://bsc-dataseed2.binance.org/',
     'https://bsc-dataseed3.binance.org/',
     'https://bsc-dataseed4.binance.org/',
-    'https://apis.ankr.com/' + ankrApikeyBscmain + '/' + ankrProjectId + '/binance/full/main',
+    // 'https://apis.ankr.com/' + ankrApikeyBscmain + '/' + ankrProjectId + '/binance/full/main',
   ],
   'bsctest': [
     'https://data-seed-prebsc-1-s1.binance.org:8545/',
@@ -136,7 +136,7 @@ const HTTP_PROVIDER_URLS = {
     'https://data-seed-prebsc-2-s2.binance.org:8545/',
     'https://data-seed-prebsc-1-s3.binance.org:8545/',
     'https://data-seed-prebsc-2-s3.binance.org:8545/',
-    'https://apis.ankr.com/' + ankrApikeyBsctest + '/' + ankrProjectId + '/binance/full/test',
+    // 'https://apis.ankr.com/' + ankrApikeyBsctest + '/' + ankrProjectId + '/binance/full/test',
   ],
   'avaxmain': [
     'https://api.avax.network/ext/bc/C/rpc',
