@@ -679,8 +679,8 @@ async function safeGulp(privateKey, network, address) {
   try {
     let messages = [address];
     try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch (e) { messages.push(e.message); }
-    try { const txId = await gulp1(privateKey, network, address, '0', nonce); return txId; } catch (e) { messages.push(e.message); }
-    try { const txId = await gulp2(privateKey, network, address, '0', '0', nonce); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await gulp1(privateKey, network, address, 0, nonce); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await gulp2(privateKey, network, address, 0, 0, nonce); return txId; } catch (e) { messages.push(e.message); }
     throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
