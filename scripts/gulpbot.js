@@ -1371,6 +1371,7 @@ async function gulpAll(privateKey, network) {
 async function reportError(e, type, detail) {
   const message = typeof e === 'object' && e !== null && 'message' in e ? e.message : String(e);
   if (message.includes('SERVER_ERROR')) return;
+  if (message.includes('Gateway timeout')) return;
   if (message.includes('502 Bad Gateway')) return;
   if (message.includes('internal error')) return;
   if (message.includes('Unknown Error')) return;
