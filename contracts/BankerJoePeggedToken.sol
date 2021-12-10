@@ -141,9 +141,9 @@ contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Del
 	function _gulp() internal returns (bool _success)
 	{
 		uint256 _balance = _getBalance();
-		uint256 _reserve = totalReserve();
-		if (_balance > _reserve) {
-			uint256 _excess = _balance - _reserve;
+		uint256 _supply = totalSupply();
+		if (_balance > _supply) {
+			uint256 _excess = _balance - _supply;
 			if (psm == address(0)) {
 				_mint(treasury, _excess);
 			} else {
