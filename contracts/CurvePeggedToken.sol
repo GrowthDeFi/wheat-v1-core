@@ -15,6 +15,8 @@ import { PSM } from "./interop/Mor.sol";
 
 contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
+	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
+
 	// strategy token configuration
 	address private immutable reserveToken;
 	address private immutable stakingToken;
@@ -24,6 +26,9 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	address private psm;
 	address private treasury;
 	address private collector;
+
+	// force gulp ratio
+	uint256 private forceGulpRatio = DEFAULT_FORCE_GULP_RATIO;
 
 	constructor (string memory _name, string memory _symbol, uint8 _decimals,
 		address _curveSwap, address _curveToken, address _curveGauge,
@@ -49,7 +54,8 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 		address _liquidityPool,
 		address _psm,
 		address _treasury,
-		address _collector
+		address _collector,
+		uint256 _forceGulpRatio
 	)
 	{
 		return (
@@ -58,7 +64,8 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 			liquidityPool,
 			psm,
 			treasury,
-			collector
+			collector,
+			forceGulpRatio
 		);
 	}
 
@@ -106,10 +113,15 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 *                operation.
 	 * @param _minShares The minimum number of shares expected to be
 	 *                   received in the operation.
+	 * @param _execGulp Whether or not gulp() is called prior to the deposit.
+	 *                  If the deposit is percentually larger than forceGulpRatio,
+	 *                  gulp() execution is compulsory.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares) external /*onlyEOAorWhitelist*/ nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
 	{
-		require(_gulp(), "unavailable");
+		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
+			require(_gulp(), "unavailable");
+		}
 		address _from = msg.sender;
 		uint256 _shares = _calcSharesFromAmount(_amount);
 		require(_shares >= _minShares, "high slippage");
@@ -224,6 +236,21 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 		emit ChangePsm(_oldPsm, _newPsm);
 	}
 
+	/**
+	 * @notice Updates the force gulp ratio. Any deposit larger then the
+	 *         ratio, relative to the reserve, forces gulp.
+	 *         This is a privileged function.
+	 * @param _newForceGulpRatio The new force gulp ratio.
+	 */
+	function setForceGulpRatio(uint256 _newForceGulpRatio) external onlyOwner
+		delayed(this.setForceGulpRatio.selector, keccak256(abi.encode(_newForceGulpRatio)))
+	{
+		require(_newForceGulpRatio <= 1e18, "invalid rate");
+		uint256 _oldForceGulpRatio = forceGulpRatio;
+		forceGulpRatio = _newForceGulpRatio;
+		emit ChangeForceGulpRatio(_oldForceGulpRatio, _newForceGulpRatio);
+	}
+
 	/// @dev Calculation of shares from amount given the share price (ratio between reserve and supply)
 	function _calcSharesFromAmount(uint256 _amount) internal view returns (uint256 _shares)
 	{
@@ -277,6 +304,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	event ChangePsm(address _oldPsm, address _newPsm);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
+	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
 }
 
 contract CurvePeggedTokenPSMBridge
@@ -292,7 +320,7 @@ contract CurvePeggedTokenPSMBridge
 
 	constructor (address _peggedToken, uint256 _i) public
 	{
-		(address _reserveToken,, address _liquidityPool, address _psm,,) = CurvePeggedToken(_peggedToken).state();
+		(address _reserveToken,, address _liquidityPool, address _psm,,,) = CurvePeggedToken(_peggedToken).state();
 		address _underlyingToken = _getUnderlyingToken(_liquidityPool, _i);
 		address _dai = PSM(_psm).dai();
 		address _gemJoin = PSM(_psm).gemJoin();
@@ -306,13 +334,13 @@ contract CurvePeggedTokenPSMBridge
 		gemJoin = _gemJoin;
 	}
 
-	function deposit(uint256 _underlyingAmount, uint256 _minDaiAmount) external
+	function deposit(uint256 _underlyingAmount, uint256 _minDaiAmount, bool _execGulp) external
 	{
 		Transfers._pullFunds(underlyingToken, msg.sender, _underlyingAmount);
 		_deposit(_underlyingAmount);
 		uint256 _reserveAmount = Transfers._getBalance(reserveToken);
 		Transfers._approveFunds(reserveToken, peggedToken, _reserveAmount);
-		CurvePeggedToken(peggedToken).deposit(_reserveAmount, 0);
+		CurvePeggedToken(peggedToken).deposit(_reserveAmount, 0, _execGulp);
 		uint256 _sharesAmount = Transfers._getBalance(peggedToken);
 		Transfers._approveFunds(peggedToken, gemJoin, _sharesAmount);
 		PSM(psm).sellGem(address(this), _sharesAmount);
