@@ -13,10 +13,6 @@ import { Transfers } from "./modules/Transfers.sol";
 import { CurveSwap, CurveGauge } from "./interop/Curve.sol";
 import { PSM } from "./interop/Mor.sol";
 
-// GAUGE 0x5B5CFE992AdAC0C9D48E05854B2d91C73a003858
-// TOKEN 0x1337BedC9D22ecbe766dF105c9623922A27963EC
-// POOL  0x7f90122BF0700F9E7e1F688fe926940E8839F353
-
 contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	// strategy token configuration
@@ -285,7 +281,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 
 contract CurvePeggedTokenPSMBridge
 {
-	address public immutable strategyToken;
+	address public immutable peggedToken;
 	uint256 public immutable i;
 	address public immutable reserveToken;
 	address public immutable underlyingToken;
@@ -294,13 +290,13 @@ contract CurvePeggedTokenPSMBridge
 	address public immutable dai;
 	address public immutable gemJoin;
 
-	constructor (address payable _strategyToken, uint256 _i) public
+	constructor (address _peggedToken, uint256 _i) public
 	{
-		(address _reserveToken,, address _liquidityPool, address _psm,,) = CurvePeggedToken(_strategyToken).state();
+		(address _reserveToken,, address _liquidityPool, address _psm,,) = CurvePeggedToken(_peggedToken).state();
 		address _underlyingToken = _getUnderlyingToken(_liquidityPool, _i);
 		address _dai = PSM(_psm).dai();
 		address _gemJoin = PSM(_psm).gemJoin();
-		strategyToken = _strategyToken;
+		peggedToken = _peggedToken;
 		i = _i;
 		reserveToken = _reserveToken;
 		underlyingToken = _underlyingToken;
@@ -315,23 +311,23 @@ contract CurvePeggedTokenPSMBridge
 		Transfers._pullFunds(underlyingToken, msg.sender, _underlyingAmount);
 		_deposit(_underlyingAmount);
 		uint256 _reserveAmount = Transfers._getBalance(reserveToken);
-		Transfers._approveFunds(reserveToken, strategyToken, _reserveAmount);
-		CurvePeggedToken(strategyToken).deposit(_reserveAmount, 0);
-		uint256 _sharesAmount = Transfers._getBalance(strategyToken);
-		Transfers._approveFunds(strategyToken, gemJoin, _sharesAmount);
+		Transfers._approveFunds(reserveToken, peggedToken, _reserveAmount);
+		CurvePeggedToken(peggedToken).deposit(_reserveAmount, 0);
+		uint256 _sharesAmount = Transfers._getBalance(peggedToken);
+		Transfers._approveFunds(peggedToken, gemJoin, _sharesAmount);
 		PSM(psm).sellGem(address(this), _sharesAmount);
 		uint256 _daiAmount = Transfers._getBalance(dai);
 		Transfers._pushFunds(dai, msg.sender, _daiAmount);
 		require(_daiAmount >= _minDaiAmount, "high slippage");
 	}
 
-	function withdraw(uint256 _daiAmount, uint256 _minUnderlyingAmount) external
+	function withdraw(uint256 _daiAmount, uint256 _minUnderlyingAmount, bool _execGulp) external
 	{
 		Transfers._pullFunds(dai, msg.sender, _daiAmount);
 		Transfers._approveFunds(dai, psm, _daiAmount);
 		uint256 _sharesAmount = _calcWithdrawal(_daiAmount);
 		PSM(psm).buyGem(address(this), _sharesAmount);
-		CurvePeggedToken(strategyToken).withdraw(_sharesAmount, 0, true);
+		CurvePeggedToken(peggedToken).withdraw(_sharesAmount, 0, _execGulp);
 		uint256 _reserveAmount = Transfers._getBalance(reserveToken);
 		_withdraw(_reserveAmount);
 		uint256 _underlyingAmount = Transfers._getBalance(underlyingToken);
@@ -365,68 +361,3 @@ contract CurvePeggedTokenPSMBridge
 		CurveSwap(liquidityPool).remove_liquidity_one_coin(_amount, int128(i), 0, true);
 	}
 }
-
-/*
-contract CurvePeggedTokenTestBridge
-{
-	address public immutable strategyToken;
-	uint256 public immutable i;
-	address public immutable reserveToken;
-	address public immutable underlyingToken;
-	address public immutable liquidityPool;
-
-	constructor (address payable _strategyToken, uint256 _i) public
-	{
-		(address _reserveToken,, address _liquidityPool,,,) = CurvePeggedToken(_strategyToken).state();
-		address _underlyingToken = _getUnderlyingToken(_liquidityPool, _i);
-		strategyToken = _strategyToken;
-		i = _i;
-		reserveToken = _reserveToken;
-		underlyingToken = _underlyingToken;
-		liquidityPool = _liquidityPool;
-	}
-
-	function deposit(uint256 _underlyingAmount, uint256 _minSharesAmount) external
-	{
-		Transfers._pullFunds(underlyingToken, msg.sender, _underlyingAmount);
-		_deposit(_underlyingAmount);
-		uint256 _reserveAmount = Transfers._getBalance(reserveToken);
-		Transfers._approveFunds(reserveToken, strategyToken, _reserveAmount);
-		CurvePeggedToken(strategyToken).deposit(_reserveAmount, 0);
-		uint256 _sharesAmount = Transfers._getBalance(strategyToken);
-		Transfers._pushFunds(strategyToken, msg.sender, _sharesAmount);
-		require(_sharesAmount >= _minSharesAmount, "high slippage");
-	}
-
-	function withdraw(uint256 _sharesAmount, uint256 _minUnderlyingAmount) external
-	{
-		Transfers._pullFunds(strategyToken, msg.sender, _sharesAmount);
-		CurvePeggedToken(strategyToken).withdraw(_sharesAmount, 0, true);
-		uint256 _reserveAmount = Transfers._getBalance(reserveToken);
-		_withdraw(_reserveAmount);
-		uint256 _underlyingAmount = Transfers._getBalance(underlyingToken);
-		Transfers._pushFunds(underlyingToken, msg.sender, _underlyingAmount);
-		require(_underlyingAmount >= _minUnderlyingAmount, "high slippage");
-	}
-
-	function _getUnderlyingToken(address _liquidityPool, uint256 _i) internal view returns (address _underlyingToken)
-	{
-		return CurveSwap(_liquidityPool).underlying_coins(_i);
-	}
-
-	/// @dev Performs a deposit into the lending pool
-	function _deposit(uint256 _amount) internal
-	{
-		Transfers._approveFunds(underlyingToken, liquidityPool, _amount);
-		uint256[3] memory _amounts;
-		_amounts[i] = _amount;
-		CurveSwap(liquidityPool).add_liquidity(_amounts, 0, true);
-	}
-
-	/// @dev Performs a withdrawal from the lending pool
-	function _withdraw(uint256 _amount) internal
-	{
-		CurveSwap(liquidityPool).remove_liquidity_one_coin(_amount, int128(i), 0, true);
-	}
-}
-*/
