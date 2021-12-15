@@ -43,6 +43,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 		psm = _psm;
 		treasury = _treasury;
 		collector = _collector;
+		_mint(address(1), 1); // avoids division by zero
 	}
 
 	/// @dev Single public function to expose the private state, saves contract space
@@ -73,7 +74,9 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 */
 	function totalReserve() public view returns (uint256 _totalReserve)
 	{
-		return Transfers._getBalance(stakingToken);
+		_totalReserve = Transfers._getBalance(stakingToken);
+		if (_totalReserve == uint256(-1)) return _totalReserve;
+		return _totalReserve + 1; // avoids division by zero
 	}
 
 	/**
