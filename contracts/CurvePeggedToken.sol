@@ -13,6 +13,10 @@ import { Transfers } from "./modules/Transfers.sol";
 import { CurveSwap, CurveGauge } from "./interop/Curve.sol";
 import { PSM } from "./interop/Mor.sol";
 
+// GAUGE 0x5B5CFE992AdAC0C9D48E05854B2d91C73a003858
+// TOKEN 0x1337BedC9D22ecbe766dF105c9623922A27963EC
+// POOL  0x7f90122BF0700F9E7e1F688fe926940E8839F353
+
 contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
 {
 	// strategy token configuration
@@ -149,7 +153,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	/// @dev Actual gulp implementation
 	function _gulp() internal returns (bool _success)
 	{
-		uint256 _balance = _getBalance();
+		uint256 _balance = _getUnderlyingBalance();
 		uint256 _supply = totalSupply();
 		if (_balance > _supply) {
 			uint256 _excess = _balance - _supply;
@@ -244,7 +248,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	}
 
 	/// @dev Retrieves the underlying balance on the liquidity pool
-	function _getBalance() internal view returns (uint256 _amount)
+	function _getUnderlyingBalance() internal view returns (uint256 _amount)
 	{
 		return Transfers._getBalance(stakingToken) * CurveSwap(liquidityPool).get_virtual_price() / 1e18;
 	}
