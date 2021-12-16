@@ -742,6 +742,7 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
         if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
           throw new Error('Gas price beyond the set limit');
         }
+        await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, '10000000000').estimateGas({ from });
         let txId = null;
         await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, '10000000000').send()
           .on('receipt', ({ transactionHash }) => { txId = transactionHash; });
@@ -756,6 +757,7 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
         if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
           throw new Error('Gas price beyond the set limit');
         }
+        await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').estimateGas({ from });
         let txId = null;
         await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').send()
           .on('receipt', ({ transactionHash }) => { txId = transactionHash; });
