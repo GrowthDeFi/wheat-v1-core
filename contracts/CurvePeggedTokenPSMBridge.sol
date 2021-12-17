@@ -25,30 +25,22 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 	address public immutable underlyingToken;
 	address public immutable liquidityPool;
 
-	// additional contract configuration
-	address public immutable dai;
-	address public immutable gemJoin;
-
 	// addresses receiving tokens
 	address public psm;
 	address public treasury;
 
 	// tolerable slippage
-	uint256 private slippage = DEFAULT_SLIPPAGE;
+	uint256 public slippage = DEFAULT_SLIPPAGE;
 
 	constructor (address _peggedToken, uint256 _i) public
 	{
 		(address _reserveToken,, address _liquidityPool, address _psm, address _treasury,,) = CurvePeggedToken(_peggedToken).state();
 		address _underlyingToken = _getUnderlyingToken(_liquidityPool, _i);
-		address _dai = PSM(_psm).dai();
-		address _gemJoin = PSM(_psm).gemJoin();
 		peggedToken = _peggedToken;
 		i = _i;
 		reserveToken = _reserveToken;
 		underlyingToken = _underlyingToken;
 		liquidityPool = _liquidityPool;
-		dai = _dai;
-		gemJoin = _gemJoin;
 		psm = _psm;
 		treasury = _treasury;
 	}
@@ -71,17 +63,19 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 		Transfers._approveFunds(reserveToken, peggedToken, _reserveAmount);
 		CurvePeggedToken(peggedToken).deposit(_reserveAmount, 0, _execGulp);
 		uint256 _sharesAmount = Transfers._getBalance(peggedToken);
-		Transfers._approveFunds(peggedToken, gemJoin, _sharesAmount);
+		Transfers._approveFunds(peggedToken, PSM(psm).gemJoin(), _sharesAmount);
 		PSM(psm).sellGem(address(this), _sharesAmount);
-		uint256 _daiAmount = Transfers._getBalance(dai);
-		Transfers._pushFunds(dai, msg.sender, _daiAmount);
+		address _dai = PSM(psm).dai();
+		uint256 _daiAmount = Transfers._getBalance(_dai);
+		Transfers._pushFunds(_dai, msg.sender, _daiAmount);
 		require(_daiAmount >= _minDaiAmount, "high slippage");
 	}
 
 	function withdraw(uint256 _daiAmount, uint256 _minUnderlyingAmount, bool _execGulp) public nonReentrant
 	{
-		Transfers._pullFunds(dai, msg.sender, _daiAmount);
-		Transfers._approveFunds(dai, psm, _daiAmount);
+		address _dai = PSM(psm).dai();
+		Transfers._pullFunds(_dai, msg.sender, _daiAmount);
+		Transfers._approveFunds(_dai, psm, _daiAmount);
 		uint256 _sharesAmount = _calcPsmWithdrawal(_daiAmount);
 		PSM(psm).buyGem(address(this), _sharesAmount);
 		CurvePeggedToken(peggedToken).withdraw(_sharesAmount, 0, _execGulp);
@@ -128,6 +122,7 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 	function setPsm(address _newPsm) external onlyOwner
 		delayed(this.setPsm.selector, keccak256(abi.encode(_newPsm)))
 	{
+		require(_newPsm != address(0), "invalid address");
 		address _oldPsm = psm;
 		psm = _newPsm;
 		emit ChangePsm(_oldPsm, _newPsm);

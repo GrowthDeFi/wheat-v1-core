@@ -31,7 +31,7 @@ contract CurvePeggedTokenPSMInjector is ReentrancyGuard, DelayedActionGuard
 	address public treasury;
 
 	// tolerable slippage
-	uint256 private slippage = DEFAULT_SLIPPAGE;
+	uint256 public slippage = DEFAULT_SLIPPAGE;
 
 	constructor (address _peggedToken, uint256 _i) public
 	{
