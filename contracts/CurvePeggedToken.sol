@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -307,87 +308,4 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeCollector(address _oldCollector, address _newCollector);
 	event ChangeForceGulpRatio(uint256 _oldForceGulpRatio, uint256 _newForceGulpRatio);
-}
-
-contract CurvePeggedTokenPSMBridge
-{
-	address public immutable peggedToken;
-	uint256 public immutable i;
-	address public immutable reserveToken;
-	address public immutable underlyingToken;
-	address public immutable liquidityPool;
-	address public immutable psm;
-	address public immutable dai;
-	address public immutable gemJoin;
-
-	constructor (address _peggedToken, uint256 _i) public
-	{
-		(address _reserveToken,, address _liquidityPool, address _psm,,,) = CurvePeggedToken(_peggedToken).state();
-		address _underlyingToken = _getUnderlyingToken(_liquidityPool, _i);
-		address _dai = PSM(_psm).dai();
-		address _gemJoin = PSM(_psm).gemJoin();
-		peggedToken = _peggedToken;
-		i = _i;
-		reserveToken = _reserveToken;
-		underlyingToken = _underlyingToken;
-		liquidityPool = _liquidityPool;
-		psm = _psm;
-		dai = _dai;
-		gemJoin = _gemJoin;
-	}
-
-	function deposit(uint256 _underlyingAmount, uint256 _minDaiAmount, bool _execGulp) external
-	{
-		Transfers._pullFunds(underlyingToken, msg.sender, _underlyingAmount);
-		_deposit(_underlyingAmount);
-		uint256 _reserveAmount = Transfers._getBalance(reserveToken);
-		Transfers._approveFunds(reserveToken, peggedToken, _reserveAmount);
-		CurvePeggedToken(peggedToken).deposit(_reserveAmount, 0, _execGulp);
-		uint256 _sharesAmount = Transfers._getBalance(peggedToken);
-		Transfers._approveFunds(peggedToken, gemJoin, _sharesAmount);
-		PSM(psm).sellGem(address(this), _sharesAmount);
-		uint256 _daiAmount = Transfers._getBalance(dai);
-		Transfers._pushFunds(dai, msg.sender, _daiAmount);
-		require(_daiAmount >= _minDaiAmount, "high slippage");
-	}
-
-	function withdraw(uint256 _daiAmount, uint256 _minUnderlyingAmount, bool _execGulp) external
-	{
-		Transfers._pullFunds(dai, msg.sender, _daiAmount);
-		Transfers._approveFunds(dai, psm, _daiAmount);
-		uint256 _sharesAmount = _calcWithdrawal(_daiAmount);
-		PSM(psm).buyGem(address(this), _sharesAmount);
-		CurvePeggedToken(peggedToken).withdraw(_sharesAmount, 0, _execGulp);
-		uint256 _reserveAmount = Transfers._getBalance(reserveToken);
-		_withdraw(_reserveAmount);
-		uint256 _underlyingAmount = Transfers._getBalance(underlyingToken);
-		Transfers._pushFunds(underlyingToken, msg.sender, _underlyingAmount);
-		require(_underlyingAmount >= _minUnderlyingAmount, "high slippage");
-	}
-
-	function _getUnderlyingToken(address _liquidityPool, uint256 _i) internal view returns (address _underlyingToken)
-	{
-		return CurveSwap(_liquidityPool).underlying_coins(_i);
-	}
-
-	function _calcWithdrawal(uint256 _daiAmount) internal view returns (uint256 _sharesAmount)
-	{
-		uint256 _denominator = 1e18 + PSM(psm).tout();
-		return (_daiAmount * 1e18 + (_denominator - 1)) / _denominator;
-	}
-
-	/// @dev Adds liquidity to the pool
-	function _deposit(uint256 _amount) internal
-	{
-		Transfers._approveFunds(underlyingToken, liquidityPool, _amount);
-		uint256[3] memory _amounts;
-		_amounts[i] = _amount;
-		CurveSwap(liquidityPool).add_liquidity(_amounts, 0, true);
-	}
-
-	/// @dev Removes liquidity from the pool
-	function _withdraw(uint256 _amount) internal
-	{
-		CurveSwap(liquidityPool).remove_liquidity_one_coin(_amount, int128(i), 0, true);
-	}
 }
