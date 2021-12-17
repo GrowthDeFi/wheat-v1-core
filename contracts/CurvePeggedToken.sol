@@ -85,6 +85,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	/**
 	 * @notice Allows for the beforehand calculation of shares to be
 	 *         received/minted upon depositing to the contract.
+	 *         May not be precise due to gulping which may shift it slightly.
 	 * @param _amount The amount of reserve token being deposited.
 	 * @return _shares The net amount of shares being received.
 	 */
@@ -97,6 +98,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 * @notice Allows for the beforehand calculation of the amount of
 	 *         reserve token to be withdrawn given the desired amount of
 	 *         shares.
+	 *         May not be precise due to gulping which may shift it slightly.
 	 * @param _shares The amount of shares to provide.
 	 * @return _amount The amount of the reserve token to be received.
 	 */
@@ -210,7 +212,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	}
 
 	/**
-	 * @notice Updates the fee collector address used to collect the performance fee.
+	 * @notice Updates the fee collector address used to collect the rewards.
 	 *         This is a privileged function.
 	 * @param _newCollector The new fee collector address.
 	 */
@@ -265,7 +267,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 
 	// ----- BEGIN: underlying contract abstraction
 
-	/// @dev Lists the reserve and reward tokens of the lending pool
+	/// @dev Lists the reserve and reward tokens of the liquidity pool
 	function _getTokens(address _curveSwap, address _curveToken, address _curveGauge) internal view returns (address _reserveToken, address _stakingToken, address _liquidityPool)
 	{
 		require(CurveSwap(_curveSwap).lp_token() == _curveToken, "invalid swap");
@@ -374,7 +376,7 @@ contract CurvePeggedTokenPSMBridge
 		return (_daiAmount * 1e18 + (_denominator - 1)) / _denominator;
 	}
 
-	/// @dev Performs a deposit into the lending pool
+	/// @dev Adds liquidity to the pool
 	function _deposit(uint256 _amount) internal
 	{
 		Transfers._approveFunds(underlyingToken, liquidityPool, _amount);
@@ -383,7 +385,7 @@ contract CurvePeggedTokenPSMBridge
 		CurveSwap(liquidityPool).add_liquidity(_amounts, 0, true);
 	}
 
-	/// @dev Performs a withdrawal from the lending pool
+	/// @dev Removes liquidity from the pool
 	function _withdraw(uint256 _amount) internal
 	{
 		CurveSwap(liquidityPool).remove_liquidity_one_coin(_amount, int128(i), 0, true);
