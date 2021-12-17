@@ -21,10 +21,12 @@ contract CurvePeggedTokenPSMInjector is ReentrancyGuard, DelayedActionGuard
 
 	// adapter token configuration
 	address public immutable peggedToken;
-	uint256 public immutable i;
 	address public immutable reserveToken;
-	address public immutable underlyingToken;
 	address public immutable liquidityPool;
+
+	// configurable underlying token
+	uint256 public i;
+	address public underlyingToken;
 
 	// addresses receiving tokens
 	address public psm;
@@ -82,10 +84,23 @@ contract CurvePeggedTokenPSMInjector is ReentrancyGuard, DelayedActionGuard
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
-		require(_token != underlyingToken, "invalid token");
+		for (uint256 _i = 0; _i < 3; _i++) {
+			address _underlyingToken = _getUnderlyingToken(liquidityPool, _i);
+			require(_token != _underlyingToken, "invalid token");
+		}
 		require(_token != peggedToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
+	}
+
+	function setUnderlyingIndex(uint256 _newIndex) external onlyOwner
+		delayed(this.setUnderlyingIndex.selector, keccak256(abi.encode(_newIndex)))
+	{
+		require(_newIndex < 3, "invalid index");
+		uint256 _oldIndex = i;
+		i = _newIndex;
+		underlyingToken = _getUnderlyingToken(liquidityPool, i);
+		emit ChangeUnderlyingIndex(_oldIndex, _newIndex);
 	}
 
 	/**
@@ -142,6 +157,7 @@ contract CurvePeggedTokenPSMInjector is ReentrancyGuard, DelayedActionGuard
 
 	// ----- END: underlying contract abstraction
 
+	event ChangeUnderlyingIndex(uint256 _oldIndex, uint256 _newIndex);
 	event ChangePsm(address _oldPsm, address _newPsm);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 	event ChangeSlippage(uint256 _oldSlippage, uint256 _newSlippage);

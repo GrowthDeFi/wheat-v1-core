@@ -34,6 +34,7 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 
 	constructor (address _peggedToken, uint256 _i) public
 	{
+		require(_i < 3, "invalid index");
 		(address _reserveToken,, address _liquidityPool, address _psm, address _treasury,,) = CurvePeggedToken(_peggedToken).state();
 		address _underlyingToken = _getUnderlyingToken(_liquidityPool, _i);
 		peggedToken = _peggedToken;
