@@ -5,7 +5,6 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 import { BankerJoePeggedToken } from "./BankerJoePeggedToken.sol";
 
@@ -21,7 +20,7 @@ import { PSM } from "./interop/Mor.sol";
  * 4% converted into WETH and sent to the associated collector; and 2% converted into
  * WBTC and sent to the associated collector.
  */
-contract TraderJoeFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract TraderJoeFeeCollectorAdapter is ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -73,7 +72,7 @@ contract TraderJoeFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ De
 		exchange = _exchange;
 	}
 
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

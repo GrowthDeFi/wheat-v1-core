@@ -4,7 +4,6 @@ pragma solidity ^0.6.0;
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -15,7 +14,7 @@ import { Wrapping } from "./modules/Wrapping.sol";
  * It converts the reward token (CURVE) into WAVAX and sends WAVAX to the
  * actual fee collector. The additional AVAX/WAVAX sent as reward is sent along.
  */
-contract CurveFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract CurveFeeCollectorAdapter is ReentrancyGuard, DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
@@ -44,7 +43,7 @@ contract CurveFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ Delaye
 		exchange = _exchange;
 	}
 
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

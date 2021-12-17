@@ -4,7 +4,6 @@ pragma solidity ^0.6.0;
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -16,7 +15,7 @@ import { PantherToken } from "./interop/PantherSwap.sol";
  *         strategies, it converts the source reward token (PANTHER) into the target
  *         reward token (BNB) whenever the gulp function is called.
  */
-contract PantherSwapBuybackAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract PantherSwapBuybackAdapter is ReentrancyGuard, DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
@@ -89,7 +88,7 @@ contract PantherSwapBuybackAdapter is ReentrancyGuard, /*WhitelistGuard,*/ Delay
 	 * Performs the conversion of the accumulated source reward token into
 	 * the target reward token and sends to the buyback contract.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

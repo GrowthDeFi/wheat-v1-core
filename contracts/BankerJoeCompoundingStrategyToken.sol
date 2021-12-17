@@ -7,7 +7,6 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -23,7 +22,7 @@ import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol"
  *         performance fee is deducted. The bonus is also deducted in full as
  *         performance fee.
  */
-contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -160,7 +159,7 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 *                  If the deposit is percentually larger than forceGulpRatio,
 	 *                  gulp() execution is compulsory.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external nonReentrant
 	{
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
 			require(_gulp(), "unavailable");
@@ -182,7 +181,7 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 *                   to be received in the operation.
 	 * @param _execGulp Whether or not gulp() is called prior to the withdrawal.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external nonReentrant
 	{
 		if (_execGulp) {
 			require(_gulp(), "unavailable");
@@ -200,7 +199,7 @@ contract BankerJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * Part of the reward accumulated is collected and sent to the fee collector
 	 * contract as performance fee.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

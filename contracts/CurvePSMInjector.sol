@@ -6,7 +6,6 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { CurvePeggedToken } from "./CurvePeggedToken.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
@@ -14,7 +13,7 @@ import { CurveSwap } from "./interop/Curve.sol";
 import { PSM } from "./interop/Mor.sol";
 
 // this contract is to work around a bug when injecting funds into the PSM in the original code
-contract CurvePSMInjector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract CurvePSMInjector is ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -47,7 +46,7 @@ contract CurvePSMInjector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 		treasury = _treasury;
 	}
 
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

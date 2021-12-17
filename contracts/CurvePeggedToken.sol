@@ -6,7 +6,6 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -14,7 +13,7 @@ import { Transfers } from "./modules/Transfers.sol";
 import { CurveSwap, CurveGauge } from "./interop/Curve.sol";
 import { PSM } from "./interop/Mor.sol";
 
-contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract CurvePeggedToken is ERC20, ReentrancyGuard, DelayedActionGuard
 {
 	uint256 constant DEFAULT_FORCE_GULP_RATIO = 1e15; // 0.1%
 
@@ -120,7 +119,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 *                  If the deposit is percentually larger than forceGulpRatio,
 	 *                  gulp() execution is compulsory.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external nonReentrant
 	{
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
 			require(_gulp(), "unavailable");
@@ -143,7 +142,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 *                   to be received in the operation.
 	 * @param _execGulp Whether or not gulp() is called prior to the withdrawal.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external nonReentrant
 	{
 		if (_execGulp) {
 			require(_gulp(), "unavailable");
@@ -159,7 +158,7 @@ contract CurvePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	/**
 	 * Deposits excess reserve into the PSM and sends reward/bonus tokens to the collector.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

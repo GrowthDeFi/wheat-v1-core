@@ -4,7 +4,6 @@ pragma solidity ^0.6.0;
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -19,7 +18,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         on MasterChed from reserve funds are, on the other hand, collected and sent to
  *         the buyback contract. These operations happen via the gulp function.
  */
-contract PancakeSwapFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract PancakeSwapFeeCollector is ReentrancyGuard, DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
@@ -110,7 +109,7 @@ contract PancakeSwapFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ Delayed
 	 * into the reserve token. Also collects the rewards from its deposits
 	 * and sent it to the buyback contract.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

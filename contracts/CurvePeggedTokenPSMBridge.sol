@@ -6,14 +6,13 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { CurvePeggedToken } from "./CurvePeggedToken.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
 
 import { CurveSwap } from "./interop/Curve.sol";
 import { PSM } from "./interop/Mor.sol";
 
-contract CurvePeggedTokenPSMBridge is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 

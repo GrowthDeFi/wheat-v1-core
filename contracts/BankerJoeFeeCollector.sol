@@ -3,7 +3,6 @@ pragma solidity ^0.6.0;
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -18,7 +17,7 @@ import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol"
  *         on BankerJoe from reserve funds are, on the other hand, collected and sent to
  *         the buyback contract. These operations happen via the gulp function.
  */
-contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract BankerJoeFeeCollector is ReentrancyGuard, DelayedActionGuard
 {
 	// strategy token configuration
 	address public immutable bonusToken;
@@ -57,7 +56,7 @@ contract BankerJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	 * into the reserve token. Also collects the rewards from its deposits
 	 * and sent it to the buyback contract.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

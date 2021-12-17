@@ -5,7 +5,6 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -16,7 +15,7 @@ import { Transfers } from "./modules/Transfers.sol";
  *         into the two desired buyback tokens, according to the configured splitting;
  *         and burn these amounts.
  */
-contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract UniversalBuyback is ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -98,7 +97,7 @@ contract UniversalBuyback is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionG
 	 * Performs the conversion of the accumulated reward token into
 	 * the buyback tokens, according to the defined splitting, and burns them.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

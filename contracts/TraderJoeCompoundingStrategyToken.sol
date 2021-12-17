@@ -7,7 +7,6 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -24,7 +23,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         MasterChef. A performance fee is deducted from the converted funds and sent
  *         to the fee collector contract.
  */
-contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -190,7 +189,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _minShares The minimum number of shares expected to be
 	 *                   received in the operation.
 	 */
-	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function deposit(uint256 _amount, uint256 _minShares, bool _execGulp) external nonReentrant
 	{
 		require(!emergencyMode, "not allowed");
 		if (_execGulp || _amount.mul(1e18) / totalReserve() > forceGulpRatio) {
@@ -213,7 +212,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * @param _minAmount The minimum amount of the reserve token expected
 	 *                   to be received in the operation.
 	 */
-	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external /*onlyEOAorWhitelist*/ nonReentrant
+	function withdraw(uint256 _shares, uint256 _minAmount, bool _execGulp) external nonReentrant
 	{
 		if (_execGulp) {
 			require(!emergencyMode, "not allowed");
@@ -235,7 +234,7 @@ contract TraderJoeCompoundingStrategyToken is ERC20, ReentrancyGuard, /*Whitelis
 	 * Part of the reward accumulated is collected and sent to the fee collector
 	 * contract as performance fee.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(!emergencyMode, "not allowed");
 		require(_gulp(), "unavailable");

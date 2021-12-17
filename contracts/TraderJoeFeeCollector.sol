@@ -3,7 +3,6 @@ pragma solidity ^0.6.0;
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -19,7 +18,7 @@ import { Pair } from "./interop/UniswapV2.sol";
  *         reserve funds are, on the other hand, collected and sent to the buyback/collector
  *         contract. These operations happen via the gulp function.
  */
-contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract TraderJoeFeeCollector is ReentrancyGuard, DelayedActionGuard
 {
 	// underlying contract configuration
 	address private immutable masterChef;
@@ -64,7 +63,7 @@ contract TraderJoeFeeCollector is ReentrancyGuard, /*WhitelistGuard,*/ DelayedAc
 	 * into the reserve token. Also collects the rewards from its deposits
 	 * and sent it to the buyback contract.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

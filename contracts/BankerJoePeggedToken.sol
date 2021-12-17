@@ -5,7 +5,6 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -14,7 +13,7 @@ import { Wrapping } from "./modules/Wrapping.sol";
 import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol";
 import { PSM } from "./interop/Mor.sol";
 
-contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract BankerJoePeggedToken is ERC20, ReentrancyGuard, DelayedActionGuard
 {
 	// strategy token configuration
 	address private immutable bonusToken;
@@ -106,7 +105,7 @@ contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Del
 	 * @param _amount The amount of reserve token being deposited in the
 	 *                operation.
 	 */
-	function deposit(uint256 _amount) external /*onlyEOAorWhitelist*/ nonReentrant
+	function deposit(uint256 _amount) external nonReentrant
 	{
 		address _from = msg.sender;
 		uint256 _shares = _amount;
@@ -120,7 +119,7 @@ contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Del
 	 *         the reserve token.
 	 * @param _shares The amount of this shares being redeemed in the operation.
 	 */
-	function withdraw(uint256 _shares) external /*onlyEOAorWhitelist*/ nonReentrant
+	function withdraw(uint256 _shares) external nonReentrant
 	{
 		address _from = msg.sender;
 		uint256 _amount = _shares;
@@ -132,7 +131,7 @@ contract BankerJoePeggedToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ Del
 	/**
 	 * Deposits excess reserve into the PSM and sends reward/bonus tokens to the collector.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

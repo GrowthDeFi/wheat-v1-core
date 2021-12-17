@@ -6,7 +6,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -22,7 +21,7 @@ import { Joetroller, JRewardDistributor, JToken } from "./interop/BankerJoe.sol"
  *         performance fee is deducted. The bonus is also deducted in full as
  *         performance fee.
  */
-contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
@@ -123,7 +122,7 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	 * @param _amount The amount of reserve token being deposited in the
 	 *                operation.
 	 */
-	function deposit(uint256 _amount) external /*onlyEOAorWhitelist*/ nonReentrant
+	function deposit(uint256 _amount) external nonReentrant
 	{
 		address _from = msg.sender;
 		uint256 _shares = _amount;
@@ -138,7 +137,7 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	 *         calcAmountFromShares() function.
 	 * @param _shares The amount of this shares being redeemed in the operation.
 	 */
-	function withdraw(uint256 _shares) external /*onlyEOAorWhitelist*/ nonReentrant
+	function withdraw(uint256 _shares) external nonReentrant
 	{
 		address _from = msg.sender;
 		uint256 _amount = _shares;
@@ -152,7 +151,7 @@ contract BankerJoeWrappingToken is ERC20, ReentrancyGuard, /*WhitelistGuard,*/ D
 	 * Part of the reward accumulated is collected and sent to the fee collector
 	 * contract as performance fee.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}

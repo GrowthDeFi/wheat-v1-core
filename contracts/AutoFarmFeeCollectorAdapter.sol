@@ -4,7 +4,6 @@ pragma solidity ^0.6.0;
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { IExchange } from "./IExchange.sol";
-import { WhitelistGuard } from "./WhitelistGuard.sol";
 import { DelayedActionGuard } from "./DelayedActionGuard.sol";
 
 import { Transfers } from "./modules/Transfers.sol";
@@ -14,7 +13,7 @@ import { Transfers } from "./modules/Transfers.sol";
  *         strategies, it converts the source reward token (AUTO) into the target
  *         reward token (CAKE) whenever the gulp function is called.
  */
-contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ DelayedActionGuard
+contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, DelayedActionGuard
 {
 	uint256 constant DEFAULT_MINIMAL_GULP_FACTOR = 80e16; // 80%
 
@@ -83,7 +82,7 @@ contract AutoFarmFeeCollectorAdapter is ReentrancyGuard, /*WhitelistGuard,*/ Del
 	 * Performs the conversion of the accumulated source reward token into
 	 * the target reward token and sends to the fee collector.
 	 */
-	function gulp() external /*onlyEOAorWhitelist*/ nonReentrant
+	function gulp() external nonReentrant
 	{
 		require(_gulp(), "unavailable");
 	}
