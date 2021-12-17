@@ -13,7 +13,7 @@ import { CurveSwap } from "./interop/Curve.sol";
 import { PSM } from "./interop/Mor.sol";
 
 // this contract is to work around a bug when injecting funds into the PSM in the original code
-contract CurvePSMInjector is ReentrancyGuard, DelayedActionGuard
+contract CurvePeggedTokenPSMInjector is ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
