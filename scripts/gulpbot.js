@@ -781,7 +781,9 @@ async function gulpAll(privateKey, network) {
     const WAVAX = '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7';
     const WETH = '0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB';
     const WBTC = '0x50b7545627a5162F82A992c33b87aDc75187B218';
+    const USDC = '0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664';
     const XJOE = '0x57319d41F71E81F3c65F2a47CA4e001EbAFd4F33';
+    const CRV = '0x47536F17F4fF30e64A96a7555826b8f9e66ec468';
     const JOE_EXCHANGE = '0xB85B290B99B10dCd78189317b5bF965854bdc952';
     const TDJ_AVAX_JOE = '0x454E67025631C065d3cFAD6d71E6892f74487a15';
     const TDJ_AVAX_WETH = '0xFE15c2695F1F920da45C30AAE47d11dE51007AF9';
@@ -870,7 +872,7 @@ async function gulpAll(privateKey, network) {
     }
 
     {
-      // PSM INJECTOR
+      // PSM INJECTOR stkUSDCv3
       const address = '0x5622C4A8F6B245aFdddA6c32748055837A2616Cc';
       const amount = await getTokenBalance(privateKey, network, stkUSDCv3, address);
       const MINIMUM_AMOUNT = 5000000000n; // 5000 stkUSDCv3
@@ -878,6 +880,34 @@ async function gulpAll(privateKey, network) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
           return { name: 'stkUSDCv3', type: 'PsmInjector', address, tx };
+        }
+      }
+    }
+
+    {
+      // PSM INJECTOR stkUSDLPv3 using USDC
+      const address = '0x4EcD4082C1E809D89901cD3A802409c8d2Ae6EC4';
+      const amount = await getTokenBalance(privateKey, network, USDC, address);
+      const MINIMUM_AMOUNT = 5000000000n; // 5000 USDC
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'stkUSDLPv3', type: 'PsmInjector', address, tx };
+        }
+      }
+    }
+
+    {
+      // stkUSDLPv3 CRV/WAVAX adapter
+      const address = '0x744ed0c7453b4332885e650cE66611cEd9f6e50b';
+      const amount1 = await getTokenBalance(privateKey, network, CRV, address);
+      const amount2 = await getTokenBalance(privateKey, network, WAVAX, address);
+      const MINIMUM_AMOUNT1 = 500000000000000000000n; // 500 CRV
+      const MINIMUM_AMOUNT2 = 25000000000000000000n; // 25 WAVAX
+      if (BigInt(amount1) >= MINIMUM_AMOUNT1 || BigInt(amount2) >= MINIMUM_AMOUNT2) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'CRV+WAVAX', type: 'TraderJoeCurveAdapter', address, tx };
         }
       }
     }
