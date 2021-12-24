@@ -2,6 +2,9 @@
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 /*
 @title Voting Escrow
 @author Curve Finance
@@ -11,16 +14,6 @@ pragma experimental ABIEncoderV2;
 @dev Vote weight decays linearly over time. Lock time cannot be
      more than `MAXTIME` (4 years).
 */
-
-interface ERC20
-{
-	function decimals() external view returns (uint256 _decimals);
-	function name() external view returns (string[64] memory _name);
-	function symbol() external view returns (string[32] memory _symbol);
-
-	function transfer(address _to, uint256 _amount) external returns (bool _success);
-	function transferFrom(address _from, address _to, uint256 _amount) external returns (bool _success);
-}
 
 // Interface for checking whether address belongs to a whitelisted
 // type of a smart wallet.
@@ -33,7 +26,7 @@ interface SmartWalletChecker
 	function check(address _addr) external returns (bool);
 }
 
-contract VotingEscrow
+contract VotingEscrow is ReentrancyGuard
 {
 	// Voting escrow to have time-weighted votes
 	// Votes have a weight depending on time, so that users are committed
@@ -79,7 +72,7 @@ contract VotingEscrow
 	uint256 constant MAXTIME = 4 * 365 * 86400; // 4 years
 	uint256 constant MULTIPLIER = 10 ** 18;
 
-	address public token;
+	address public immutable token;
 	uint256 public supply;
 
 	mapping(address => LockedBalance) public locked;
@@ -95,10 +88,10 @@ contract VotingEscrow
 	address public controller;
 	bool public transfersEnabled;
 
-	string[64] public name;
-	string[32] public symbol;
-	string[32] public version;
-	uint256 public decimals;
+	string public name;
+	string public symbol;
+	string public version;
+	uint8 public immutable decimals;
 
 	// Checker for whitelisted (smart contract) wallets which are allowed to deposit
 	// The goal is to prevent tokenizing the escrow
@@ -110,27 +103,24 @@ contract VotingEscrow
 
 	/*
 	@notice Contract constructor
-	@param token_addr `ERC20CRV` token address
+	@param _token `ERC20CRV` token address
 	@param _name Token name
 	@param _symbol Token symbol
 	@param _version Contract version - required for Aragon compatibility
 	*/
-	constructor(address _token_addr, string[64] memory _name, string[32] memory _symbol, string[32] memory _version) public
+	constructor(address _token, string memory _name, string memory _symbol, string memory _version) public
 	{
 		admin = msg.sender;
-		token = _token_addr;
+		token = _token;
 		point_history[0].blk = block.number;
 		point_history[0].ts = block.timestamp;
 		controller = msg.sender;
 		transfersEnabled = true;
 
-		uint256 _decimals = ERC20(_token_addr).decimals();
-		require(_decimals <= 255);
-		decimals = _decimals;
-
 		name = _name;
 		symbol = _symbol;
 		version = _version;
+		decimals = ERC20(_token).decimals();
 	}
 
 	/*
@@ -411,7 +401,7 @@ contract VotingEscrow
 	@param _addr User's wallet address
 	@param _value Amount to add to user's lock
 	*/
-	function deposit_for(address _addr, uint256 _value) external /*lock*/
+	function deposit_for(address _addr, uint256 _value) external nonReentrant
 	{
 		LockedBalance memory _locked = locked[_addr];
 
@@ -427,7 +417,7 @@ contract VotingEscrow
 	@param _value Amount to deposit
 	@param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
 	*/
-	function create_lock(uint256 _value, uint256 __unlock_time) external /*lock*/
+	function create_lock(uint256 _value, uint256 __unlock_time) external nonReentrant
 	{
 		assert_not_contract(msg.sender);
 		uint256 _unlock_time = (__unlock_time / WEEK) * WEEK; // Locktime is rounded down to weeks
@@ -445,7 +435,7 @@ contract VotingEscrow
 	@notice Deposit `_value` additional tokens for `msg.sender` without modifying the unlock time
 	@param _value Amount of tokens to deposit and add to the lock
 	*/
-	function increase_amount(uint256 _value) external /*lock*/
+	function increase_amount(uint256 _value) external nonReentrant
 	{
 		assert_not_contract(msg.sender);
 		LockedBalance memory _locked = locked[msg.sender];
@@ -461,7 +451,7 @@ contract VotingEscrow
 	@notice Extend the unlock time for `msg.sender` to `_unlock_time`
 	@param _unlock_time New epoch time for unlocking
 	*/
-	function increase_unlock_time(uint256 __unlock_time) external /*lock*/
+	function increase_unlock_time(uint256 __unlock_time) external nonReentrant
 	{
 		assert_not_contract(msg.sender);
 		LockedBalance memory _locked = locked[msg.sender];
@@ -479,7 +469,7 @@ contract VotingEscrow
 	@notice Withdraw all tokens for `msg.sender`
 	@dev Only possible if the lock has expired
 	*/
-	function withdraw() external /*lock*/
+	function withdraw() external nonReentrant
 	{
 		LockedBalance memory _locked = locked[msg.sender];
 		require(block.timestamp >= _locked.end, "The lock didn't expire");
