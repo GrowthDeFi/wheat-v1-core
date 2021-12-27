@@ -6,9 +6,6 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /*
-@title Voting Escrow
-@author Curve Finance
-@license MIT
 @notice Votes have a weight depending on time, so that users are
         committed to the future of (whatever they are voting for)
 @dev Vote weight decays linearly over time. Lock time cannot be
@@ -19,7 +16,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 // type of a smart wallet.
 // When new types are added - the whole contract is changed
 // The check() method is modifying to be able to use caching
-//for individual wallet addresses
+// for individual wallet addresses
 
 interface SmartWalletChecker
 {
@@ -79,8 +76,8 @@ contract VotingEscrow is ReentrancyGuard
 
 	uint256 public epoch;
 
-	Point[100000000000000000000000000000] public point_history; // epoch -> unsigned point
-	mapping(address => Point[1000000000]) public user_point_history; // user -> Point[user_epoch]
+	mapping(uint256 => Point) public point_history; // epoch -> unsigned point
+	mapping(address => mapping(uint256 => Point)) public user_point_history; // user -> Point[user_epoch]
 	mapping(address => uint256) public user_point_epoch;
 	mapping(uint256 => int128) public slope_changes; // time -> signed slope change
 
@@ -121,6 +118,16 @@ contract VotingEscrow is ReentrancyGuard
 		symbol = _symbol;
 		version = _version;
 		decimals = ERC20(_token).decimals();
+	}
+
+	function point_history_export(uint256 _loc) external view returns (Point memory)
+	{
+		return point_history[_loc];
+	}
+
+	function user_point_history_export(address _addr, uint256 _loc) external view returns (Point memory)
+	{
+		return user_point_history[_addr][_loc];
 	}
 
 	/*
