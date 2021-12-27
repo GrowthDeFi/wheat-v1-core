@@ -59,15 +59,9 @@ contract VotingEscrow is ReentrancyGuard
 	int128 constant INCREASE_LOCK_AMOUNT = 2;
 	int128 constant INCREASE_UNLOCK_TIME = 3;
 
-	event CommitOwnership(address _admin);
-	event ApplyOwnership(address _admin);
-	event Deposit(address indexed _provider, uint256 _value, uint256 indexed _locktime, int128 _type, uint256 _ts);
-	event Withdraw(address indexed _provider, uint256 _value, uint256 _ts);
-	event Supply(uint256 _prevSupply, uint256 _supply);
-
-	uint256 constant WEEK = 7 * 86400; // all future times are rounded by week
-	uint256 constant MAXTIME = 4 * 365 * 86400; // 4 years
-	uint256 constant MULTIPLIER = 10 ** 18;
+	uint256 constant WEEK = 7 days; // all future times are rounded by week
+	uint256 constant MAXTIME = 4 * 365 days; // 4 years
+	uint256 constant MULTIPLIER = 1e18;
 
 	address public immutable token;
 	uint256 public supply;
@@ -76,8 +70,8 @@ contract VotingEscrow is ReentrancyGuard
 
 	uint256 public epoch;
 
-	mapping(uint256 => Point) public point_history; // epoch -> unsigned point
-	mapping(address => mapping(uint256 => Point)) public user_point_history; // user -> Point[user_epoch]
+	mapping(uint256 => Point) private point_history_; // epoch -> unsigned point
+	mapping(address => mapping(uint256 => Point)) private user_point_history_; // user -> Point[user_epoch]
 	mapping(address => uint256) public user_point_epoch;
 	mapping(uint256 => int128) public slope_changes; // time -> signed slope change
 
@@ -109,8 +103,8 @@ contract VotingEscrow is ReentrancyGuard
 	{
 		admin = msg.sender;
 		token = _token;
-		point_history[0].blk = block.number;
-		point_history[0].ts = block.timestamp;
+		point_history_[0].blk = block.number;
+		point_history_[0].ts = block.timestamp;
 		controller = msg.sender;
 		transfersEnabled = true;
 
@@ -120,14 +114,14 @@ contract VotingEscrow is ReentrancyGuard
 		decimals = ERC20(_token).decimals();
 	}
 
-	function point_history_export(uint256 _loc) external view returns (Point memory)
+	function point_history(uint256 _loc) external view returns (Point memory)
 	{
-		return point_history[_loc];
+		return point_history_[_loc];
 	}
 
-	function user_point_history_export(address _addr, uint256 _loc) external view returns (Point memory)
+	function user_point_history(address _addr, uint256 _loc) external view returns (Point memory)
 	{
-		return user_point_history[_addr][_loc];
+		return user_point_history_[_addr][_loc];
 	}
 
 	/*
@@ -197,7 +191,12 @@ contract VotingEscrow is ReentrancyGuard
 	function get_last_user_slope(address _addr) external view returns (int128)
 	{
 		uint256 _uepoch = user_point_epoch[_addr];
-		return user_point_history[_addr][_uepoch].slope;
+		return user_point_history_[_addr][_uepoch].slope;
+	}
+
+	function point_history__ts(uint256 _idx) external view returns (uint256)
+	{
+		return point_history_[_idx].ts;
 	}
 
 	/*
@@ -208,7 +207,7 @@ contract VotingEscrow is ReentrancyGuard
 	*/
 	function user_point_history__ts(address _addr, uint256 _idx) external view returns (uint256)
 	{
-		return user_point_history[_addr][_idx].ts;
+		return user_point_history_[_addr][_idx].ts;
 	}
 
 	/*
@@ -261,7 +260,7 @@ contract VotingEscrow is ReentrancyGuard
 
 		Point memory _last_point = Point({ bias: 0, slope: 0, ts: block.timestamp, blk: block.number });
 		if (_epoch > 0) {
-			_last_point = point_history[_epoch];
+			_last_point = point_history_[_epoch];
 		}
 		uint256 _last_checkpoint = _last_point.ts;
 		// initial_last_point is used for extrapolation to calculate block number
@@ -303,7 +302,7 @@ contract VotingEscrow is ReentrancyGuard
 					_last_point.blk = block.number;
 					break;
 				} else {
-					point_history[_epoch] = _last_point;
+					point_history_[_epoch] = _last_point;
 				}
 			}
 		}
@@ -325,7 +324,7 @@ contract VotingEscrow is ReentrancyGuard
 		}
 
 		// Record the changed point into history
-		point_history[_epoch] = _last_point;
+		point_history_[_epoch] = _last_point;
 
 		if (_addr != address(0)) {
 			// Schedule the slope changes (slope is going down)
@@ -354,7 +353,7 @@ contract VotingEscrow is ReentrancyGuard
 			user_point_epoch[_addr] = _user_epoch;
 			_u_new.ts = block.timestamp;
 			_u_new.blk = block.number;
-			user_point_history[_addr][_user_epoch] = _u_new;
+			user_point_history_[_addr][_user_epoch] = _u_new;
 		}
 	}
 
@@ -424,10 +423,10 @@ contract VotingEscrow is ReentrancyGuard
 	@param _value Amount to deposit
 	@param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
 	*/
-	function create_lock(uint256 _value, uint256 __unlock_time) external nonReentrant
+	function create_lock(uint256 _value, uint256 _unlock_time) external nonReentrant
 	{
 		assert_not_contract(msg.sender);
-		uint256 _unlock_time = (__unlock_time / WEEK) * WEEK; // Locktime is rounded down to weeks
+		_unlock_time = (_unlock_time / WEEK) * WEEK; // Locktime is rounded down to weeks
 		LockedBalance memory _locked = locked[msg.sender];
 
 		require(_value > 0); // dev: need non-zero value
@@ -510,7 +509,7 @@ contract VotingEscrow is ReentrancyGuard
 	@param max_epoch Don't go beyond this epoch
 	@return Approximate timestamp for block
 	*/
-	function find_block_epoch(uint256 _block, uint256 _max_epoch) internal view returns (uint256)
+	function _find_block_epoch(uint256 _block, uint256 _max_epoch) internal view returns (uint256)
 	{
 		// Binary search
 		uint256 _min = 0;
@@ -518,7 +517,7 @@ contract VotingEscrow is ReentrancyGuard
 		for (uint256 _i = 0; _i < 128; _i++) { // Will be always enough for 128-bit numbers
 			if (_min >= _max) break;
 			uint256 _mid = (_min + _max + 1) / 2;
-			if (point_history[_mid].blk <= _block)
+			if (point_history_[_mid].blk <= _block)
 				_min = _mid;
 			else
 				_max = _mid - 1;
@@ -541,7 +540,7 @@ contract VotingEscrow is ReentrancyGuard
 	{
 		uint256 _epoch = user_point_epoch[_addr];
 		if (_epoch == 0) return 0;
-		Point memory _last_point = user_point_history[_addr][_epoch];
+		Point memory _last_point = user_point_history_[_addr][_epoch];
 		_last_point.bias -= _last_point.slope * int128(_t - _last_point.ts);
 		if (_last_point.bias < 0) _last_point.bias = 0;
 		return uint256(_last_point.bias);
@@ -566,21 +565,21 @@ contract VotingEscrow is ReentrancyGuard
 		for (uint256 _i =0; _i < 128; _i++) { // Will be always enough for 128-bit numbers
 			if (_min >= _max) break;
 			uint256 _mid = (_min + _max + 1) / 2;
-			if (user_point_history[_addr][_mid].blk <= _block)
+			if (user_point_history_[_addr][_mid].blk <= _block)
 				_min = _mid;
 			else
 				_max = _mid - 1;
 		}
 
-		Point memory _upoint = user_point_history[_addr][_min];
+		Point memory _upoint = user_point_history_[_addr][_min];
 
 		uint256 _max_epoch = epoch;
-		uint256 _epoch = find_block_epoch(_block, _max_epoch);
-		Point memory _point_0 = point_history[_epoch];
+		uint256 _epoch = _find_block_epoch(_block, _max_epoch);
+		Point memory _point_0 = point_history_[_epoch];
 		uint256 _d_block = 0;
 		uint256 _d_t = 0;
 		if (_epoch < _max_epoch) {
-			Point memory _point_1 = point_history[_epoch + 1];
+			Point memory _point_1 = point_history_[_epoch + 1];
 			_d_block = _point_1.blk - _point_0.blk;
 			_d_t = _point_1.ts - _point_0.ts;
 		} else {
@@ -637,7 +636,7 @@ contract VotingEscrow is ReentrancyGuard
 	function totalSupply(uint256 _t) public view returns (uint256)
 	{
 		uint256 _epoch = epoch;
-		Point memory last_point = point_history[_epoch];
+		Point memory last_point = point_history_[_epoch];
 		return supply_at(last_point, _t);
 	}
 
@@ -650,12 +649,12 @@ contract VotingEscrow is ReentrancyGuard
 	{
 		require(_block <= block.number);
 		uint256 _epoch = epoch;
-		uint256 _target_epoch = find_block_epoch(_block, _epoch);
+		uint256 _target_epoch = _find_block_epoch(_block, _epoch);
 
-		Point memory _point = point_history[_target_epoch];
+		Point memory _point = point_history_[_target_epoch];
 		uint256 _dt = 0;
 		if (_target_epoch < _epoch) {
-			Point memory _point_next = point_history[_target_epoch + 1];
+			Point memory _point_next = point_history_[_target_epoch + 1];
 			if (_point.blk != _point_next.blk) {
 				_dt = (_block - _point.blk) * (_point_next.ts - _point.ts) / (_point_next.blk - _point.blk);
 			}
@@ -679,4 +678,10 @@ contract VotingEscrow is ReentrancyGuard
 		require(msg.sender == controller);
 		controller = _newController;
 	}
+
+	event CommitOwnership(address _admin);
+	event ApplyOwnership(address _admin);
+	event Deposit(address indexed _provider, uint256 _value, uint256 indexed _locktime, int128 _type, uint256 _ts);
+	event Withdraw(address indexed _provider, uint256 _value, uint256 _ts);
+	event Supply(uint256 _prevSupply, uint256 _supply);
 }
