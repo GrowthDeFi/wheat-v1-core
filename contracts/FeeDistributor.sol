@@ -27,14 +27,14 @@ contract FeeDistributor is ReentrancyGuard
 	mapping(address => uint256) public user_epoch_of;
 
 	uint256 public last_token_time;
-	uint256[1000000000000000] public tokens_per_week;
+	mapping (uint256 => uint256) public tokens_per_week;
 
 	address public voting_escrow;
 	address public token;
 	uint256 public total_received;
 	uint256 public token_last_balance;
 
-	uint256[1000000000000000] public ve_supply; // VE total supply at week bounds
+	mapping (uint256 => uint256) public ve_supply; // VE total supply at week bounds
 
 	address public admin;
 	address public future_admin;
