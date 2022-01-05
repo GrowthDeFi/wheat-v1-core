@@ -16,7 +16,9 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 {
 	using SafeMath for uint256;
 
+	/*
 	uint256 constant DEFAULT_SLIPPAGE = 1e16; // 1%
+	*/
 
 	// adapter token configuration
 	address public immutable peggedToken;
@@ -29,8 +31,10 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 	address public psm;
 	address public treasury;
 
+	/*
 	// tolerable slippage
 	uint256 public slippage = DEFAULT_SLIPPAGE;
+	*/
 
 	constructor (address _peggedToken, uint256 _i) public
 	{
@@ -46,15 +50,19 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 		treasury = _treasury;
 	}
 
+	/*
 	function deposit(uint256 _underlyingAmount) external
 	{
+		// should take into account DAI/underlying decimals difference
 		deposit(_underlyingAmount, _underlyingAmount.mul(100e16 - slippage) / 100e16, false);
 	}
 
 	function withdraw(uint256 _daiAmount) external
 	{
+		// should take into account DAI/underlying decimals difference
 		withdraw(_daiAmount, _daiAmount.mul(100e16 - slippage) / 100e16, true);
 	}
+	*/
 
 	function deposit(uint256 _underlyingAmount, uint256 _minDaiAmount, bool _execGulp) public nonReentrant
 	{
@@ -129,6 +137,7 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 		emit ChangePsm(_oldPsm, _newPsm);
 	}
 
+	/*
 	function setSlippage(uint256 _newSlippage) external onlyOwner
 		delayed(this.setSlippage.selector, keccak256(abi.encode(_newSlippage)))
 	{
@@ -137,6 +146,7 @@ contract CurvePeggedTokenPSMBridge is ReentrancyGuard, DelayedActionGuard
 		slippage = _oldSlippage;
 		emit ChangeSlippage(_oldSlippage, _newSlippage);
 	}
+	*/
 
 	// ----- BEGIN: underlying contract abstraction
 
