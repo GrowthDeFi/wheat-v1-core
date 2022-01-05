@@ -50,28 +50,33 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 		}));
 	}
 
-	function deposit(uint256 _amount, uint256 _unlock) external nonReentrant
+	function checkpoint() external
 	{
-		_unlock = (_unlock / 1 weeks) * 1 weeks;
-		require(block.timestamp < _unlock && _unlock <= block.timestamp + MAX_LOCK_TIME, "invalid unlock");
+		_checkpoint(address(0), 0, 0, 0, 0);
+	}
+
+	function deposit(uint256 _amount, uint256 _newUnlock) external nonReentrant
+	{
+		require(_newUnlock % 1 weeks == 0 && block.timestamp < _newUnlock && _newUnlock <= block.timestamp + MAX_LOCK_TIME, "invalid unlock");
 		UserInfo storage _user = userInfo[msg.sender];
-		require(_user.unlock == 0 || _user.unlock > block.timestamp, "expired");
-		require(_unlock >= _user.unlock, "invalid extension");
-		uint256 _oldAmount = _user.amount;
 		uint256 _oldUnlock = _user.unlock;
-		_user.amount += _amount;
-		_user.unlock = _unlock;
-		_checkpoint(msg.sender, _oldAmount, _oldUnlock, _user.amount, _user.unlock);
+		require(_oldUnlock == 0 || _oldUnlock > block.timestamp, "already available");
+		require(_newUnlock >= _oldUnlock, "not an extension");
+		uint256 _oldAmount = _user.amount;
+		uint256 _newAmount = _oldAmount.add(_amount);
+		_user.amount = _newAmount;
+		_user.unlock = _newUnlock;
+		_checkpoint(msg.sender, _oldAmount, _oldUnlock, _newAmount, _newUnlock);
 		Transfers._pullFunds(reserveToken, msg.sender, _amount);
-		emit Deposit(msg.sender, _amount, _unlock);
+		emit Deposit(msg.sender, _amount, _newUnlock);
 	}
 
 	function withdraw() external nonReentrant
 	{
 		UserInfo storage _user = userInfo[msg.sender];
-		require(block.timestamp >= _user.unlock, "not available");
-		uint256 _amount = _user.amount;
 		uint256 _unlock = _user.unlock;
+		require(block.timestamp >= _unlock, "not available");
+		uint256 _amount = _user.amount;
 		_user.amount = 0;
 		_user.unlock = 0;
 		_checkpoint(msg.sender, _amount, _unlock, 0, 0);
@@ -79,55 +84,14 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 		emit Withdraw(msg.sender, _amount);
 	}
 
-	function checkpoint() external
-	{
-		_checkpoint(address(0), 0, 0, 0, 0);
-	}
-
 	function totalSupply() external view override returns (uint256 _totalSupply)
 	{
 		return totalSupply(block.timestamp);
 	}
 
-	function totalSupply(uint256 _when) public view returns (uint256 _totalSupply)
-	{
-		Point storage _point = points[points.length - 1];
-		int128 _bias = _point.bias;
-		int128 _slope = _point.slope;
-		uint256 _time = _point.time;
-		uint256 _ti = (_time / 1 weeks) * 1 weeks;
-		for (uint256 _i = 0; _i < 255; _i++) {
-			_ti += 1 weeks;
-			int128 _slopeChange;
-			if (_ti <= _when)
-				_slopeChange = slopeChanges[_ti];
-			else {
-				_slopeChange = 0;
-				_ti = _when;
-			}
-			_bias -= _slope * int128(_ti - _time);
-			if (_ti == _when) break;
-			_slope += _slopeChange;
-			_time = _ti;
-		}
-		if (_bias < 0) _bias = 0;
-		return uint256(_bias);
-	}
-
 	function balanceOf(address _account) external view override returns (uint256 _balance)
 	{
 		return balanceOf(_account, block.timestamp);
-	}
-
-	function balanceOf(address _account, uint256 _when) public view returns (uint256 _balance)
-	{
-		Point[] storage _points = userPoints[_account];
-		uint256 _length = _points.length;
-		if (_length == 0) return 0;
-		Point storage _point = _points[_length - 1];
-		int128 _bias = _point.bias - _point.slope * int128(_when - _point.time);
-		if (_bias < 0) _bias = 0;
-		return uint256(_bias);
 	}
 
 	function allowance(address _account, address _spender) external view override returns (uint256 _allowance)
@@ -155,6 +119,42 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 		require(false, "forbidden");
 		_from; _to; _amount;
 		return false;
+	}
+
+	function totalSupply(uint256 _when) public view returns (uint256 _totalSupply)
+	{
+		Point storage _point = points[points.length - 1];
+		int128 _bias = _point.bias;
+		int128 _slope = _point.slope;
+		uint256 _time = _point.time;
+		uint256 _ti = (_time / 1 weeks) * 1 weeks;
+		for (uint256 _i = 0; _i < 255; _i++) {
+			_ti += 1 weeks;
+			int128 _slopeChange;
+			if (_ti <= _when)
+				_slopeChange = slopeChanges[_ti];
+			else {
+				_slopeChange = 0;
+				_ti = _when;
+			}
+			_bias -= _slope * int128(_ti - _time);
+			if (_ti == _when) break;
+			_slope += _slopeChange;
+			_time = _ti;
+		}
+		if (_bias < 0) _bias = 0;
+		return uint256(_bias);
+	}
+
+	function balanceOf(address _account, uint256 _when) public view returns (uint256 _balance)
+	{
+		Point[] storage _points = userPoints[_account];
+		uint256 _length = _points.length;
+		if (_length == 0) return 0;
+		Point storage _point = _points[_length - 1];
+		int128 _bias = _point.bias - _point.slope * int128(_when - _point.time);
+		if (_bias < 0) _bias = 0;
+		return uint256(_bias);
 	}
 
 	function _checkpoint(address _account, uint256 _oldAmount, uint256 _oldUnlock, uint256 _newAmount, uint256 _newUnlock) internal
