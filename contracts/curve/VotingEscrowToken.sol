@@ -29,9 +29,9 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 
 	mapping(address => UserInfo) public userInfo;
 
-	Point[] public points;
-	mapping(address => Point[]) public userPoints;
-	mapping(uint256 => uint256) public slopeDecay;
+	Point[] private points_;
+	mapping(address => Point[]) private userPoints_;
+	mapping(uint256 => uint256) private slopeDecay_;
 
 	constructor(string memory _name, string memory _symbol, uint8 _decimals, address _reserveToken)
 		public
@@ -40,7 +40,7 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 		symbol = _symbol;
 		decimals = _decimals;
 		reserveToken = _reserveToken;
-		_appendPoint(points, 0, 0, block.timestamp);
+		_appendPoint(points_, 0, 0, block.timestamp);
 	}
 
 	function deposit(uint256 _amount, uint256 _newUnlock) external nonReentrant
@@ -79,7 +79,7 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 
 	function totalSupply(uint256 _when) public view returns (uint256 _totalSupply)
 	{
-		Point[] storage _points = points;
+		Point[] storage _points = points_;
 		uint256 _index = _findPoint(_points, _when);
 		if (_index == 0) return 0;
 		Point storage _point = _points[_index - 1];
@@ -94,7 +94,7 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 			_bias = _ellapsed <= _maxEllapsed ? _bias - _slope * _ellapsed : 0;
 			if (_bias == 0) break;
 			if (_end == _when) break;
-			_slope -= slopeDecay[_end];
+			_slope -= slopeDecay_[_end];
 			_start = _end;
 			_end = _start + 1 weeks;
 		}
@@ -103,7 +103,7 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 
 	function balanceOf(address _account, uint256 _when) public view returns (uint256 _balance)
 	{
-		Point[] storage _points = userPoints[_account];
+		Point[] storage _points = userPoints_[_account];
 		uint256 _index = _findPoint(_points, _when);
 		if (_index == 0) return 0;
 		Point storage _point = _points[_index - 1];
@@ -190,7 +190,7 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 		if (_oldUnlock > block.timestamp && _oldAmount > 0) {
 			_oldSlope = _oldAmount / MAX_LOCK_TIME;
 			_oldBias = _oldSlope * (_oldUnlock - block.timestamp);
-			slopeDecay[_oldUnlock] -= _oldSlope;
+			slopeDecay_[_oldUnlock] -= _oldSlope;
 		}
 
 		uint256 _newBias = 0;
@@ -198,12 +198,13 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 		if (_newUnlock > block.timestamp && _newAmount > 0) {
 			_newSlope = _newAmount / MAX_LOCK_TIME;
 			_newBias = _newSlope * (_newUnlock - block.timestamp);
-			slopeDecay[_newUnlock] += _newSlope;
+			slopeDecay_[_newUnlock] += _newSlope;
 		}
 
 		{
+			Point[] storage _points = points_;
 			uint256 _when = block.timestamp;
-			Point storage _point = points[points.length - 1];
+			Point storage _point = _points[_points.length - 1];
 			uint256 _bias = _point.bias;
 			uint256 _slope = _point.slope;
 			uint256 _start = _point.time;
@@ -213,19 +214,19 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 				uint256 _ellapsed = _end - _start;
 				uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
 				_bias = _ellapsed <= _maxEllapsed ? _bias - _slope * _ellapsed : 0;
-				_slope -= slopeDecay[_end];
+				_slope -= slopeDecay_[_end];
 				if (_end == _when) break;
-				_appendPoint(points, _bias, _slope, _end);
+				_appendPoint(_points, _bias, _slope, _end);
 				_start = _end;
 				_end = _start + 1 weeks;
 			}
-			_bias = _bias + (_newBias - _oldBias);
+			_bias += _newBias - _oldBias;
 			_slope = _slope - _oldSlope + _newSlope;
-			_appendPoint(points, _bias, _slope, block.timestamp);
+			_appendPoint(_points, _bias, _slope, block.timestamp);
 		}
 
 		if (_account != address(0)) {
-			_appendPoint(userPoints[_account], _newBias, _newSlope, block.timestamp);
+			_appendPoint(userPoints_[_account], _newBias, _newSlope, block.timestamp);
 		}
 	}
 
