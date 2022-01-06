@@ -219,7 +219,7 @@ contract VotingEscrowToken is IERC20, ReentrancyGuard
 				_start = _end;
 				_end = _start + 1 weeks;
 			}
-			_bias = _bias - _oldBias + _newBias;
+			_bias = _bias + (_newBias - _oldBias);
 			_slope = _slope - _oldSlope + _newSlope;
 			_appendPoint(points, _bias, _slope, block.timestamp);
 		}
