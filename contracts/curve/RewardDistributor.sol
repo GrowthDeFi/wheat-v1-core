@@ -16,8 +16,8 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	address public immutable escrowToken;
 	address public immutable rewardToken;
 
-	uint256 public lastTime;
-	uint256 public lastBalance;
+	uint256 public lastAlloc;
+	uint256 public rewardBalance;
 	mapping(uint256 => uint256) public rewardPerWeek;
 
 	uint256 public firstWeek;
@@ -30,21 +30,26 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		escrowToken = _escrowToken;
 		rewardToken = _rewardToken;
 		treasury = _treasury;
-		lastTime = block.timestamp;
+		lastAlloc = block.timestamp;
 		firstWeek = (block.timestamp * 1 weeks) / 1 weeks;
 	}
 
 	function allocateReward() public returns (uint256 _amount)
 	{
-		uint256 _oldTime = lastTime;
+		uint256 _oldTime = lastAlloc;
 		uint256 _newTime = block.timestamp;
 		uint256 _time = _newTime - _oldTime;
 		if (_time < MIN_ALLOC_TIME) return 0;
-		uint256 _oldBalance = lastBalance;
+		uint256 _oldBalance = rewardBalance;
 		uint256 _newBalance = Transfers._getBalance(rewardToken);
 		uint256 _balance = _newBalance - _oldBalance;
-		lastTime = _newTime;
-		lastBalance = _newBalance;
+		uint256 _maxBalance = uint256(-1) / _time;
+		if (_balance > _maxBalance) {
+			_balance = _maxBalance;
+			_newBalance = _oldBalance + _balance;
+		}
+		lastAlloc = _newTime;
+		rewardBalance = _newBalance;
 		if (_balance == 0) return 0;
 		uint256 _start = _oldTime;
 		uint256 _week = (_start / 1 weeks) * 1 weeks;
@@ -69,10 +74,10 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	{
 		ValueEscrowToken(escrowToken).checkpoint();
 		allocateReward();
-		uint256 _week = (lastTime / 1 weeks) * 1 weeks;
+		uint256 _week = (lastAlloc / 1 weeks) * 1 weeks;
 		_amount = _claim(_account, _week);
 		Transfers._pushFunds(rewardToken, _account, _amount);
-		lastBalance -= _amount;
+		rewardBalance -= _amount;
 		return _amount;
 	}
 
@@ -80,7 +85,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	{
 		ValueEscrowToken(escrowToken).checkpoint();
 		allocateReward();
-		uint256 _week = (lastTime / 1 weeks) * 1 weeks;
+		uint256 _week = (lastAlloc / 1 weeks) * 1 weeks;
 		_amounts = new uint256[](_accounts.length);
 		uint256 _totalAmount = 0;
 		for (uint256 _i = 0; _i < _accounts.length; _i++) {
@@ -90,7 +95,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 			_totalAmount += _amount;
 			_amounts[_i] = _amount;
 		}
-		lastBalance -= _totalAmount;
+		rewardBalance -= _totalAmount;
 		return _amounts;
 	}
 
