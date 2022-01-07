@@ -6,7 +6,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { Transfers } from "../modules/Transfers.sol";
 
-contract VotingEscrowToken is IERC20, ReentrancyGuard
+contract ValueEscrowToken is IERC20, ReentrancyGuard
 {
 	struct UserInfo {
 		uint256 amount;
