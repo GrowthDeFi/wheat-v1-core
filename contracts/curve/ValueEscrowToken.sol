@@ -86,17 +86,18 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 		uint256 _bias = _point.bias;
 		uint256 _slope = _point.slope;
 		uint256 _start = _point.time;
-		uint256 _end = (_start / 1 weeks + 1) * 1 weeks;
+		uint256 _week = (_start / 1 weeks) * 1 weeks;
 		while (true) {
-			if (_end > _when) _end = _when;
+			uint256 _nextWeek = _week + 1 weeks;
+			uint256 _end = _nextWeek < _when ? _nextWeek : _when;
 			uint256 _ellapsed = _end - _start;
 			uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
 			_bias = _ellapsed <= _maxEllapsed ? _bias - _slope * _ellapsed : 0;
 			if (_bias == 0) break;
 			if (_end == _when) break;
-			_slope -= slopeDecay_[_end];
+			_slope -= slopeDecay_[_nextWeek];
 			_start = _end;
-			_end = _start + 1 weeks;
+			_week = _nextWeek;
 		}
 		return _bias;
 	}
@@ -208,17 +209,18 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 			uint256 _bias = _point.bias;
 			uint256 _slope = _point.slope;
 			uint256 _start = _point.time;
-			uint256 _end = (_start / 1 weeks + 1) * 1 weeks;
+			uint256 _week = (_start / 1 weeks) * 1 weeks;
 			while (true) {
-				if (_end > _when) _end = _when;
+				uint256 _nextWeek = _week + 1 weeks;
+				uint256 _end = _nextWeek < _when ? _nextWeek : _when;
 				uint256 _ellapsed = _end - _start;
 				uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
 				_bias = _ellapsed <= _maxEllapsed ? _bias - _slope * _ellapsed : 0;
-				_slope -= slopeDecay_[_end];
+				_slope -= slopeDecay_[_nextWeek];
 				if (_end == _when) break;
 				_appendPoint(_points, _bias, _slope, _end);
 				_start = _end;
-				_end = _start + 1 weeks;
+				_week = _nextWeek;
 			}
 			_bias += _newBias - _oldBias;
 			_slope = _slope - _oldSlope + _newSlope;
