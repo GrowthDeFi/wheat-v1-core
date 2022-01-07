@@ -34,6 +34,32 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		firstWeek = (block.timestamp * 1 weeks) / 1 weeks;
 	}
 
+	function allocateReward() public returns (uint256 _amount)
+	{
+		uint256 _oldTime = lastTime;
+		uint256 _newTime = block.timestamp;
+		uint256 _time = _newTime - _oldTime;
+		if (_time < MIN_ALLOC_TIME) return 0;
+		uint256 _oldBalance = lastBalance;
+		uint256 _newBalance = Transfers._getBalance(rewardToken);
+		uint256 _balance = _newBalance - _oldBalance;
+		lastTime = _newTime;
+		lastBalance = _newBalance;
+		if (_balance == 0) return 0;
+		uint256 _start = _oldTime;
+		uint256 _week = (_start / 1 weeks) * 1 weeks;
+		while (true) {
+			uint256 _nextWeek = _week + 1 weeks;
+			uint256 _end = _nextWeek < _newTime ? _nextWeek : _newTime;
+			rewardPerWeek[_nextWeek] += _balance * (_start - _end) / _time;
+			if (_end == _newTime) break;
+			_start = _end;
+			_week = _nextWeek;
+		}
+		emit AllocateReward(_balance);
+		return _balance;
+	}
+
 	function claim() external returns (uint256 _amount)
 	{
 		return claim(msg.sender);
@@ -42,7 +68,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	function claim(address _account) public nonReentrant returns (uint256 _amount)
 	{
 		ValueEscrowToken(escrowToken).checkpoint();
-		_allocateReward(MIN_ALLOC_TIME);
+		allocateReward();
 		uint256 _week = (lastTime / 1 weeks) * 1 weeks;
 		_amount = _claim(_account, _week);
 		Transfers._pushFunds(rewardToken, _account, _amount);
@@ -53,7 +79,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	function claimBatch(address[] calldata _accounts) external nonReentrant returns (uint256[] memory _amounts)
 	{
 		ValueEscrowToken(escrowToken).checkpoint();
-		_allocateReward(MIN_ALLOC_TIME);
+		allocateReward();
 		uint256 _week = (lastTime / 1 weeks) * 1 weeks;
 		_amounts = new uint256[](_accounts.length);
 		uint256 _totalAmount = 0;
@@ -66,38 +92,6 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		}
 		lastBalance -= _totalAmount;
 		return _amounts;
-	}
-
-	function allocateReward() public returns (uint256 _amount)
-	{
-		return _allocateReward(MIN_ALLOC_TIME);
-	}
-
-	function _allocateReward(uint256 _minTime) internal returns (uint256 _amount)
-	{
-		uint256 _oldTime = lastTime;
-		uint256 _newTime = block.timestamp;
-		uint256 _time = _newTime - _oldTime;
-		if (_time < _minTime) return 0;
-		uint256 _oldBalance = lastBalance;
-		uint256 _newBalance = Transfers._getBalance(rewardToken);
-		uint256 _balance = _newBalance - _oldBalance;
-		lastTime = _newTime;
-		lastBalance = _newBalance;
-		if (_balance > 0) {
-			uint256 _start = _oldTime;
-			uint256 _week = (_start / 1 weeks) * 1 weeks;
-			while (true) {
-				uint256 _nextWeek = _week + 1 weeks;
-				uint256 _end = _nextWeek < _newTime ? _nextWeek : _newTime;
-				rewardPerWeek[_nextWeek] += _time > 0 ? _balance * (_start - _end) / _time : _balance;
-				if (_end == _newTime) break;
-				_start = _end;
-				_week = _nextWeek;
-			}
-		}
-		emit AllocateReward(_balance);
-		return _balance;
 	}
 
 	function _claim(address _account, uint256 _lastWeek) internal returns (uint256 _amount)
