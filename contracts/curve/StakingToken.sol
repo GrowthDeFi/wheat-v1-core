@@ -61,6 +61,10 @@ contract StakingToken is IERC20Historical, ERC20, ReentrancyGuard
 		emit Withdraw(msg.sender, _amount);
 	}
 
+	function checkpoint() external override
+	{
+	}
+
 	function totalSupply(uint256 _when) public override view returns (uint256 _totalSupply)
 	{
 		Point[] storage _points = points_;

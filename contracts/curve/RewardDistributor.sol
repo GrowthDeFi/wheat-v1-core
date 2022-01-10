@@ -72,7 +72,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 
 	function claim(address _account) public nonReentrant returns (uint256 _amount)
 	{
-		//ValueEscrowToken(escrowToken).checkpoint();
+		IERC20Historical(escrowToken).checkpoint();
 		allocateReward();
 		uint256 _week = (lastAlloc / 1 weeks) * 1 weeks;
 		_amount = _claim(_account, _week);
@@ -83,7 +83,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 
 	function claimBatch(address[] calldata _accounts) external nonReentrant returns (uint256[] memory _amounts)
 	{
-		//ValueEscrowToken(escrowToken).checkpoint();
+		IERC20Historical(escrowToken).checkpoint();
 		allocateReward();
 		uint256 _week = (lastAlloc / 1 weeks) * 1 weeks;
 		_amounts = new uint256[](_accounts.length);

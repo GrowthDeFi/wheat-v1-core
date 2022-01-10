@@ -7,4 +7,6 @@ interface IERC20Historical is IERC20
 {
 	function totalSupply(uint256 _when) external view returns (uint256 _totalSupply);
 	function balanceOf(address _account, uint256 _when) external view returns (uint256 _balance);
+
+	function checkpoint() external;
 }
