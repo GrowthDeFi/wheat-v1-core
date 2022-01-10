@@ -19,7 +19,8 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 		uint256 time;
 	}
 
-	uint256 constant MAX_LOCK_TIME = 4 * 365 days; // 4 years
+	uint256 public constant UNLOCK_BASIS = 1 weeks;
+	uint256 public constant MAX_LOCK_TIME = 4 * 365 days; // 4 years
 
 	string public name;
 	string public symbol;
@@ -45,7 +46,7 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 
 	function deposit(uint256 _amount, uint256 _newUnlock) external nonReentrant
 	{
-		require(_newUnlock % 1 weeks == 0 && block.timestamp < _newUnlock && _newUnlock <= block.timestamp + MAX_LOCK_TIME, "invalid unlock");
+		require(_newUnlock % UNLOCK_BASIS == 0 && block.timestamp < _newUnlock && _newUnlock <= block.timestamp + MAX_LOCK_TIME, "invalid unlock");
 		UserInfo storage _user = userInfo[msg.sender];
 		uint256 _oldUnlock = _user.unlock;
 		require(_oldUnlock == 0 || _oldUnlock > block.timestamp, "expired unlock");
@@ -87,9 +88,9 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 		uint256 _bias = _point.bias;
 		uint256 _slope = _point.slope;
 		uint256 _start = _point.time;
-		uint256 _week = (_start / 1 weeks) * 1 weeks;
+		uint256 _week = (_start / UNLOCK_BASIS) * UNLOCK_BASIS;
 		while (true) {
-			uint256 _nextWeek = _week + 1 weeks;
+			uint256 _nextWeek = _week + UNLOCK_BASIS;
 			uint256 _end = _nextWeek < _when ? _nextWeek : _when;
 			uint256 _ellapsed = _end - _start;
 			uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
@@ -209,9 +210,9 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 			uint256 _bias = _point.bias;
 			uint256 _slope = _point.slope;
 			uint256 _start = _point.time;
-			uint256 _week = (_start / 1 weeks) * 1 weeks;
+			uint256 _week = (_start / UNLOCK_BASIS) * UNLOCK_BASIS;
 			while (true) {
-				uint256 _nextWeek = _week + 1 weeks;
+				uint256 _nextWeek = _week + UNLOCK_BASIS;
 				uint256 _end = _nextWeek < _when ? _nextWeek : _when;
 				uint256 _ellapsed = _end - _start;
 				uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
