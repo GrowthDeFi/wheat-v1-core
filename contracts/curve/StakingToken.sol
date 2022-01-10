@@ -7,7 +7,9 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { Transfers } from "../modules/Transfers.sol";
 
-contract StakingToken is ERC20, ReentrancyGuard
+import { IERC20Historical } from "./IERC20Historical.sol";
+
+contract StakingToken is IERC20Historical, ERC20, ReentrancyGuard
 {
 	using SafeMath for uint256;
 
@@ -59,7 +61,7 @@ contract StakingToken is ERC20, ReentrancyGuard
 		emit Withdraw(msg.sender, _amount);
 	}
 
-	function totalSupply(uint256 _when) public view returns (uint256 _totalSupply)
+	function totalSupply(uint256 _when) public override view returns (uint256 _totalSupply)
 	{
 		Point[] storage _points = points_;
 		uint256 _index = _findPoint(_points, _when);
@@ -68,7 +70,7 @@ contract StakingToken is ERC20, ReentrancyGuard
 		return _point.bias;
 	}
 
-	function balanceOf(address _account, uint256 _when) public view returns (uint256 _balance)
+	function balanceOf(address _account, uint256 _when) public override view returns (uint256 _balance)
 	{
 		Point[] storage _points = userPoints_[_account];
 		uint256 _index = _findPoint(_points, _when);

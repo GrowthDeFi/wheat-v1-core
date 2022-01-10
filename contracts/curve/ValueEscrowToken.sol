@@ -6,7 +6,9 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { Transfers } from "../modules/Transfers.sol";
 
-contract ValueEscrowToken is IERC20, ReentrancyGuard
+import { IERC20Historical } from "./IERC20Historical.sol";
+
+contract ValueEscrowToken is IERC20Historical, ReentrancyGuard
 {
 	struct UserInfo {
 		uint256 amount;
@@ -73,7 +75,7 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 		emit Withdraw(msg.sender, _amount);
 	}
 
-	function totalSupply(uint256 _when) public view returns (uint256 _totalSupply)
+	function totalSupply(uint256 _when) public override view returns (uint256 _totalSupply)
 	{
 		Point[] storage _points = points_;
 		uint256 _index = _findPoint(_points, _when);
@@ -97,7 +99,7 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 		return _bias;
 	}
 
-	function balanceOf(address _account, uint256 _when) public view returns (uint256 _balance)
+	function balanceOf(address _account, uint256 _when) public override view returns (uint256 _balance)
 	{
 		Point[] storage _points = userPoints_[_account];
 		uint256 _index = _findPoint(_points, _when);
