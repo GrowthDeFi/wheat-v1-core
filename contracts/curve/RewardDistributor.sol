@@ -3,11 +3,11 @@ pragma solidity ^0.6.0;
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { DelayedActionGuard } from "../DelayedActionGuard.sol";
-
 import { Transfers } from "../modules/Transfers.sol";
 
-import { ValueEscrowToken } from "./ValueEscrowToken.sol";
+import { DelayedActionGuard } from "../DelayedActionGuard.sol";
+
+import { IERC20Historical } from "./IERC20Historical.sol";
 
 contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 {
@@ -107,8 +107,8 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		_amount = 0;
 		while (_week < _lastWeek) {
 			_week += 1 weeks;
-			uint256 _supply = ValueEscrowToken(escrowToken).totalSupply(_week);
-			uint256 _balance = ValueEscrowToken(escrowToken).balanceOf(_account, _week);
+			uint256 _supply = IERC20Historical(escrowToken).totalSupply(_week);
+			uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _week);
 			_amount += rewardPerWeek[_week] * _balance / _supply;
 		}
 		emit Claimed(_account, _amount);
