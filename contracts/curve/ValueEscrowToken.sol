@@ -93,8 +93,8 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 			uint256 _ellapsed = _end - _start;
 			uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
 			_bias = _ellapsed <= _maxEllapsed ? _bias - _slope * _ellapsed : 0;
+			if (_end == _nextWeek) _slope -= slopeDecay_[_nextWeek];
 			if (_end == _when) break;
-			_slope -= slopeDecay_[_nextWeek];
 			_start = _end;
 			_week = _nextWeek;
 		}
