@@ -75,6 +75,7 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 	function checkpoint() external
 	{
 		_checkpoint(address(0), 0, 0, 0, 0);
+		emit Checkpoint();
 	}
 
 	function totalSupply(uint256 _when) public view returns (uint256 _totalSupply)
@@ -222,7 +223,7 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 				_week = _nextWeek;
 			}
 			_bias += _newBias - _oldBias;
-			_slope = _slope - _oldSlope + _newSlope;
+			_slope += _newSlope - _oldSlope;
 			_appendPoint(_points, _bias, _slope, block.timestamp);
 		}
 
@@ -233,4 +234,5 @@ contract ValueEscrowToken is IERC20, ReentrancyGuard
 
 	event Deposit(address indexed _account, uint256 _amount, uint256 indexed _unlock);
 	event Withdraw(address indexed _account, uint256 _amount);
+	event Checkpoint();
 }
