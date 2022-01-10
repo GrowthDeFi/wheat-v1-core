@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -8,7 +9,7 @@ import { Transfers } from "../modules/Transfers.sol";
 
 import { IERC20Historical } from "./IERC20Historical.sol";
 
-contract ValueEscrowToken is IERC20Historical, ReentrancyGuard
+contract ValueEscrowToken is IERC20Historical, Ownable, ReentrancyGuard
 {
 	struct UserInfo {
 		uint256 amount;
@@ -36,6 +37,8 @@ contract ValueEscrowToken is IERC20Historical, ReentrancyGuard
 	mapping(address => Point[]) private userPoints_;
 	mapping(uint256 => uint256) private slopeDecay_;
 
+	bool public emergencyMode;
+
 	constructor(string memory _name, string memory _symbol, uint8 _decimals, address _reserveToken)
 		public
 	{
@@ -46,7 +49,19 @@ contract ValueEscrowToken is IERC20Historical, ReentrancyGuard
 		_appendPoint(points_, 0, 0, block.timestamp);
 	}
 
-	function deposit(uint256 _amount, uint256 _newUnlock) external nonReentrant
+	modifier nonEmergency()
+	{
+		require(!emergencyMode, "not available");
+		_;
+	}
+
+	function enterEmergencyMode() external onlyOwner nonEmergency
+	{
+		emergencyMode = true;
+		emit EmergencyDeclared();
+	}
+
+	function deposit(uint256 _amount, uint256 _newUnlock) external nonReentrant nonEmergency
 	{
 		require(_newUnlock % UNLOCK_BASIS == 0 && block.timestamp < _newUnlock && _newUnlock <= block.timestamp + MAX_LOCK_TIME, "invalid unlock");
 		UserInfo storage _user = userInfo[msg.sender];
@@ -66,16 +81,18 @@ contract ValueEscrowToken is IERC20Historical, ReentrancyGuard
 	{
 		UserInfo storage _user = userInfo[msg.sender];
 		uint256 _unlock = _user.unlock;
-		require(block.timestamp >= _unlock, "not available");
 		uint256 _amount = _user.amount;
+		if (!emergencyMode) {
+			require(block.timestamp >= _unlock, "not available");
+			_checkpoint(msg.sender, _amount, _unlock, 0, 0);
+		}
 		_user.amount = 0;
 		_user.unlock = 0;
-		_checkpoint(msg.sender, _amount, _unlock, 0, 0);
 		Transfers._pushFunds(reserveToken, msg.sender, _amount);
 		emit Withdraw(msg.sender, _amount);
 	}
 
-	function checkpoint() external override
+	function checkpoint() external override nonEmergency
 	{
 		Point[] storage _points = points_;
 		Point storage _point = _points[_points.length - 1];
@@ -240,4 +257,5 @@ contract ValueEscrowToken is IERC20Historical, ReentrancyGuard
 
 	event Deposit(address indexed _account, uint256 _amount, uint256 indexed _unlock);
 	event Withdraw(address indexed _account, uint256 _amount);
+	event EmergencyDeclared();
 }

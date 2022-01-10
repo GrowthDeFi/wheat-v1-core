@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.6.0;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -9,7 +10,7 @@ import { Transfers } from "../modules/Transfers.sol";
 
 import { IERC20Historical } from "./IERC20Historical.sol";
 
-contract StakingToken is IERC20Historical, ERC20, ReentrancyGuard
+contract StakingToken is IERC20Historical, ERC20, Ownable, ReentrancyGuard
 {
 	using SafeMath for uint256;
 
@@ -29,6 +30,8 @@ contract StakingToken is IERC20Historical, ERC20, ReentrancyGuard
 	Point[] private points_;
 	mapping(address => Point[]) private userPoints_;
 
+	bool public emergencyMode;
+
 	constructor(string memory _name, string memory _symbol, uint8 _decimals, address _reserveToken)
 		ERC20(_name, _symbol) public
 	{
@@ -36,7 +39,19 @@ contract StakingToken is IERC20Historical, ERC20, ReentrancyGuard
 		reserveToken = _reserveToken;
 	}
 
-	function deposit(uint256 _amount) external nonReentrant
+	modifier nonEmergency()
+	{
+		require(!emergencyMode, "not available");
+		_;
+	}
+
+	function enterEmergencyMode() external onlyOwner nonEmergency
+	{
+		emergencyMode = true;
+		emit EmergencyDeclared();
+	}
+
+	function deposit(uint256 _amount) external nonReentrant nonEmergency
 	{
 		UserInfo storage _user = userInfo[msg.sender];
 		uint256 _oldAmount = _user.amount;
@@ -57,11 +72,13 @@ contract StakingToken is IERC20Historical, ERC20, ReentrancyGuard
 		_user.amount = _newAmount;
 		_burn(msg.sender, _amount);
 		Transfers._pushFunds(reserveToken, msg.sender, _amount);
-		_checkpoint(msg.sender, _newAmount, totalSupply());
+		if (!emergencyMode) {
+			_checkpoint(msg.sender, _newAmount, totalSupply());
+		}
 		emit Withdraw(msg.sender, _amount);
 	}
 
-	function checkpoint() external override
+	function checkpoint() external override nonEmergency
 	{
 	}
 
@@ -121,4 +138,5 @@ contract StakingToken is IERC20Historical, ERC20, ReentrancyGuard
 
 	event Deposit(address indexed _account, uint256 _amount);
 	event Withdraw(address indexed _account, uint256 _amount);
+	event EmergencyDeclared();
 }
