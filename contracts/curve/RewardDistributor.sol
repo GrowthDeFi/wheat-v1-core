@@ -11,17 +11,18 @@ import { IERC20Historical } from "./IERC20Historical.sol";
 
 contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 {
-	uint256 constant MIN_ALLOC_TIME = 1 days;
+	uint256 public constant MIN_ALLOC_TIME = 1 days;
+	uint256 public constant CLAIM_BASIS = 1 weeks;
 
 	address public immutable escrowToken;
 	address public immutable rewardToken;
 
 	uint256 public lastAlloc;
 	uint256 public rewardBalance;
-	mapping(uint256 => uint256) public rewardPerWeek;
+	mapping(uint256 => uint256) public rewardPerPeriod;
 
-	uint256 public firstWeek;
-	mapping(address => uint256) public lastClaimWeek;
+	uint256 public immutable firstClaimPeriod;
+	mapping(address => uint256) public lastClaimPeriod;
 
 	address public treasury;
 
@@ -31,7 +32,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		rewardToken = _rewardToken;
 		treasury = _treasury;
 		lastAlloc = block.timestamp;
-		firstWeek = (block.timestamp * 1 weeks) / 1 weeks;
+		firstClaimPeriod = (block.timestamp * CLAIM_BASIS) / CLAIM_BASIS;
 	}
 
 	function allocateReward() public returns (uint256 _amount)
@@ -52,64 +53,43 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		rewardBalance = _newBalance;
 		if (_balance == 0) return 0;
 		uint256 _start = _oldTime;
-		uint256 _week = (_start / 1 weeks) * 1 weeks;
+		uint256 _period = (_start / CLAIM_BASIS) * CLAIM_BASIS;
 		while (true) {
-			uint256 _nextWeek = _week + 1 weeks;
-			uint256 _end = _nextWeek < _newTime ? _nextWeek : _newTime;
-			rewardPerWeek[_nextWeek] += _balance * (_start - _end) / _time;
+			uint256 _nextPeriod = _period + CLAIM_BASIS;
+			uint256 _end = _nextPeriod < _newTime ? _nextPeriod : _newTime;
+			rewardPerPeriod[_nextPeriod] += _balance * (_start - _end) / _time;
 			if (_end == _newTime) break;
 			_start = _end;
-			_week = _nextWeek;
+			_period = _nextPeriod;
 		}
 		emit AllocateReward(_balance);
 		return _balance;
 	}
 
-	function claim() external returns (uint256 _amount)
-	{
-		return claim(msg.sender);
-	}
-
-	function claim(address _account) public nonReentrant returns (uint256 _amount)
+	function claim(bool noPenalty) external returns (uint256 _amount)
 	{
 		IERC20Historical(escrowToken).checkpoint();
 		allocateReward();
-		uint256 _week = (lastAlloc / 1 weeks) * 1 weeks;
-		_amount = _claim(_account, _week);
-		Transfers._pushFunds(rewardToken, _account, _amount);
+		uint256 _period = (lastAlloc / CLAIM_BASIS) * CLAIM_BASIS;
+		if (noPenalty) _period -= 13 * CLAIM_BASIS;
+		_amount = _claim(msg.sender, _period);
+		Transfers._pushFunds(rewardToken, msg.sender, _amount);
 		rewardBalance -= _amount;
 		return _amount;
 	}
 
-	function claimBatch(address[] calldata _accounts) external nonReentrant returns (uint256[] memory _amounts)
+	function _claim(address _account, uint256 _lastPeriod) internal returns (uint256 _amount)
 	{
-		IERC20Historical(escrowToken).checkpoint();
-		allocateReward();
-		uint256 _week = (lastAlloc / 1 weeks) * 1 weeks;
-		_amounts = new uint256[](_accounts.length);
-		uint256 _totalAmount = 0;
-		for (uint256 _i = 0; _i < _accounts.length; _i++) {
-			address _account = _accounts[_i];
-			uint256 _amount = _claim(_account, _week);
-			Transfers._pushFunds(rewardToken, _account, _amount);
-			_totalAmount += _amount;
-			_amounts[_i] = _amount;
-		}
-		rewardBalance -= _totalAmount;
-		return _amounts;
-	}
-
-	function _claim(address _account, uint256 _lastWeek) internal returns (uint256 _amount)
-	{
-		uint256 _week = lastClaimWeek[_account];
-		lastClaimWeek[_account] = _lastWeek;
-		if (_week == 0) _week = firstWeek;
+		uint256 _period = lastClaimPeriod[_account];
+		if (_period > _lastPeriod) _lastPeriod = _period;
+		lastClaimPeriod[_account] = _lastPeriod;
+		if (_period == 0) _period = firstClaimPeriod;
 		_amount = 0;
-		while (_week < _lastWeek) {
-			_week += 1 weeks;
-			uint256 _supply = IERC20Historical(escrowToken).totalSupply(_week);
-			uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _week);
-			_amount += rewardPerWeek[_week] * _balance / _supply;
+		while (_period < _lastPeriod) {
+			_period += CLAIM_BASIS;
+			uint256 _supply = IERC20Historical(escrowToken).totalSupply(_period);
+			uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
+			_amount += rewardPerPeriod[_period] * _balance / _supply;
 		}
 		emit Claimed(_account, _amount);
 		return _amount;
