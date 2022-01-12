@@ -105,20 +105,18 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	{
 		_amount = 0;
 		_excess = 0;
-		address _escrowToken = escrowToken;
-		address _boostToken = boostToken;
-		if (_boostToken == address(0)) {
+		if (boostToken == address(0)) {
 			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
-				uint256 _totalSupply = 1 + IERC20Historical(_escrowToken).totalSupply(_period);
-				uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
+				uint256 _totalSupply = 1 + IERC20Historical(escrowToken).totalSupply(_period);
+				uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
 				_amount += rewardPerPeriod_[_period] * _balance / _totalSupply;
 			}
 		} else {
 			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
-				uint256 _totalSupply = 1 + IERC20Historical(_escrowToken).totalSupply(_period);
-				uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
-				uint256 _boostTotalSupply = 1 + IERC20Historical(_boostToken).totalSupply(_period);
-				uint256 _boostBalance = IERC20Historical(_boostToken).balanceOf(_account, _period);
+				uint256 _totalSupply = 1 + IERC20Historical(escrowToken).totalSupply(_period);
+				uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
+				uint256 _boostTotalSupply = 1 + IERC20Historical(boostToken).totalSupply(_period);
+				uint256 _boostBalance = IERC20Historical(boostToken).balanceOf(_account, _period);
 				uint256 _normalizedBalance = 4 * _balance * _boostTotalSupply + 6 * _boostBalance * _totalSupply;
 				uint256 _normalizedTotalSupply = 10 * _boostTotalSupply * _totalSupply;
 				uint256 _limitedBalance = _normalizedBalance > _balance ? _balance : _normalizedBalance;
