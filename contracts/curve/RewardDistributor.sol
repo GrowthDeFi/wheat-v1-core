@@ -121,8 +121,9 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 				uint256 _normalizedTotalSupply = 10 * _boostTotalSupply * _totalSupply;
 				uint256 _limitedBalance = _normalizedBalance > _balance ? _balance : _normalizedBalance;
 				uint256 _exceededBalance = _normalizedBalance - _limitedBalance;
-				_amount += rewardPerPeriod_[_period] * _limitedBalance / _normalizedTotalSupply;
-				_excess += rewardPerPeriod_[_period] * _exceededBalance / _normalizedTotalSupply;
+				uint256 _rewardPerPeriod = rewardPerPeriod_[_period];
+				_amount += _rewardPerPeriod * _limitedBalance / _normalizedTotalSupply;
+				_excess += _rewardPerPeriod * _exceededBalance / _normalizedTotalSupply;
 			}
 		}
 		return (_amount, _excess);
