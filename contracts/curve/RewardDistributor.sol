@@ -95,14 +95,19 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		return _amount;
 	}
 
+	function recoverReward() external onlyOwner nonReentrant
+		delayed(this.recoverLostFunds.selector, keccak256(abi.encode()))
+	{
+		bool _emergencyMode = IERC20Historical(escrowToken).emergencyMode();
+		require(_emergencyMode, "not available");
+		uint256 _balance = Transfers._getBalance(rewardToken);
+		Transfers._pushFunds(rewardToken, treasury, _balance);
+	}
+
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
 		delayed(this.recoverLostFunds.selector, keccak256(abi.encode(_token)))
 	{
-		if (_token == rewardToken) {
-			bool _claimStuck = false;
-			try IERC20Historical(escrowToken).checkpoint() {} catch (bytes memory /*_data*/) { _claimStuck = true; }
-			require(_claimStuck, "invalid token");
-		}
+		require(_token != rewardToken, "invalid token");
 		uint256 _balance = Transfers._getBalance(_token);
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
