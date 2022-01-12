@@ -26,8 +26,8 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	uint256 private rewardBalance_;
 	mapping(uint256 => uint256) private rewardPerPeriod_;
 
-	uint256 private immutable firstClaimPeriod_;
-	mapping(address => uint256) private lastClaimPeriod_;
+	uint256 private immutable firstPeriod_;
+	mapping(address => uint256) private lastPeriod_;
 
 	constructor(address _escrowToken, address _rewardToken, address _boostToken, address _treasury) public
 	{
@@ -36,10 +36,22 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		boostToken = _boostToken;
 		treasury = _treasury;
 		lastAlloc_ = block.timestamp;
-		firstClaimPeriod_ = (block.timestamp / CLAIM_BASIS + 1) * CLAIM_BASIS;
+		firstPeriod_ = (block.timestamp / CLAIM_BASIS + 1) * CLAIM_BASIS;
 	}
 
-	function allocateReward() public returns (uint256 _amount)
+	function unallocated() external view returns (uint256 _amount)
+	{
+		uint256 _oldTime = lastAlloc_;
+		uint256 _newTime = block.timestamp;
+		uint256 _time = _newTime - _oldTime;
+		if (_time < MIN_ALLOC_TIME) return 0;
+		uint256 _oldBalance = rewardBalance_;
+		uint256 _newBalance = Transfers._getBalance(rewardToken);
+		uint256 _balance = _newBalance - _oldBalance;
+		return _balance;
+	}
+
+	function allocate() public returns (uint256 _amount)
 	{
 		uint256 _oldTime = lastAlloc_;
 		uint256 _newTime = block.timestamp;
@@ -70,7 +82,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		return _balance;
 	}
 
-	function pendingReward(address _account, bool _noPenalty) external view returns (uint256 _amount, uint256 _penalty)
+	function available(address _account, bool _noPenalty) external view returns (uint256 _amount, uint256 _penalty)
 	{
 		(_amount, _penalty,,) = _claim(_account, _noPenalty);
 		return (_amount, _penalty);
@@ -79,9 +91,9 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	function claim(bool _noPenalty) external nonReentrant returns (uint256 _amount, uint256 _penalty)
 	{
 		IERC20Historical(escrowToken).checkpoint();
-		allocateReward();
+		allocate();
 		uint256 _excess;
-		(_amount, _penalty, _excess, lastClaimPeriod_[msg.sender]) = _claim(msg.sender, _noPenalty);
+		(_amount, _penalty, _excess, lastPeriod_[msg.sender]) = _claim(msg.sender, _noPenalty);
 		rewardBalance_ -= _amount + _penalty + _excess;
 		Transfers._pushFunds(rewardToken, msg.sender, _amount);
 		Transfers._pushFunds(rewardToken, FURNACE, _penalty);
@@ -89,7 +101,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		return (_amount, _penalty);
 	}
 
-	function _calculateAccruedReward(address _account, uint256 _firstPeriod, uint256 _lastPeriod) internal view returns (uint256 _amount, uint256 _excess)
+	function _calculateAccrued(address _account, uint256 _firstPeriod, uint256 _lastPeriod) internal view returns (uint256 _amount, uint256 _excess)
 	{
 		_amount = 0;
 		_excess = 0;
@@ -120,14 +132,14 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 
 	function _claim(address _account, bool _noPenalty) internal view returns (uint256 _amount, uint256 _penalty, uint256 _excess, uint256 _period)
 	{
-		uint256 _firstPeriod = lastClaimPeriod_[_account];
-		if (_firstPeriod < firstClaimPeriod_) _firstPeriod = firstClaimPeriod_;
+		uint256 _firstPeriod = lastPeriod_[_account];
+		if (_firstPeriod < firstPeriod_) _firstPeriod = firstPeriod_;
 		uint256 _lastPeriod = (lastAlloc_ / CLAIM_BASIS + 1) * CLAIM_BASIS;
 		uint256 _middlePeriod =_lastPeriod - 13 * CLAIM_BASIS; // 13 weeks
 		if (_middlePeriod < _firstPeriod) _middlePeriod = _firstPeriod;
 		if (_noPenalty) _lastPeriod = _middlePeriod;
-		(uint256 _amount1, uint256 _excess1) = _calculateAccruedReward(_account, _firstPeriod, _middlePeriod);
-		(uint256 _amount2, uint256 _excess2) = _calculateAccruedReward(_account, _middlePeriod, _lastPeriod);
+		(uint256 _amount1, uint256 _excess1) = _calculateAccrued(_account, _firstPeriod, _middlePeriod);
+		(uint256 _amount2, uint256 _excess2) = _calculateAccrued(_account, _middlePeriod, _lastPeriod);
 		_penalty = _amount2 / 2; // 50%
 		_amount = _amount1 + (_amount2 - _penalty);
 		_excess = _excess1 + _excess2;
