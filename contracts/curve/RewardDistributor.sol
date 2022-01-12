@@ -78,7 +78,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 			_start = _end;
 			_period = _nextPeriod;
 		}
-		emit AllocateReward(_balance);
+		emit Allocate(_balance);
 		return _balance;
 	}
 
@@ -97,8 +97,30 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		rewardBalance_ -= _amount + _penalty + _excess;
 		Transfers._pushFunds(rewardToken, msg.sender, _amount);
 		Transfers._pushFunds(rewardToken, FURNACE, _penalty);
-		emit Claimed(msg.sender, _amount, _penalty);
+		if (_amount > 0 || _penalty > 0) {
+			emit Claim(msg.sender, _amount, _penalty);
+		}
+		if (_excess > 0) {
+			emit Recycle(_excess);
+		}
 		return (_amount, _penalty);
+	}
+
+	function unrecycled() external view returns (uint256 _amount)
+	{
+		(_amount,) = _recycle();
+		return _amount;
+	}
+
+	function recycle() external returns (uint256 _amount)
+	{
+		IERC20Historical(escrowToken).checkpoint();
+		allocate();
+		uint256 _excess;
+		(_excess, lastPeriod_[address(0)]) = _recycle();
+		rewardBalance_ -= _excess;
+		emit Recycle(_excess);
+		return _excess;
 	}
 
 	function _calculateAccrued(address _account, uint256 _firstPeriod, uint256 _lastPeriod) internal view returns (uint256 _amount, uint256 _excess)
@@ -107,26 +129,54 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		_excess = 0;
 		if (boostToken == address(0)) {
 			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
-				uint256 _totalSupply = 1 + IERC20Historical(escrowToken).totalSupply(_period);
-				uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
-				_amount += rewardPerPeriod_[_period] * _balance / _totalSupply;
+				uint256 _totalSupply = IERC20Historical(escrowToken).totalSupply(_period);
+				if (_totalSupply > 0) {
+					uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
+					uint256 _rewardPerPeriod = rewardPerPeriod_[_period];
+					_amount += _rewardPerPeriod * _balance / _totalSupply;
+				}
 			}
 		} else {
 			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
-				uint256 _totalSupply = 1 + IERC20Historical(escrowToken).totalSupply(_period);
-				uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
-				uint256 _boostTotalSupply = 1 + IERC20Historical(boostToken).totalSupply(_period);
-				uint256 _boostBalance = IERC20Historical(boostToken).balanceOf(_account, _period);
-				uint256 _normalizedBalance = 4 * _balance * _boostTotalSupply + 6 * _boostBalance * _totalSupply;
+				uint256 _totalSupply = IERC20Historical(escrowToken).totalSupply(_period);
+				uint256 _boostTotalSupply = IERC20Historical(boostToken).totalSupply(_period);
 				uint256 _normalizedTotalSupply = 10 * _boostTotalSupply * _totalSupply;
-				uint256 _limitedBalance = _normalizedBalance > _balance ? _balance : _normalizedBalance;
-				uint256 _exceededBalance = _normalizedBalance - _limitedBalance;
-				uint256 _rewardPerPeriod = rewardPerPeriod_[_period];
-				_amount += _rewardPerPeriod * _limitedBalance / _normalizedTotalSupply;
-				_excess += _rewardPerPeriod * _exceededBalance / _normalizedTotalSupply;
+				if (_normalizedTotalSupply > 0) {
+					uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
+					uint256 _boostBalance = IERC20Historical(boostToken).balanceOf(_account, _period);
+					uint256 _normalizedBalance = 4 * _balance * _boostTotalSupply + 6 * _boostBalance * _totalSupply;
+					uint256 _limitedBalance = _normalizedBalance > _balance ? _balance : _normalizedBalance;
+					uint256 _exceededBalance = _normalizedBalance - _limitedBalance;
+					uint256 _rewardPerPeriod = rewardPerPeriod_[_period];
+					_amount += _rewardPerPeriod * _limitedBalance / _normalizedTotalSupply;
+					_excess += _rewardPerPeriod * _exceededBalance / _normalizedTotalSupply;
+				}
 			}
 		}
 		return (_amount, _excess);
+	}
+
+	function _calculateAccrued(uint256 _firstPeriod, uint256 _lastPeriod) internal view returns (uint256 _amount)
+	{
+		_amount = 0;
+		if (boostToken == address(0)) {
+			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
+				uint256 _totalSupply = IERC20Historical(escrowToken).totalSupply(_period);
+				if (_totalSupply == 0) {
+					_amount += rewardPerPeriod_[_period];
+				}
+			}
+		} else {
+			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
+				uint256 _totalSupply = IERC20Historical(escrowToken).totalSupply(_period);
+				uint256 _boostTotalSupply = IERC20Historical(boostToken).totalSupply(_period);
+				uint256 _normalizedTotalSupply = 10 * _boostTotalSupply * _totalSupply;
+				if (_normalizedTotalSupply == 0) {
+					_amount += rewardPerPeriod_[_period];
+				}
+			}
+		}
+		return _amount;
 	}
 
 	function _claim(address _account, bool _noPenalty) internal view returns (uint256 _amount, uint256 _penalty, uint256 _excess, uint256 _period)
@@ -143,6 +193,15 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		_amount = _amount1 + (_amount2 - _penalty);
 		_excess = _excess1 + _excess2;
 		return (_amount, _penalty, _excess, _lastPeriod);
+	}
+
+	function _recycle() internal view returns (uint256 _excess, uint256 _period)
+	{
+		uint256 _firstPeriod = lastPeriod_[address(0)];
+		if (_firstPeriod < firstPeriod_) _firstPeriod = firstPeriod_;
+		uint256 _lastPeriod = (lastAlloc_ / CLAIM_BASIS + 1) * CLAIM_BASIS;
+		_excess = _calculateAccrued(_firstPeriod, _lastPeriod);
+		return (_excess, _lastPeriod);
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
@@ -162,7 +221,8 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		emit ChangeTreasury(_oldTreasury, _newTreasury);
 	}
 
-	event AllocateReward(uint256 _amount);
-	event Claimed(address indexed _account, uint256 _amount, uint256 _penalty);
+	event Allocate(uint256 _amount);
+	event Claim(address indexed _account, uint256 _amount, uint256 _penalty);
+	event Recycle(uint256 _amount);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 }
