@@ -18,6 +18,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 
 	address public immutable escrowToken;
 	address public immutable rewardToken;
+	address public immutable boostToken;
 
 	uint256 public lastAlloc;
 	uint256 public rewardBalance;
@@ -28,10 +29,11 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 
 	address public treasury;
 
-	constructor(address _escrowToken, address _rewardToken, address _treasury) public
+	constructor(address _escrowToken, address _rewardToken, address _boostToken, address _treasury) public
 	{
 		escrowToken = _escrowToken;
 		rewardToken = _rewardToken;
+		boostToken = _boostToken;
 		treasury = _treasury;
 		lastAlloc = block.timestamp;
 		firstClaimPeriod = (block.timestamp / CLAIM_BASIS + 1) * CLAIM_BASIS;
@@ -89,11 +91,29 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	function _calculateAccruedReward(address _account, uint256 _firstPeriod, uint256 _lastPeriod) internal view returns (uint256 _amount)
 	{
 		_amount = 0;
-		for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
-			uint256 _totalSupply = IERC20Historical(escrowToken).totalSupply(_period);
-			if (_totalSupply > 0) {
-				uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
-				_amount += rewardPerPeriod[_period] * _balance / _totalSupply;
+		address _escrowToken = escrowToken;
+		address _boostToken = boostToken;
+		if (_boostToken == address(0)) {
+			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
+				uint256 _totalSupply = IERC20Historical(_escrowToken).totalSupply(_period);
+				if (_totalSupply > 0) {
+					uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
+					_amount += rewardPerPeriod[_period] * _balance / _totalSupply;
+				}
+			}
+		} else {
+			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
+				uint256 _totalSupply = IERC20Historical(_escrowToken).totalSupply(_period);
+				if (_totalSupply > 0) {
+					uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
+					uint256 _boostTotalSupply = IERC20Historical(_boostToken).totalSupply(_period);
+					if (_boostTotalSupply > 0) {
+						uint256 _boostBalance = IERC20Historical(_boostToken).balanceOf(_account, _period);
+						_balance = 4 * _balance * _boostTotalSupply + 6 * _boostBalance * _totalSupply;
+						_totalSupply = 10 * _boostTotalSupply * _totalSupply;
+					}
+					_amount += rewardPerPeriod[_period] * _balance / _totalSupply;
+				}
 			}
 		}
 		return _amount;
