@@ -110,17 +110,17 @@ contract ValueEscrowToken is IERC20Historical, Ownable, ReentrancyGuard
 		uint256 _bias = _point.bias;
 		uint256 _slope = _point.slope;
 		uint256 _start = _point.time;
-		uint256 _week = (_start / UNLOCK_BASIS) * UNLOCK_BASIS;
+		uint256 _period = (_start / UNLOCK_BASIS) * UNLOCK_BASIS;
 		while (true) {
-			uint256 _nextWeek = _week + UNLOCK_BASIS;
-			uint256 _end = _nextWeek < _when ? _nextWeek : _when;
+			uint256 _nextPeriod = _period + UNLOCK_BASIS;
+			uint256 _end = _nextPeriod < _when ? _nextPeriod : _when;
 			uint256 _ellapsed = _end - _start;
 			uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
 			_bias = _ellapsed <= _maxEllapsed ? _bias - _slope * _ellapsed : 0;
-			if (_end == _nextWeek) _slope -= slopeDecay_[_nextWeek];
+			if (_end == _nextPeriod) _slope -= slopeDecay_[_nextPeriod];
 			if (_end == _when) break;
 			_start = _end;
-			_week = _nextWeek;
+			_period = _nextPeriod;
 		}
 		return _bias;
 	}
@@ -232,18 +232,18 @@ contract ValueEscrowToken is IERC20Historical, Ownable, ReentrancyGuard
 			uint256 _bias = _point.bias;
 			uint256 _slope = _point.slope;
 			uint256 _start = _point.time;
-			uint256 _week = (_start / UNLOCK_BASIS) * UNLOCK_BASIS;
+			uint256 _period = (_start / UNLOCK_BASIS) * UNLOCK_BASIS;
 			while (true) {
-				uint256 _nextWeek = _week + UNLOCK_BASIS;
-				uint256 _end = _nextWeek < _when ? _nextWeek : _when;
+				uint256 _nextPeriod = _period + UNLOCK_BASIS;
+				uint256 _end = _nextPeriod < _when ? _nextPeriod : _when;
 				uint256 _ellapsed = _end - _start;
 				uint256 _maxEllapsed = _slope > 0 ? _bias / _slope : uint256(-1);
 				_bias = _ellapsed <= _maxEllapsed ? _bias - _slope * _ellapsed : 0;
-				if (_end == _nextWeek) _slope -= slopeDecay_[_nextWeek];
+				if (_end == _nextPeriod) _slope -= slopeDecay_[_nextPeriod];
 				if (_end == _when) break;
 				_appendPoint(_points, _bias, _slope, _end);
 				_start = _end;
-				_week = _nextWeek;
+				_period = _nextPeriod;
 			}
 			_bias += _newBias - _oldBias;
 			_slope += _newSlope - _oldSlope;
