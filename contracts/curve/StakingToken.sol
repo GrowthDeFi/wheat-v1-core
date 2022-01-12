@@ -30,7 +30,7 @@ contract StakingToken is IERC20Historical, ERC20, Ownable, ReentrancyGuard
 	Point[] private points_;
 	mapping(address => Point[]) private userPoints_;
 
-	bool public override emergencyMode;
+	bool public emergencyMode;
 
 	constructor(string memory _name, string memory _symbol, uint8 _decimals, address _reserveToken)
 		ERC20(_name, _symbol) public

@@ -37,7 +37,7 @@ contract ValueEscrowToken is IERC20Historical, Ownable, ReentrancyGuard
 	mapping(address => Point[]) private userPoints_;
 	mapping(uint256 => uint256) private slopeDecay_;
 
-	bool public override emergencyMode;
+	bool public emergencyMode;
 
 	constructor(string memory _name, string memory _symbol, uint8 _decimals, address _reserveToken)
 		public
