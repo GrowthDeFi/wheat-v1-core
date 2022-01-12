@@ -20,14 +20,14 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	address public immutable rewardToken;
 	address public immutable boostToken;
 
-	uint256 public lastAlloc;
-	uint256 public rewardBalance;
-	mapping(uint256 => uint256) public rewardPerPeriod;
-
-	uint256 public immutable firstClaimPeriod;
-	mapping(address => uint256) public lastClaimPeriod;
-
 	address public treasury;
+
+	uint256 private lastAlloc_;
+	uint256 private rewardBalance_;
+	mapping(uint256 => uint256) private rewardPerPeriod_;
+
+	uint256 private immutable firstClaimPeriod_;
+	mapping(address => uint256) private lastClaimPeriod_;
 
 	constructor(address _escrowToken, address _rewardToken, address _boostToken, address _treasury) public
 	{
@@ -35,17 +35,17 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		rewardToken = _rewardToken;
 		boostToken = _boostToken;
 		treasury = _treasury;
-		lastAlloc = block.timestamp;
-		firstClaimPeriod = (block.timestamp / CLAIM_BASIS + 1) * CLAIM_BASIS;
+		lastAlloc_ = block.timestamp;
+		firstClaimPeriod_ = (block.timestamp / CLAIM_BASIS + 1) * CLAIM_BASIS;
 	}
 
 	function allocateReward() public returns (uint256 _amount)
 	{
-		uint256 _oldTime = lastAlloc;
+		uint256 _oldTime = lastAlloc_;
 		uint256 _newTime = block.timestamp;
 		uint256 _time = _newTime - _oldTime;
 		if (_time < MIN_ALLOC_TIME) return 0;
-		uint256 _oldBalance = rewardBalance;
+		uint256 _oldBalance = rewardBalance_;
 		uint256 _newBalance = Transfers._getBalance(rewardToken);
 		uint256 _balance = _newBalance - _oldBalance;
 		uint256 _maxBalance = uint256(-1) / _time;
@@ -53,15 +53,15 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 			_balance = _maxBalance;
 			_newBalance = _oldBalance + _balance;
 		}
-		lastAlloc = _newTime;
-		rewardBalance = _newBalance;
+		lastAlloc_ = _newTime;
+		rewardBalance_ = _newBalance;
 		if (_balance == 0) return 0;
 		uint256 _start = _oldTime;
 		uint256 _period = (_start / CLAIM_BASIS) * CLAIM_BASIS;
 		while (true) {
 			uint256 _nextPeriod = _period + CLAIM_BASIS;
 			uint256 _end = _nextPeriod < _newTime ? _nextPeriod : _newTime;
-			rewardPerPeriod[_nextPeriod] += _balance * (_start - _end) / _time;
+			rewardPerPeriod_[_nextPeriod] += _balance * (_start - _end) / _time;
 			if (_end == _newTime) break;
 			_start = _end;
 			_period = _nextPeriod;
@@ -72,66 +72,66 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 
 	function pendingReward(address _account, bool _noPenalty) external view returns (uint256 _amount, uint256 _penalty)
 	{
-		(_amount, _penalty,) = _claim(_account, _noPenalty);
+		(_amount, _penalty,,) = _claim(_account, _noPenalty);
 		return (_amount, _penalty);
 	}
 
 	function claim(bool _noPenalty) external nonReentrant returns (uint256 _amount, uint256 _penalty)
 	{
-		allocateReward();
 		IERC20Historical(escrowToken).checkpoint();
-		(_amount, _penalty, lastClaimPeriod[msg.sender]) = _claim(msg.sender, _noPenalty);
-		rewardBalance -= _amount + _penalty;
+		allocateReward();
+		uint256 _excess;
+		(_amount, _penalty, _excess, lastClaimPeriod_[msg.sender]) = _claim(msg.sender, _noPenalty);
+		rewardBalance_ -= _amount + _penalty + _excess;
 		Transfers._pushFunds(rewardToken, msg.sender, _amount);
 		Transfers._pushFunds(rewardToken, FURNACE, _penalty);
 		emit Claimed(msg.sender, _amount, _penalty);
 		return (_amount, _penalty);
 	}
 
-	function _calculateAccruedReward(address _account, uint256 _firstPeriod, uint256 _lastPeriod) internal view returns (uint256 _amount)
+	function _calculateAccruedReward(address _account, uint256 _firstPeriod, uint256 _lastPeriod) internal view returns (uint256 _amount, uint256 _excess)
 	{
 		_amount = 0;
+		_excess = 0;
 		address _escrowToken = escrowToken;
 		address _boostToken = boostToken;
 		if (_boostToken == address(0)) {
 			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
-				uint256 _totalSupply = IERC20Historical(_escrowToken).totalSupply(_period);
-				if (_totalSupply > 0) {
-					uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
-					_amount += rewardPerPeriod[_period] * _balance / _totalSupply;
-				}
+				uint256 _totalSupply = 1 + IERC20Historical(_escrowToken).totalSupply(_period);
+				uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
+				_amount += rewardPerPeriod_[_period] * _balance / _totalSupply;
 			}
 		} else {
 			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
-				uint256 _totalSupply = IERC20Historical(_escrowToken).totalSupply(_period);
-				if (_totalSupply > 0) {
-					uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
-					uint256 _boostTotalSupply = IERC20Historical(_boostToken).totalSupply(_period);
-					if (_boostTotalSupply > 0) {
-						uint256 _boostBalance = IERC20Historical(_boostToken).balanceOf(_account, _period);
-						_balance = 4 * _balance * _boostTotalSupply + 6 * _boostBalance * _totalSupply;
-						_totalSupply = 10 * _boostTotalSupply * _totalSupply;
-					}
-					_amount += rewardPerPeriod[_period] * _balance / _totalSupply;
-				}
+				uint256 _totalSupply = 1 + IERC20Historical(_escrowToken).totalSupply(_period);
+				uint256 _balance = IERC20Historical(_escrowToken).balanceOf(_account, _period);
+				uint256 _boostTotalSupply = 1 + IERC20Historical(_boostToken).totalSupply(_period);
+				uint256 _boostBalance = IERC20Historical(_boostToken).balanceOf(_account, _period);
+				uint256 _normalizedBalance = 4 * _balance * _boostTotalSupply + 6 * _boostBalance * _totalSupply;
+				uint256 _normalizedTotalSupply = 10 * _boostTotalSupply * _totalSupply;
+				uint256 _limitedBalance = _normalizedBalance > _balance ? _balance : _normalizedBalance;
+				uint256 _exceededBalance = _normalizedBalance - _limitedBalance;
+				_amount += rewardPerPeriod_[_period] * _limitedBalance / _normalizedTotalSupply;
+				_excess += rewardPerPeriod_[_period] * _exceededBalance / _normalizedTotalSupply;
 			}
 		}
-		return _amount;
+		return (_amount, _excess);
 	}
 
-	function _claim(address _account, bool _noPenalty) internal view returns (uint256 _amount, uint256 _penalty, uint256 _period)
+	function _claim(address _account, bool _noPenalty) internal view returns (uint256 _amount, uint256 _penalty, uint256 _excess, uint256 _period)
 	{
-		uint256 _firstPeriod = lastClaimPeriod[_account];
-		if (_firstPeriod < firstClaimPeriod) _firstPeriod = firstClaimPeriod;
-		uint256 _lastPeriod = (lastAlloc / CLAIM_BASIS + 1) * CLAIM_BASIS;
+		uint256 _firstPeriod = lastClaimPeriod_[_account];
+		if (_firstPeriod < firstClaimPeriod_) _firstPeriod = firstClaimPeriod_;
+		uint256 _lastPeriod = (lastAlloc_ / CLAIM_BASIS + 1) * CLAIM_BASIS;
 		uint256 _middlePeriod =_lastPeriod - 13 * CLAIM_BASIS; // 13 weeks
 		if (_middlePeriod < _firstPeriod) _middlePeriod = _firstPeriod;
 		if (_noPenalty) _lastPeriod = _middlePeriod;
-		uint256 _amount1 = _calculateAccruedReward(_account, _firstPeriod, _middlePeriod);
-		uint256 _amount2 = _calculateAccruedReward(_account, _middlePeriod, _lastPeriod);
+		(uint256 _amount1, uint256 _excess1) = _calculateAccruedReward(_account, _firstPeriod, _middlePeriod);
+		(uint256 _amount2, uint256 _excess2) = _calculateAccruedReward(_account, _middlePeriod, _lastPeriod);
 		_penalty = _amount2 / 2; // 50%
 		_amount = _amount1 + (_amount2 - _penalty);
-		return (_amount, _penalty, _lastPeriod);
+		_excess = _excess1 + _excess2;
+		return (_amount, _penalty, _excess, _lastPeriod);
 	}
 
 	function recoverLostFunds(address _token) external onlyOwner nonReentrant
