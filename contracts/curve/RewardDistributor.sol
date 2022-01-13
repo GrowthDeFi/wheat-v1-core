@@ -16,9 +16,16 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	uint256 public constant CLAIM_BASIS = 1 weeks;
 	uint256 public constant MIN_ALLOC_TIME = 1 days;
 
+	uint256 constant DEFAULT_PENALTY_RATE = 50e16; // 50%
+	uint256 constant DEFAULT_PENALTY_PERIODS = 13; // 13 weeks
+	uint256 constant MAXIMUM_PENALTY_PERIODS = 5 * 52; // ~5 years
+
 	address public immutable escrowToken;
 	address public immutable rewardToken;
 	address public immutable boostToken;
+
+	uint256 public penaltyRate = DEFAULT_PENALTY_RATE;
+	uint256 public penaltyPeriods = DEFAULT_PENALTY_PERIODS;
 
 	address public treasury;
 
@@ -185,12 +192,12 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		uint256 _firstPeriod = lastPeriod_[_account];
 		if (_firstPeriod < firstPeriod_) _firstPeriod = firstPeriod_;
 		uint256 _lastPeriod = (lastAlloc_ / CLAIM_BASIS + 1) * CLAIM_BASIS;
-		uint256 _middlePeriod =_lastPeriod - 13 * CLAIM_BASIS; // 13 weeks
+		uint256 _middlePeriod =_lastPeriod - penaltyPeriods * CLAIM_BASIS;
 		if (_middlePeriod < _firstPeriod) _middlePeriod = _firstPeriod;
 		if (_noPenalty) _lastPeriod = _middlePeriod;
 		(uint256 _amount1, uint256 _excess1) = _calculateAccrued(_account, _firstPeriod, _middlePeriod);
 		(uint256 _amount2, uint256 _excess2) = _calculateAccrued(_account, _middlePeriod, _lastPeriod);
-		_penalty = _amount2 / 2; // 50%
+		_penalty = _amount2 * penaltyRate / 100e16;
 		_amount = _amount1 + (_amount2 - _penalty);
 		_excess = _excess1 + _excess2;
 		return (_amount, _penalty, _excess, _lastPeriod);
@@ -213,6 +220,16 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
+	function setPenaltyParams(uint256 _newPenaltyRate, uint256 _newPenaltyPeriods) external onlyOwner
+		delayed(this.setPenaltyParams.selector, keccak256(abi.encode(_newPenaltyRate, _newPenaltyPeriods)))
+	{
+		require(_newPenaltyRate <= 100e16, "invalid rate");
+		require(_newPenaltyPeriods <= MAXIMUM_PENALTY_PERIODS, "invalid periods");
+		(uint256 _oldPenaltyRate, uint256 _oldPenaltyPeriods) = (penaltyRate, penaltyPeriods);
+		(penaltyRate, penaltyPeriods) = (_newPenaltyRate, _newPenaltyPeriods);
+		emit ChangePenaltyParams(_oldPenaltyRate, _oldPenaltyPeriods, _newPenaltyRate, _newPenaltyPeriods);
+	}
+
 	function setTreasury(address _newTreasury) external onlyOwner
 		delayed(this.setTreasury.selector, keccak256(abi.encode(_newTreasury)))
 	{
@@ -225,5 +242,6 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	event Allocate(uint256 _amount);
 	event Claim(address indexed _account, uint256 _amount, uint256 _penalty);
 	event Recycle(uint256 _amount);
+	event ChangePenaltyParams(uint256 _oldPenaltyRate, uint256 _oldPenaltyPeriods, uint256 _newPenaltyRate, uint256 _newPenaltyPeriods);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 }
