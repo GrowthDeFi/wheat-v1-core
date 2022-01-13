@@ -140,12 +140,13 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 			for (uint256 _period = _firstPeriod; _period < _lastPeriod; _period += CLAIM_BASIS) {
 				uint256 _totalSupply = IERC20Historical(escrowToken).totalSupply(_period);
 				uint256 _boostTotalSupply = IERC20Historical(boostToken).totalSupply(_period);
-				uint256 _normalizedTotalSupply = 10 * _boostTotalSupply * _totalSupply;
+				uint256 _normalizedTotalSupply = 10 * _totalSupply * _boostTotalSupply;
 				if (_normalizedTotalSupply > 0) {
 					uint256 _balance = IERC20Historical(escrowToken).balanceOf(_account, _period);
 					uint256 _boostBalance = IERC20Historical(boostToken).balanceOf(_account, _period);
-					uint256 _normalizedBalance = 4 * _balance * _boostTotalSupply + 6 * _boostBalance * _totalSupply;
-					uint256 _limitedBalance = _normalizedBalance > _balance ? _balance : _normalizedBalance;
+					uint256 _isolatedBalance = 10 * _balance * _boostTotalSupply;
+					uint256 _normalizedBalance = 4 * _balance * _boostTotalSupply + 6 * _totalSupply * _boostBalance;
+					uint256 _limitedBalance = _normalizedBalance > _isolatedBalance ? _isolatedBalance : _normalizedBalance;
 					uint256 _exceededBalance = _normalizedBalance - _limitedBalance;
 					uint256 _rewardPerPeriod = rewardPerPeriod_[_period];
 					_amount += _rewardPerPeriod * _limitedBalance / _normalizedTotalSupply;
