@@ -26,6 +26,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 
 	uint256 public penaltyRate = DEFAULT_PENALTY_RATE;
 	uint256 public penaltyPeriods = DEFAULT_PENALTY_PERIODS;
+	address public penaltyRecipient = FURNACE;
 
 	address public treasury;
 
@@ -103,7 +104,7 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		(_amount, _penalty, _excess, lastPeriod_[msg.sender]) = _claim(msg.sender, _noPenalty);
 		rewardBalance_ -= _amount + _penalty + _excess;
 		Transfers._pushFunds(rewardToken, msg.sender, _amount);
-		Transfers._pushFunds(rewardToken, FURNACE, _penalty);
+		Transfers._pushFunds(rewardToken, penaltyRecipient, _penalty);
 		if (_amount > 0 || _penalty > 0) {
 			emit Claim(msg.sender, _amount, _penalty);
 		}
@@ -220,14 +221,15 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 		Transfers._pushFunds(_token, treasury, _balance);
 	}
 
-	function setPenaltyParams(uint256 _newPenaltyRate, uint256 _newPenaltyPeriods) external onlyOwner
-		delayed(this.setPenaltyParams.selector, keccak256(abi.encode(_newPenaltyRate, _newPenaltyPeriods)))
+	function setPenaltyParams(uint256 _newPenaltyRate, uint256 _newPenaltyPeriods, address _newPenaltyRecipient) external onlyOwner
+		delayed(this.setPenaltyParams.selector, keccak256(abi.encode(_newPenaltyRate, _newPenaltyPeriods, _newPenaltyRecipient)))
 	{
 		require(_newPenaltyRate <= 100e16, "invalid rate");
 		require(_newPenaltyPeriods <= MAXIMUM_PENALTY_PERIODS, "invalid periods");
-		(uint256 _oldPenaltyRate, uint256 _oldPenaltyPeriods) = (penaltyRate, penaltyPeriods);
-		(penaltyRate, penaltyPeriods) = (_newPenaltyRate, _newPenaltyPeriods);
-		emit ChangePenaltyParams(_oldPenaltyRate, _oldPenaltyPeriods, _newPenaltyRate, _newPenaltyPeriods);
+		require(_newPenaltyRecipient != address(0), "invalid recipient");
+		(uint256 _oldPenaltyRate, uint256 _oldPenaltyPeriods, address _oldPenaltyRecipient) = (penaltyRate, penaltyPeriods, penaltyRecipient);
+		(penaltyRate, penaltyPeriods, penaltyRecipient) = (_newPenaltyRate, _newPenaltyPeriods, _newPenaltyRecipient);
+		emit ChangePenaltyParams(_oldPenaltyRate, _oldPenaltyPeriods, _newPenaltyRate, _newPenaltyPeriods, _oldPenaltyRecipient, _newPenaltyRecipient);
 	}
 
 	function setTreasury(address _newTreasury) external onlyOwner
@@ -242,6 +244,6 @@ contract RewardDistributor is ReentrancyGuard, DelayedActionGuard
 	event Allocate(uint256 _amount);
 	event Claim(address indexed _account, uint256 _amount, uint256 _penalty);
 	event Recycle(uint256 _amount);
-	event ChangePenaltyParams(uint256 _oldPenaltyRate, uint256 _oldPenaltyPeriods, uint256 _newPenaltyRate, uint256 _newPenaltyPeriods);
+	event ChangePenaltyParams(uint256 _oldPenaltyRate, uint256 _oldPenaltyPeriods, uint256 _newPenaltyRate, uint256 _newPenaltyPeriods, address _oldPenaltyRecipient, address _newPenaltyRecipient);
 	event ChangeTreasury(address _oldTreasury, address _newTreasury);
 }
