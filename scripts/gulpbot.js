@@ -824,11 +824,11 @@ async function gulpAll(privateKey, network) {
         [30, '0x731010369d41147523e6ae65aD3dB4Dea1Eb13ff', JOE, TDJ_USDT_JOE, JOE_MASTERCHEF_V2],
       ];
       for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
-        await fixTwap(privateKey, network, address, JOE_EXCHANGE, JOE, routingToken, reserveToken);
         const amount1 = await getTokenBalance(privateKey, network, JOE, address);
         const amount2 = await getPendingBalanceJoe(privateKey, network, masterChef, pid, address);
         const MINIMUM_AMOUNT = 250000000000000000000n; // 250 JOE
         if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, JOE_EXCHANGE, JOE, routingToken, reserveToken);
           const tx = await safeGulp(privateKey, network, address);
           if (tx !== null) {
             const name = await getTokenSymbol(privateKey, network, address);
@@ -1043,11 +1043,11 @@ async function gulpAll(privateKey, network) {
         [423, '0x01A50D26b9B40c92fa40CBC698DeB57c65b4B7e4', USDT, PCS_USDT_USDC],
       ];
       for (const [pid, address, routingToken, reserveToken] of addresses) {
-        await fixTwap(privateKey, network, address, CAKE_EXCHANGE, CAKE, routingToken, reserveToken);
         const amount1 = await getTokenBalance(privateKey, network, CAKE, address);
         const amount2 = await getPendingBalance(privateKey, network, CAKE_MASTERCHEF, pid, address);
         const MINIMUM_AMOUNT = 50000000000000000000n; // 50 CAKE
         if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, CAKE_EXCHANGE, CAKE, routingToken, reserveToken);
           const tx = await safeGulp(privateKey, network, address);
           if (tx !== null) {
             const name = await getTokenSymbol(privateKey, network, address);
@@ -1068,11 +1068,11 @@ async function gulpAll(privateKey, network) {
         [115, '0xC8216C4ac63F3cAC4f7e74A82d2252B7658FA8b1', BUSD, APE_MOR_BUSD],
       ];
       for (const [pid, address, routingToken, reserveToken] of addresses) {
-        await fixTwap(privateKey, network, address, BANANA_EXCHANGE, BANANA, routingToken, reserveToken);
         const amount1 = await getTokenBalance(privateKey, network, BANANA, address);
         const amount2 = await getPendingBalance(privateKey, network, BANANA_MASTERCHEF, pid, address);
         const MINIMUM_AMOUNT = 500000000000000000000n; // 500 BANANA
         if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, BANANA_EXCHANGE, BANANA, routingToken, reserveToken);
           const tx = await safeGulp(privateKey, network, address);
           if (tx !== null) {
             const name = await getTokenSymbol(privateKey, network, address);
