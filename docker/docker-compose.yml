@@ -23,3 +23,7 @@ services:
     <<: *gulpbot
     container_name: gulpbot-avaxmain
     command: node /repo/scripts/gulpbot.js avaxmain
+  gulpbot-ftmmain:
+    <<: *gulpbot
+    container_name: gulpbot-ftmmain
+    command: node /repo/scripts/gulpbot.js ftmmain
