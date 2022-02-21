@@ -75,6 +75,8 @@ const CHAIN_ID = {
   'bsctest': 97,
   'avaxmain': 43114,
   'avaxtest': 43113,
+  'ftmmain': 250,
+  'ftmtest': 4002,
 };
 
 const NETWORK_NAME = {
@@ -82,6 +84,8 @@ const NETWORK_NAME = {
   97: 'bsctest',
   43114: 'avaxmain',
   43113: 'avaxtest',
+  250: 'ftmmain',
+  4002: 'ftmtest',
 };
 
 const ADDRESS_URL_PREFIX = {
@@ -89,6 +93,8 @@ const ADDRESS_URL_PREFIX = {
   'bsctest': 'https://testnet.bscscan.com/address/',
   'avaxmain': 'https://snowtrace.io/address/',
   'avaxtest': 'https://testnet.snowtrace.io/address/',
+  'ftmmain': 'https://ftmscan.com/address/',
+  'ftmtest': 'https://testnet.ftmscan.com/address/',
 };
 
 const TX_URL_PREFIX = {
@@ -96,6 +102,8 @@ const TX_URL_PREFIX = {
   'bsctest': 'https://testnet.bscscan.com/tx/',
   'avaxmain': 'https://snowtrace.io/tx/',
   'avaxtest': 'https://testnet.snowtrace.io/tx/',
+  'ftmmain': 'https://ftmscan.com/tx/',
+  'ftmtest': 'https://testnet.ftmscan.com/tx/',
 };
 
 const NATIVE_SYMBOL = {
@@ -103,6 +111,8 @@ const NATIVE_SYMBOL = {
   'bsctest': 'BNB',
   'avaxmain': 'AVAX',
   'avaxtest': 'AVAX',
+  'ftmmain': 'FTM',
+  'ftmtest': 'FTM',
 };
 
 const LIMIT_GASPRICE = {
@@ -110,6 +120,8 @@ const LIMIT_GASPRICE = {
   'bsctest': '10000000000',
   'avaxmain': '100000000000',
   'avaxtest': '100000000000',
+  'ftmmain': '800000000000',
+  'ftmtest': '800000000000',
 };
 
 const HTTP_PROVIDER_URLS = {
@@ -143,6 +155,12 @@ const HTTP_PROVIDER_URLS = {
   ],
   'avaxtest': [
     'https://api.avax-test.network/ext/bc/C/rpc',
+  ],
+  'ftmmain': [
+    'https://rpc.ftm.tools/',
+  ],
+  'ftmtest': [
+    'https://rpc.testnet.fantom.network/',
   ],
 };
 
@@ -200,6 +218,7 @@ async function sendTelegramMessage(message, key = '') {
 const IERC20_ABI = require('../build/contracts/IERC20.json').abi;
 const MASTERCHEF_ABI = require('../build/contracts/CustomMasterChef.json').abi;
 const MASTERCHEFJOE_ABI = require('../build/contracts/MasterChefJoe.json').abi;
+const MASTERCHEFLQDR_ABI = require('../build/contracts/MasterChefLqdr.json').abi;
 const STRATEGY_ABI = require('../build/contracts/RewardCompoundingStrategyToken.json').abi;
 const COLLECTOR_ADAPTER_ABI = require('../build/contracts/AutoFarmFeeCollectorAdapter.json').abi;
 const COLLECTOR_ABI = require('../build/contracts/FeeCollector.json').abi;
@@ -211,6 +230,8 @@ const MASTERCHEF_ADDRESS = {
   'bsctest': '0xF4748df5D63F6AB01e276065E6bD098Ce8dEA98a',
   'avaxmain': '0x5818388B1d756090FF1545D943fF9D1F6Ea13ce3',
   'avaxtest': '0x0000000000000000000000000000000000000000',
+  'ftmmain': '0x0000000000000000000000000000000000000000',
+  'ftmtest': '0x0000000000000000000000000000000000000000',
 };
 
 function getDefaultAccount(privateKey, network) {
@@ -286,6 +307,19 @@ async function getPendingBalanceJoe(privateKey, network, address, pid, account =
   if (account === null) [account] = web3.currentProvider.getAddresses();
   try {
     const { _pendingJoe: amount } = await contract.methods.pendingTokens(pid, account).call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function getPendingBalanceLqdr(privateKey, network, address, pid, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = MASTERCHEFLQDR_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const { _pendingJoe: amount } = await contract.methods.pendingLqdr(pid, account).call();
     return amount;
   } catch (e) {
     throw new Error(e.message);
@@ -770,6 +804,108 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
 }
 
 async function gulpAll(privateKey, network) {
+
+  if (network === 'ftmmain') {
+
+    const LQDR = '0x10b620b2dbAC4Faa7D7FFD71Da486f5D44cd86f9';
+    const LQDR_MASTERCHEF_V2 = '0x6e2ad6527901c9664f016466b8DA1357a004db0f';
+    const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
+    const SPI_EXCHANGE = '0x7c50808E072a5531eC5D3DCc88Bd7a4Afc36dbf9';
+    const SPO_EXCHANGE = '0x3FDbFdc60Cf80465E7dC05041AE4f03E5e2D55cB';
+    const SPI_FTM_LQDR = '0x4Fe6f19031239F105F753D1DF8A0d24857D0cAA2';
+    const SPI_FTM_FUSDT = '0xd14Dd3c56D9bc306322d4cEa0E1C49e9dDf045D4';
+    const SPI_FTM_WBTC = '0x279b2c897737a50405ED2091694F225D83F2D3bA';
+    const SPI_FTM_USDC = '0xe7E90f5a767406efF87Fdad7EB07ef407922EC1D';
+    const SPI_FTM_WETH = '0x613BF4E46b4817015c01c6Bb31C7ae9edAadc26e';
+    const SPI_FTM_MIM = '0xB32b31DfAfbD53E310390F641C7119b5B9Ea0488';
+    const SPI_FTM_SPIRIT = '0x30748322B6E34545DBe0788C421886AEB5297789';
+    const SPI_FTM_FRAX = '0x7ed0cdDB9BB6c6dfEa6fB63E117c8305479B8D7D';
+    const SPI_FTM_MAI = '0x51Eb93ECfEFFbB2f6fE6106c4491B5a0B944E8bd';
+    const SPO_FTM_BOO = '0xEc7178F4C41f346b2721907F5cF7628E388A7a58';
+    const SPO_FTM_USDC = '0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c';
+    const SPO_FTM_DAI = '0xe120ffBDA0d14f3Bb6d6053E90E63c572A66a428';
+    const SPO_FTM_SUSHI = '0xf84E313B36E86315af7a06ff26C8b20e9EB443C3';
+    const SPO_FTM_LINK = '0x89d9bC2F2d091CfBFc31e333D6Dc555dDBc2fd29';
+    const SPO_FTM_WETH = '0xf0702249F4D3A25cD3DED7859a165693685Ab577';
+    const SPO_FTM_FUSDT = '0x5965E53aa80a0bcF1CD6dbDd72e6A9b2AA047410';
+    const SPO_FTM_MIM = '0x6f86e65b255c9111109d2D2325ca2dFc82456efc';
+    const SPO_FTM_SCREAM = '0x30872e4fc4edbFD7a352bFC2463eb4fAe9C09086';
+
+    {
+      // LQDR SpiritSwap strategies
+      const addresses = [
+        // 0 - stkFTM/LQDRv3
+        [0, '0x2FD8e6458f8AEA3C3370Ecf3357D754412c97C70', WFTM, SPI_FTM_LQDR, LQDR_MASTERCHEF_V2],
+        // 3 - stkFTM/fUSDTv3
+        [3, '0x83CbBea0074711dcbED2CB7936A22F4C59D624a7', WFTM, SPI_FTM_FUSDT, LQDR_MASTERCHEF_V2],
+        // 4 - stkFTM/WBTCv3
+        [4, '0x1fb4Abc302B2EB5ed3c4dD59C884eBB2b0cD1528', WFTM, SPI_FTM_WBTC, LQDR_MASTERCHEF_V2],
+        // 5 - stkFTM/USDCv3
+        [5, '0x0697ef69527147A3757516ecF6b1ff45652A2298', WFTM, SPI_FTM_USDC, LQDR_MASTERCHEF_V2],
+        // 6 - stkFTM/WETHv3
+        [6, '0x50714fF57E8cCf127E27Eba5Dfd1b82a4F918FE3', WFTM, SPI_FTM_WETH, LQDR_MASTERCHEF_V2],
+        // 7 - stkFTM/MIMv3
+        [7, '0xDA2AE62e2B71ad3000BB75acdA2F8f68DC88aCE4', WFTM, SPI_FTM_MIM, LQDR_MASTERCHEF_V2],
+        // 28 - stkFTM/SPIRITv3
+        [28, '0xF99A8Cd2b651893A3F8fb1045E4101e63D82264c', WFTM, SPI_FTM_SPIRIT, LQDR_MASTERCHEF_V2],
+        // 3 - stkFTM/FRAXv3
+        [33, '0xC1D8EE2b67440e2bae0Ca608F3DC0a5D3B83eE0F', WFTM, SPI_FTM_FRAX, LQDR_MASTERCHEF_V2],
+        // 38 - stkFTM/MAIv3
+        [38, '0x4cea7726Eea4a0B342f8422D003Df735eAfDB195', WFTM, SPI_FTM_MAI, LQDR_MASTERCHEF_V2],
+      ];
+      for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
+        const amount1 = await getTokenBalance(privateKey, network, LQDR, address);
+        const amount2 = await getPendingBalanceLqdr(privateKey, network, masterChef, pid, address);
+        const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, SPI_EXCHANGE, LQDR, routingToken, reserveToken);
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'SpiritSwapStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
+      // LQDR SpookySwap strategies
+      const addresses = [
+        // 10 - stkFTM/BOOv3
+        [10, '0x2f797A09AcD7012782714EC62a64c02Db4Cd6d45', WFTM, SPO_FTM_BOO, LQDR_MASTERCHEF_V2],
+        // 11 - stkFTM/USDCv3
+        [11, '0x91CFBb392e6aF98e1b0fDD483b660bAFd049f61F', WFTM, SPO_FTM_USDC, LQDR_MASTERCHEF_V2],
+        // 12 - stkFTM/DAIv3
+        [12, '0xaFe49F040F934174A9FDFf24b1F219047dC3225e', WFTM, SPO_FTM_DAI, LQDR_MASTERCHEF_V2],
+        // 13 - stkFTM/SUSHIv3
+        [13, '0x9b1E10f73851B0d2bF401E0e82260eF64740296F', WFTM, SPO_FTM_SUSHI, LQDR_MASTERCHEF_V2],
+        // 14 - stkFTM/LINKv3
+        [14, '0x3B758ee4ffa3f29ec0827ED5939F0595c53c5e42', WFTM, SPO_FTM_LINK, LQDR_MASTERCHEF_V2],
+        // 15 - stkFTM/WETHv3
+        [15, '0x1c312bcf04B4640516894D1e8AC20B8CcC764c0E', WFTM, SPO_FTM_WETH, LQDR_MASTERCHEF_V2],
+        // 16 - stkFTM/fUSDTv3
+        [16, '0x91D350d539dCFc8a88e665C1247283ef4bF2FD7e', WFTM, SPO_FTM_FUSDT, LQDR_MASTERCHEF_V2],
+        // 17 - stkFTM/MIMv3
+        [17, '0x7abF269faC9E8324dE364F26ed3B8379C7F0629E', WFTM, SPO_FTM_MIM, LQDR_MASTERCHEF_V2],
+        // 23 - stkFTM/SCREAMv3
+        [23, '0x4d5727523127cfE9F0088f05bCa9B2afd4Ac87e5', WFTM, SPO_FTM_SCREAM, LQDR_MASTERCHEF_V2],
+      ];
+      for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
+        const amount1 = await getTokenBalance(privateKey, network, LQDR, address);
+        const amount2 = await getPendingBalanceLqdr(privateKey, network, masterChef, pid, address);
+        const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, SPO_EXCHANGE, LQDR, routingToken, reserveToken);
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'SpookySwapStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+  }
 
   if (network === 'avaxmain') {
 
