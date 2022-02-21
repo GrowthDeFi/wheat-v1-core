@@ -319,7 +319,7 @@ async function getPendingBalanceLqdr(privateKey, network, address, pid, account 
   const contract = new web3.eth.Contract(abi, address);
   if (account === null) [account] = web3.currentProvider.getAddresses();
   try {
-    const { _pending: amount } = await contract.methods.pendingLqdr(pid, account).call();
+    const amount = await contract.methods.pendingLqdr(pid, account).call();
     return amount;
   } catch (e) {
     throw new Error(e.message);
