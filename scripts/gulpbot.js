@@ -938,6 +938,7 @@ async function gulpAll(privateKey, network) {
       }
     }
 
+    return false;
   }
 
   if (network === 'avaxmain') {
