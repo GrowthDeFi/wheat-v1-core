@@ -810,6 +810,9 @@ async function gulpAll(privateKey, network) {
     const LQDR = '0x10b620b2dbAC4Faa7D7FFD71Da486f5D44cd86f9';
     const LQDR_MASTERCHEF_V2 = '0x6e2ad6527901c9664f016466b8DA1357a004db0f';
     const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
+    const GEIST = '0xd8321AA83Fb0a4ECd6348D4577431310A6E0814d';
+    const CRV = '0x1E4F97b9f9F913c46F1632781732927B9019C68b';
+    const USDC = '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75';
     const SPI_EXCHANGE = '0x7c50808E072a5531eC5D3DCc88Bd7a4Afc36dbf9';
     const SPO_EXCHANGE = '0x3FDbFdc60Cf80465E7dC05041AE4f03E5e2D55cB';
     const SPI_FTM_LQDR = '0x4Fe6f19031239F105F753D1DF8A0d24857D0cAA2';
@@ -901,6 +904,36 @@ async function gulpAll(privateKey, network) {
             const name = await getTokenSymbol(privateKey, network, address);
             return { name, type: 'SpookySwapStrategy', address, tx };
           }
+        }
+      }
+    }
+
+    {
+      // stkUSDLPv3 GEIST/CRV/WFTM adapter
+      const address = '0xB307521B7e740afbC2993a9023430Df8F4915f58';
+      const amount1 = await getTokenBalance(privateKey, network, GEIST, address);
+      const amount2 = await getTokenBalance(privateKey, network, CRV, address);
+      const amount3 = await getTokenBalance(privateKey, network, WFTM, address);
+      const MINIMUM_AMOUNT1 = 6500000000000000000000n; // 6500 GEIST
+      const MINIMUM_AMOUNT2 = 500000000000000000000n; // 500 CRV
+      const MINIMUM_AMOUNT3 = 1000000000000000000000n; // 1000 WFTM
+      if (BigInt(amount1) >= MINIMUM_AMOUNT1 || BigInt(amount2) >= MINIMUM_AMOUNT2 || BigInt(amount3) >= MINIMUM_AMOUNT3) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'GEIST+CRV+WAVAX', type: 'LiquidDriverCurveAdapter', address, tx };
+        }
+      }
+    }
+
+    {
+      // PSM INJECTOR stkUSDLPv3 using USDC
+      const address = '0x2Ff5b0df069E36da2f0c7E1AC381511ede792F82';
+      const amount = await getTokenBalance(privateKey, network, USDC, address);
+      const MINIMUM_AMOUNT = 5000000000n; // 5000 USDC
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'stkUSDLPv3', type: 'PsmInjector', address, tx };
         }
       }
     }
