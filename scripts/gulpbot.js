@@ -225,6 +225,17 @@ const COLLECTOR_ABI = require('../build/contracts/FeeCollector.json').abi;
 const BUYBACK_ABI = require('../build/contracts/Buyback.json').abi;
 const UNIVERSAL_BUYBACK_ABI = require('../build/contracts/UniversalBuyback.json').abi;
 
+const EXTENSION_ABI = [
+  {
+    type: 'function',
+    name: 'collect',
+    inputs: [
+    ],
+    outputs:[
+    ],
+  },
+];
+
 const MASTERCHEF_ADDRESS = {
   'bscmain': '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448',
   'bsctest': '0xF4748df5D63F6AB01e276065E6bD098Ce8dEA98a',
@@ -456,6 +467,30 @@ async function pendingBurning(privateKey, network, address, agent = null) {
   }
 }
 
+async function collect(privateKey, network, address, nonce) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = EXTENSION_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  const [from] = web3.currentProvider.getAddresses();
+  let txId = null;
+  try {
+    const estimatedGas = await contract.methods.collect().estimateGas({ from, nonce });
+    const gas = 2 * estimatedGas;
+    const gasPrice = await web3.eth.getGasPrice();
+    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+      throw new Error('Gas price beyond the set limit');
+    }
+    await contract.methods.collect().send({ from, nonce, gas })
+      .on('transactionHash', (hash) => {
+        txId = hash;
+      });
+  } catch (e) {
+    throw new Error(e.message);
+  }
+  if (txId === null) throw new Error('Failure reading txId');
+  return txId;
+}
+
 async function gulp0(privateKey, network, address, nonce) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
@@ -565,9 +600,11 @@ const ACTIVE_PIDS = [
   48, 49, 50, 51
 ];
 const MONITORING_INTERVAL = 15; // 15 seconds
-/*
 const DEFAULT_GULP_INTERVAL = 12 * 60 * 60; // 12 hours
 const GULP_INTERVAL = {
+  // cLQDR Extension
+  '0x1072A1D913806fAA9584fA180eDd53579562A4b6': 72 * 60 * 60, // 72 hours
+/*
   // 5 - stkCAKE
   '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 24 * 60 * 60, // 24 hours
 
@@ -661,8 +698,8 @@ const GULP_INTERVAL = {
   '0x495089390569d47807F1Db83F14e053002DB25b4': 48 * 60 * 60, // 48 hours
   // Universal buyback
   '0x01d1c4eC99D0A7D8f4141D42D1624fffa054D7Ae': 48 * 60 * 60, // 48 hours
-};
 */
+};
 
 const strategyCache = {};
 
@@ -715,6 +752,23 @@ async function safeGulp(privateKey, network, address) {
     try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch (e) { messages.push(e.message); }
     try { const txId = await gulp1(privateKey, network, address, 0, nonce); return txId; } catch (e) { messages.push(e.message); }
     try { const txId = await gulp2(privateKey, network, address, 0, 0, nonce); return txId; } catch (e) { messages.push(e.message); }
+    throw new Error(messages.join('\n'));
+  } finally {
+    lastGulp[address] = now;
+    writeLastGulp(network);
+  }
+}
+
+async function safeCollect(privateKey, network, address) {
+  const now = Date.now();
+  const timestamp = lastGulp[address] || 0;
+  const ellapsed = (now - timestamp) / 1000;
+  const interval = GULP_INTERVAL[address] || DEFAULT_GULP_INTERVAL;
+  if (ellapsed < interval) return null;
+  const nonce = await getNonce(privateKey, network);
+  try {
+    let messages = [address];
+    try { const txId = await collect(privateKey, network, address, nonce); return txId; } catch (e) { messages.push(e.message); }
     throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
@@ -934,6 +988,28 @@ async function gulpAll(privateKey, network) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
           return { name: 'stkUSDLPv3', type: 'PsmInjector', address, tx };
+        }
+      }
+    }
+
+    {
+      // cLQDR EXTENSION
+      const address = '0x1072A1D913806fAA9584fA180eDd53579562A4b6';
+      const tx = await safeCollect(privateKey, network, address);
+      if (tx !== null) {
+        return { name: 'cLQDR', type: 'Extension', address, tx };
+      }
+    }
+
+    {
+      // cLQDR RECEIVER
+      const address = '0x7259CeBc6D8f84afdce4B81a3a33D53A526521F8';
+      const amount = await getTokenBalance(privateKey, network, LQDR, address);
+      const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'cLQDR', type: 'Buyback', address, tx };
         }
       }
     }
