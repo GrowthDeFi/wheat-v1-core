@@ -1084,6 +1084,7 @@ async function gulpAll(privateKey, network) {
       }
     }
 
+    /*
     {
       // WHEAT strategies
       const addresses = [
@@ -1103,6 +1104,7 @@ async function gulpAll(privateKey, network) {
         }
       }
     }
+    */
 
     {
       // JOE SPLITTING ADAPTER
@@ -1210,6 +1212,7 @@ async function gulpAll(privateKey, network) {
       }
     }
 
+    /* TODO reroute rewards to multisig
     {
       // JOE buyback
       const address = '0xae35A19F1DAc62AD3794773D5f0983f05073D0f2';
@@ -1222,6 +1225,7 @@ async function gulpAll(privateKey, network) {
         }
       }
     }
+    */
 
     return false;
   }
@@ -1328,6 +1332,7 @@ async function gulpAll(privateKey, network) {
       }
     }
 
+    /*
     {
       // WHEAT strategies
       const addresses = [
@@ -1347,6 +1352,7 @@ async function gulpAll(privateKey, network) {
         }
       }
     }
+    */
 
     {
       // CAKE collector
@@ -1374,6 +1380,7 @@ async function gulpAll(privateKey, network) {
       }
     }
 
+    /* TODO reroute rewards to multisig
     {
       // CAKE buyback
       const address = '0xcD22272873B681986cE984E719D22A790dfE9C4a';
@@ -1386,7 +1393,9 @@ async function gulpAll(privateKey, network) {
         }
       }
     }
+    */
 
+    /* TODO reroute rewards to multisig
     {
       // BANANA buyback
       const address = '0x889c56ABcc2606e77B3733E8703E9e040655b8E5';
@@ -1399,6 +1408,7 @@ async function gulpAll(privateKey, network) {
         }
       }
     }
+    */
 
     // OLD SYSTEM v2
 
@@ -1549,6 +1559,7 @@ async function gulpAll(privateKey, network) {
     }
   */
 
+    /* TODO reroute rewards to multisig
     {
       // CAKE buyback
       const address = '0xC351706C3212D45fc24F6B89e686f07fAb048b16';
@@ -1561,7 +1572,9 @@ async function gulpAll(privateKey, network) {
         }
       }
     }
+    */
 
+    /* TODO reroute rewards to multisig
     {
       // universal buyback
       const address = '0x01d1c4eC99D0A7D8f4141D42D1624fffa054D7Ae';
@@ -1574,6 +1587,7 @@ async function gulpAll(privateKey, network) {
         }
       }
     }
+    */
 
     return false;
   }
