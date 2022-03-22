@@ -1003,7 +1003,7 @@ async function gulpAll(privateKey, network) {
 
     {
       // cLQDR RECEIVER
-      const address = '0x7259CeBc6D8f84afdce4B81a3a33D53A526521F8';
+      const address = '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875';
       const amount = await getTokenBalance(privateKey, network, LQDR, address);
       const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
