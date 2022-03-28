@@ -1006,14 +1006,14 @@ async function gulpAll(privateKey, network) {
     {
       // cLQDR RECEIVER
       const address = '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875';
-      const amount = await getTokenBalance(privateKey, network, LQDR, address);
-      const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
-      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+      //const amount = await getTokenBalance(privateKey, network, LQDR, address);
+      //const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
+      //if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
           return { name: 'cLQDR', type: 'Buyback', address, tx };
         }
-      }
+      //}
     }
 
     return false;
