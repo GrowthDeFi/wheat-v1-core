@@ -600,7 +600,7 @@ const ACTIVE_PIDS = [
   48, 49, 50, 51
 ];
 const MONITORING_INTERVAL = 15; // 15 seconds
-const DEFAULT_GULP_INTERVAL = 12 * 60 * 60; // 12 hours
+const DEFAULT_GULP_INTERVAL = 4 * 60 * 60; // 4 hours
 const GULP_INTERVAL = {
   // cLQDR Extension
   '0x1072A1D913806fAA9584fA180eDd53579562A4b6': 24 * 60 * 60, // 24 hours
@@ -742,12 +742,10 @@ function writeLastGulp(network) {
 
 async function safeGulp(privateKey, network, address) {
   const now = Date.now();
-/*
   const timestamp = lastGulp[address] || 0;
   const ellapsed = (now - timestamp) / 1000;
   const interval = GULP_INTERVAL[address] || DEFAULT_GULP_INTERVAL;
   if (ellapsed < interval) return null;
-*/
   const nonce = await getNonce(privateKey, network);
   try {
     let messages = [address];
