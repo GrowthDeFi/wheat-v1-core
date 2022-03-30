@@ -603,9 +603,9 @@ const MONITORING_INTERVAL = 15; // 15 seconds
 const DEFAULT_GULP_INTERVAL = 4 * 60 * 60; // 4 hours
 const GULP_INTERVAL = {
   // cLQDR Extension
-  '0x1072A1D913806fAA9584fA180eDd53579562A4b6': 24 * 60 * 60, // 24 hours
+  '0x30d1900306FD84EcFBCb16F821Aba69054aca15C': 24 * 60 * 60, // 24 hours
   // cLQDR Receiver
-  '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875': 24 * 60 * 60, // 24 hours
+  '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f': 24 * 60 * 60, // 24 hours
 /*
   // 5 - stkCAKE
   '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 24 * 60 * 60, // 24 hours
@@ -994,7 +994,7 @@ async function gulpAll(privateKey, network) {
 
     {
       // cLQDR EXTENSION
-      const address = '0x1072A1D913806fAA9584fA180eDd53579562A4b6';
+      const address = '0x30d1900306FD84EcFBCb16F821Aba69054aca15C';
       const tx = await safeCollect(privateKey, network, address);
       if (tx !== null) {
         return { name: 'cLQDR', type: 'Extension', address, tx };
@@ -1003,7 +1003,7 @@ async function gulpAll(privateKey, network) {
 
     {
       // cLQDR RECEIVER
-      const address = '0x67A4c8d130ED95fFaB9F2CDf001811Ada1077875';
+      const address = '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f';
       //const amount = await getTokenBalance(privateKey, network, LQDR, address);
       //const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
       //if (BigInt(amount) >= MINIMUM_AMOUNT) {
