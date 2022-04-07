@@ -467,7 +467,7 @@ async function pendingBurning(privateKey, network, address, agent = null) {
   }
 }
 
-async function collect(privateKey, network, address, nonce) {
+async function collect(privateKey, network, address, nonce, limitGas = true) {
   const web3 = getWeb3(privateKey, network);
   const abi = EXTENSION_ABI;
   const contract = new web3.eth.Contract(abi, address);
@@ -476,9 +476,11 @@ async function collect(privateKey, network, address, nonce) {
   try {
     const estimatedGas = await contract.methods.collect().estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
-    const gasPrice = await web3.eth.getGasPrice();
-    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
-      throw new Error('Gas price beyond the set limit');
+    if (limitGas) {
+      const gasPrice = await web3.eth.getGasPrice();
+      if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+        throw new Error('Gas price beyond the set limit');
+      }
     }
     await contract.methods.collect().send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
@@ -491,7 +493,7 @@ async function collect(privateKey, network, address, nonce) {
   return txId;
 }
 
-async function gulp0(privateKey, network, address, nonce) {
+async function gulp0(privateKey, network, address, nonce, limitGas = true) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
@@ -500,9 +502,11 @@ async function gulp0(privateKey, network, address, nonce) {
   try {
     const estimatedGas = await contract.methods.gulp().estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
-    const gasPrice = await web3.eth.getGasPrice();
-    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
-      throw new Error('Gas price beyond the set limit');
+    if (limitGas) {
+      const gasPrice = await web3.eth.getGasPrice();
+      if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+        throw new Error('Gas price beyond the set limit');
+      }
     }
     await contract.methods.gulp().send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
@@ -515,7 +519,7 @@ async function gulp0(privateKey, network, address, nonce) {
   return txId;
 }
 
-async function gulp1(privateKey, network, address, amount, nonce) {
+async function gulp1(privateKey, network, address, amount, nonce, limitGas = true) {
   const web3 = getWeb3(privateKey, network);
   const abi = COLLECTOR_ADAPTER_ABI;
   const contract = new web3.eth.Contract(abi, address);
@@ -524,9 +528,11 @@ async function gulp1(privateKey, network, address, amount, nonce) {
   try {
     const estimatedGas = await contract.methods.gulp(amount).estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
-    const gasPrice = await web3.eth.getGasPrice();
-    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
-      throw new Error('Gas price beyond the set limit');
+    if (limitGas) {
+      const gasPrice = await web3.eth.getGasPrice();
+      if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+        throw new Error('Gas price beyond the set limit');
+      }
     }
     await contract.methods.gulp(amount).send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
@@ -539,7 +545,7 @@ async function gulp1(privateKey, network, address, amount, nonce) {
   return txId;
 }
 
-async function gulp2(privateKey, network, address, amount1, amount2, nonce) {
+async function gulp2(privateKey, network, address, amount1, amount2, nonce, limitGas = true) {
   const web3 = getWeb3(privateKey, network);
   const abi = UNIVERSAL_BUYBACK_ABI;
   const contract = new web3.eth.Contract(abi, address);
@@ -548,9 +554,11 @@ async function gulp2(privateKey, network, address, amount1, amount2, nonce) {
   try {
     const estimatedGas = await contract.methods.gulp(amount1, amount2).estimateGas({ from, nonce });
     const gas = 2 * estimatedGas;
-    const gasPrice = await web3.eth.getGasPrice();
-    if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
-      throw new Error('Gas price beyond the set limit');
+    if (limitGas) {
+      const gasPrice = await web3.eth.getGasPrice();
+      if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+        throw new Error('Gas price beyond the set limit');
+      }
     }
     await contract.methods.gulp(amount1, amount2).send({ from, nonce, gas })
       .on('transactionHash', (hash) => {
@@ -740,7 +748,7 @@ function writeLastGulp(network) {
   try { fs.writeFileSync('gulpbot-' + network + '.json', JSON.stringify(lastGulp, undefined, 2)); } catch (e) { }
 }
 
-async function safeGulp(privateKey, network, address) {
+async function safeGulp(privateKey, network, address, limitGas = true) {
   const now = Date.now();
   const timestamp = lastGulp[address] || 0;
   const ellapsed = (now - timestamp) / 1000;
@@ -749,9 +757,9 @@ async function safeGulp(privateKey, network, address) {
   const nonce = await getNonce(privateKey, network);
   try {
     let messages = [address];
-    try { const txId = await gulp0(privateKey, network, address, nonce); return txId; } catch (e) { messages.push(e.message); }
-    try { const txId = await gulp1(privateKey, network, address, 0, nonce); return txId; } catch (e) { messages.push(e.message); }
-    try { const txId = await gulp2(privateKey, network, address, 0, 0, nonce); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await gulp0(privateKey, network, address, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await gulp1(privateKey, network, address, 0, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await gulp2(privateKey, network, address, 0, 0, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
     throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
@@ -759,7 +767,7 @@ async function safeGulp(privateKey, network, address) {
   }
 }
 
-async function safeCollect(privateKey, network, address) {
+async function safeCollect(privateKey, network, address, limitGas = true) {
   const now = Date.now();
   const timestamp = lastGulp[address] || 0;
   const ellapsed = (now - timestamp) / 1000;
@@ -768,7 +776,7 @@ async function safeCollect(privateKey, network, address) {
   const nonce = await getNonce(privateKey, network);
   try {
     let messages = [address];
-    try { const txId = await collect(privateKey, network, address, nonce); return txId; } catch (e) { messages.push(e.message); }
+    try { const txId = await collect(privateKey, network, address, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
     throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
@@ -788,7 +796,7 @@ async function listContracts(privateKey, network) {
   }
 }
 
-async function fixTwap(privateKey, network, address, exchange, rewardToken, routingToken, reserveToken) {
+async function fixTwap(privateKey, network, address, exchange, rewardToken, routingToken, reserveToken, limitGas = true) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
   const contract = new web3.eth.Contract(abi, address);
@@ -826,9 +834,11 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     const contract = new web3.eth.Contract(abi, exchange, { from, gas });
     if (rewardToken !== routingToken) {
       try {
-        const gasPrice = await web3.eth.getGasPrice();
-        if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
-          throw new Error('Gas price beyond the set limit');
+        if (limitGas) {
+          const gasPrice = await web3.eth.getGasPrice();
+          if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+            throw new Error('Gas price beyond the set limit');
+          }
         }
         await contract.methods.oracleAveragePriceFactorFromInput(rewardToken, routingToken, '10000000000').estimateGas({ from });
         let txId = null;
@@ -841,9 +851,11 @@ async function fixTwap(privateKey, network, address, exchange, rewardToken, rout
     }
     if (reserveToken !== routingToken) {
       try {
-        const gasPrice = await web3.eth.getGasPrice();
-        if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
-          throw new Error('Gas price beyond the set limit');
+        if (limitGas) {
+          const gasPrice = await web3.eth.getGasPrice();
+          if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+            throw new Error('Gas price beyond the set limit');
+          }
         }
         await contract.methods.oraclePoolAveragePriceFactorFromInput(reserveToken, routingToken, '10000000000').estimateGas({ from });
         let txId = null;
@@ -995,7 +1007,7 @@ async function gulpAll(privateKey, network) {
     {
       // cLQDR EXTENSION
       const address = '0x30d1900306FD84EcFBCb16F821Aba69054aca15C';
-      const tx = await safeCollect(privateKey, network, address);
+      const tx = await safeCollect(privateKey, network, address, false);
       if (tx !== null) {
         return { name: 'cLQDR', type: 'Extension', address, tx };
       }
@@ -1007,7 +1019,7 @@ async function gulpAll(privateKey, network) {
       //const amount = await getTokenBalance(privateKey, network, LQDR, address);
       //const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
       //if (BigInt(amount) >= MINIMUM_AMOUNT) {
-        const tx = await safeGulp(privateKey, network, address);
+        const tx = await safeGulp(privateKey, network, address, false);
         if (tx !== null) {
           return { name: 'cLQDR', type: 'Buyback', address, tx };
         }
