@@ -520,7 +520,7 @@ async function unavailable(privateKey, network, address, account = null) {
   const contract = new web3.eth.Contract(abi, address);
   if (account === null) [account] = web3.currentProvider.getAddresses();
   try {
-    const flag = await contract.methods.unavailable(account).call();
+    const flag = await contract.methods.unavailable().call();
     return flag;
   } catch (e) {
     throw new Error(e.message);
@@ -533,7 +533,7 @@ async function unallocated(privateKey, network, address, account = null) {
   const contract = new web3.eth.Contract(abi, address);
   if (account === null) [account] = web3.currentProvider.getAddresses();
   try {
-    const flag = await contract.methods.unallocated(account).call();
+    const flag = await contract.methods.unallocated().call();
     return flag;
   } catch (e) {
     throw new Error(e.message);
