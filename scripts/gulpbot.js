@@ -229,10 +229,31 @@ const EXTENSION_ABI = [
   {
     type: 'function',
     name: 'collect',
-    inputs: [
-    ],
-    outputs:[
-    ],
+    inputs: [],
+    outputs:[],
+  },
+];
+
+const MULTIREWARDALLOCATOR_ABI = [
+  {
+    type: 'function',
+    name: 'unavailable',
+    inputs: [],
+    'stateMutability': 'view',
+    outputs:[{ type: 'bool', name: '_flag' }],
+  },
+  {
+    type: 'function',
+    name: 'unallocated',
+    inputs: [],
+    'stateMutability': 'view',
+    outputs:[{ type: 'bool', name: '_flag' }],
+  },
+  {
+    type: 'function',
+    name: 'allocate',
+    inputs: [],
+    outputs:[],
   },
 ];
 
@@ -493,6 +514,58 @@ async function collect(privateKey, network, address, nonce, limitGas = true) {
   return txId;
 }
 
+async function unavailable(privateKey, network, address, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = MULTIREWARDALLOCATOR_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const flag = await contract.methods.unavailable(account).call();
+    return flag;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function unallocated(privateKey, network, address, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = MULTIREWARDALLOCATOR_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const flag = await contract.methods.unallocated(account).call();
+    return flag;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function allocate(privateKey, network, address, nonce, limitGas = true) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = MULTIREWARDALLOCATOR_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  const [from] = web3.currentProvider.getAddresses();
+  let txId = null;
+  try {
+    const estimatedGas = await contract.methods.allocate().estimateGas({ from, nonce });
+    const gas = 2 * estimatedGas;
+    if (limitGas) {
+      const gasPrice = await web3.eth.getGasPrice();
+      if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+        throw new Error('Gas price beyond the set limit');
+      }
+    }
+    await contract.methods.allocate().send({ from, nonce, gas })
+      .on('transactionHash', (hash) => {
+        txId = hash;
+      });
+  } catch (e) {
+    throw new Error(e.message);
+  }
+  if (txId === null) throw new Error('Failure reading txId');
+  return txId;
+}
+
 async function gulp0(privateKey, network, address, nonce, limitGas = true) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
@@ -614,6 +687,13 @@ const GULP_INTERVAL = {
   '0x30d1900306FD84EcFBCb16F821Aba69054aca15C': 24 * 60 * 60, // 24 hours
   // cLQDR Receiver
   '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f': 24 * 60 * 60, // 24 hours
+
+  // MRA [Avalanche]
+  '0x6adf0cd8BE6b8cF7149C443dA8D4F7Ca942EB9B5': 5 * 60, // 5 minutes
+
+  // MRA [BSC]
+  '0x07c3c8350b341179582CA5e6C4BF04fEC5Cf5392': 5 * 60, // 5 minutes
+
 /*
   // 5 - stkCAKE
   '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 24 * 60 * 60, // 24 hours
@@ -777,6 +857,23 @@ async function safeCollect(privateKey, network, address, limitGas = true) {
   try {
     let messages = [address];
     try { const txId = await collect(privateKey, network, address, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
+    throw new Error(messages.join('\n'));
+  } finally {
+    lastGulp[address] = now;
+    writeLastGulp(network);
+  }
+}
+
+async function safeAllocate(privateKey, network, address, limitGas = true) {
+  const now = Date.now();
+  const timestamp = lastGulp[address] || 0;
+  const ellapsed = (now - timestamp) / 1000;
+  const interval = GULP_INTERVAL[address] || DEFAULT_GULP_INTERVAL;
+  if (ellapsed < interval) return null;
+  const nonce = await getNonce(privateKey, network);
+  try {
+    let messages = [address];
+    try { const txId = await allocate(privateKey, network, address, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
     throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
@@ -1239,6 +1336,18 @@ async function gulpAll(privateKey, network) {
     }
     */
 
+    {
+      // MRA [Avalanche]
+      const address = '0x6adf0cd8BE6b8cF7149C443dA8D4F7Ca942EB9B5';
+      const flag =  await unallocated(privateKey, network, address);
+      if (flag) {
+        const tx = await safeAllocate(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'GRO', type: 'MultiRewardAllocator', address, tx };
+        }
+      }
+    }
+
     return false;
   }
 
@@ -1600,6 +1709,18 @@ async function gulpAll(privateKey, network) {
       }
     }
     */
+
+    {
+      // MRA [BSC]
+      const address = '0x07c3c8350b341179582CA5e6C4BF04fEC5Cf5392';
+      const flag = await unallocated(privateKey, network, address);
+      if (flag) {
+        const tx = await safeAllocate(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'GRO', type: 'MultiRewardAllocator', address, tx };
+        }
+      }
+    }
 
     return false;
   }
