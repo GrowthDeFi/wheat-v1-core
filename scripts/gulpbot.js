@@ -694,6 +694,9 @@ const GULP_INTERVAL = {
   // MRA [BSC]
   '0x07c3c8350b341179582CA5e6C4BF04fEC5Cf5392': 5 * 60, // 5 minutes
 
+  // MRA [Fantom]
+  '0xD51fd17f7d5B4C4486257bad5553dB3689F9FCe2': 5 * 60, // 5 minutes
+
 /*
   // 5 - stkCAKE
   '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 24 * 60 * 60, // 24 hours
@@ -1121,6 +1124,18 @@ async function gulpAll(privateKey, network) {
           return { name: 'cLQDR', type: 'Buyback', address, tx };
         }
       //}
+    }
+
+    {
+      // MRA [Fantom]
+      const address = '0xD51fd17f7d5B4C4486257bad5553dB3689F9FCe2';
+      const flag =  await unallocated(privateKey, network, address);
+      if (flag) {
+        const tx = await safeAllocate(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'GRO+cLQDR', type: 'MultiRewardAllocator', address, tx };
+        }
+      }
     }
 
     return false;
