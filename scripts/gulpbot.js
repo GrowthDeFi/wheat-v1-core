@@ -260,6 +260,19 @@ const MULTIREWARDALLOCATOR_ABI = [
 const AMO_ABI = [
   {
     type: 'function',
+    name: 'estimate',
+    inputs: [],
+    'stateMutability': 'view',
+    outputs:[{ type: 'uint256', name: '_amount' }],
+  },
+  {
+    type: 'function',
+    name: 'collect',
+    inputs: [],
+    outputs:[],
+  },
+  {
+    type: 'function',
     name: 'unbalanced',
     inputs: [],
     'stateMutability': 'view',
@@ -580,6 +593,19 @@ async function allocate(privateKey, network, address, nonce, limitGas = true) {
   }
   if (txId === null) throw new Error('Failure reading txId');
   return txId;
+}
+
+async function estimate(privateKey, network, address, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = AMO_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const amount = await contract.methods.estimate().call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
 }
 
 async function unbalanced(privateKey, network, address, account = null) {
@@ -1216,9 +1242,16 @@ async function gulpAll(privateKey, network) {
     {
       // MOR/bb-yv-USD AMO [Fantom]
       const address = '0x53AAF3c5FC977E2ED7E0e746306Dec3927829AE5';
+      const amount =  await estimate(privateKey, network, address);
+      if (BigInt(amount) > 0n) {
+        const tx = await safeCollect(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'BEETS', type: 'BeethovenxStablePhantomPoolDssAmo0', address, tx };
+        }
+      }
       const flag =  await unbalanced(privateKey, network, address);
       if (flag) {
-        const tx = await saferebalance(privateKey, network, address);
+        const tx = await safeRebalance(privateKey, network, address);
         if (tx !== null) {
           return { name: 'MOR+bb-yv-USD', type: 'BeethovenxStablePhantomPoolDssAmo0', address, tx };
         }
