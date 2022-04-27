@@ -257,6 +257,22 @@ const MULTIREWARDALLOCATOR_ABI = [
   },
 ];
 
+const AMO_ABI = [
+  {
+    type: 'function',
+    name: 'unbalanced',
+    inputs: [],
+    'stateMutability': 'view',
+    outputs:[{ type: 'bool', name: '_flag' }],
+  },
+  {
+    type: 'function',
+    name: 'rebalance',
+    inputs: [],
+    outputs:[],
+  },
+];
+
 const MASTERCHEF_ADDRESS = {
   'bscmain': '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448',
   'bsctest': '0xF4748df5D63F6AB01e276065E6bD098Ce8dEA98a',
@@ -566,6 +582,45 @@ async function allocate(privateKey, network, address, nonce, limitGas = true) {
   return txId;
 }
 
+async function unbalanced(privateKey, network, address, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = AMO_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const flag = await contract.methods.unbalanced().call();
+    return flag;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function rebalance(privateKey, network, address, nonce, limitGas = true) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = AMO_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  const [from] = web3.currentProvider.getAddresses();
+  let txId = null;
+  try {
+    const estimatedGas = await contract.methods.rebalance().estimateGas({ from, nonce });
+    const gas = 2 * estimatedGas;
+    if (limitGas) {
+      const gasPrice = await web3.eth.getGasPrice();
+      if (BigInt(gasPrice) > BigInt(LIMIT_GASPRICE[network])) {
+        throw new Error('Gas price beyond the set limit');
+      }
+    }
+    await contract.methods.rebalance().send({ from, nonce, gas })
+      .on('transactionHash', (hash) => {
+        txId = hash;
+      });
+  } catch (e) {
+    throw new Error(e.message);
+  }
+  if (txId === null) throw new Error('Failure reading txId');
+  return txId;
+}
+
 async function gulp0(privateKey, network, address, nonce, limitGas = true) {
   const web3 = getWeb3(privateKey, network);
   const abi = STRATEGY_ABI;
@@ -696,6 +751,9 @@ const GULP_INTERVAL = {
 
   // MRA [Fantom]
   '0xD51fd17f7d5B4C4486257bad5553dB3689F9FCe2': 5 * 60, // 5 minutes
+
+  // MOR/bb-yv-USD AMO [Fantom]
+  '0x53AAF3c5FC977E2ED7E0e746306Dec3927829AE5': 5 * 60, // 5 minutes
 
 /*
   // 5 - stkCAKE
@@ -877,6 +935,23 @@ async function safeAllocate(privateKey, network, address, limitGas = true) {
   try {
     let messages = [address];
     try { const txId = await allocate(privateKey, network, address, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
+    throw new Error(messages.join('\n'));
+  } finally {
+    lastGulp[address] = now;
+    writeLastGulp(network);
+  }
+}
+
+async function safeRebalance(privateKey, network, address, limitGas = true) {
+  const now = Date.now();
+  const timestamp = lastGulp[address] || 0;
+  const ellapsed = (now - timestamp) / 1000;
+  const interval = GULP_INTERVAL[address] || DEFAULT_GULP_INTERVAL;
+  if (ellapsed < interval) return null;
+  const nonce = await getNonce(privateKey, network);
+  try {
+    let messages = [address];
+    try { const txId = await rebalance(privateKey, network, address, nonce, limitGas); return txId; } catch (e) { messages.push(e.message); }
     throw new Error(messages.join('\n'));
   } finally {
     lastGulp[address] = now;
@@ -1134,6 +1209,18 @@ async function gulpAll(privateKey, network) {
         const tx = await safeAllocate(privateKey, network, address);
         if (tx !== null) {
           return { name: 'GRO+cLQDR', type: 'MultiRewardAllocator', address, tx };
+        }
+      }
+    }
+
+    {
+      // MOR/bb-yv-USD AMO [Fantom]
+      const address = '0x53AAF3c5FC977E2ED7E0e746306Dec3927829AE5';
+      const flag =  await unbalanced(privateKey, network, address);
+      if (flag) {
+        const tx = await saferebalance(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'MOR+bb-yv-USD', type: 'BeethovenxStablePhantomPoolDssAmo0', address, tx };
         }
       }
     }
