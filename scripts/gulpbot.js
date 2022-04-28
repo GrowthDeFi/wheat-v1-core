@@ -286,6 +286,33 @@ const AMO_ABI = [
   },
 ];
 
+const MASTERCHEFBOO_ABI = [
+  {
+    type: 'function',
+    name: 'rewarder',
+    inputs: [{ type: 'uint256', name: '_pid' }],
+    'stateMutability': 'view',
+    outputs:[{ type: 'address', name: '_rewarder' }],
+  },
+];
+
+const IREWARDER_ABI = [
+  {
+    type: 'function',
+    name: 'pendingTokens',
+    inputs: [
+      { type: 'uint256', name: '_pid' },
+      { type: 'address', name: '_user' },
+      { type: 'uint256', name: '_amount' },
+    ],
+    'stateMutability': 'view',
+    outputs:[
+      { type: 'address[]', name: '_tokens' },
+      { type: 'address[]', name: '_amounts' },
+    ],
+  },
+];
+
 const MASTERCHEF_ADDRESS = {
   'bscmain': '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448',
   'bsctest': '0xF4748df5D63F6AB01e276065E6bD098Ce8dEA98a',
@@ -384,6 +411,32 @@ async function getPendingBalanceLqdr(privateKey, network, address, pid, account 
     return amount;
   } catch (e) {
     throw new Error(e.message);
+  }
+}
+
+async function getPendingBalanceDeus(privateKey, network, address, pid, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  let rewarder;
+  {
+    const abi = MASTERCHEFBOO_ABI;
+    const contract = new web3.eth.Contract(abi, address);
+    try {
+      rewarder = await contract.methods.rewarder(pid).call();
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
+  {
+    const abi = IREWARDER_ABI;
+    const contract = new web3.eth.Contract(abi, rewarder);
+    try {
+      const response = await contract.methods.pendingTokens(pid, account, 0).call();
+      const amount = response._amounts[0];
+      return amount;
+    } catch (e) {
+      throw new Error(e.message);
+    }
   }
 }
 
@@ -1076,10 +1129,12 @@ async function gulpAll(privateKey, network) {
 
     const LQDR = '0x10b620b2dbAC4Faa7D7FFD71Da486f5D44cd86f9';
     const LQDR_MASTERCHEF_V2 = '0x6e2ad6527901c9664f016466b8DA1357a004db0f';
+    const BOO_MASTERCHEF_V2 = '0x18b4f774fdC7BF685daeeF66c2990b1dDd9ea6aD';
     const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
     const GEIST = '0xd8321AA83Fb0a4ECd6348D4577431310A6E0814d';
     const CRV = '0x1E4F97b9f9F913c46F1632781732927B9019C68b';
     const USDC = '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75';
+    const DEUS = '0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44';
     const SPI_EXCHANGE = '0x7c50808E072a5531eC5D3DCc88Bd7a4Afc36dbf9';
     const SPO_EXCHANGE = '0x3FDbFdc60Cf80465E7dC05041AE4f03E5e2D55cB';
     const SPI_FTM_LQDR = '0x4Fe6f19031239F105F753D1DF8A0d24857D0cAA2';
@@ -1100,6 +1155,7 @@ async function gulpAll(privateKey, network) {
     const SPO_FTM_FUSDT = '0x5965E53aa80a0bcF1CD6dbDd72e6A9b2AA047410';
     const SPO_FTM_MIM = '0x6f86e65b255c9111109d2D2325ca2dFc82456efc';
     const SPO_FTM_SCREAM = '0x30872e4fc4edbFD7a352bFC2463eb4fAe9C09086';
+    const SPO_USDC_DEI = '0xD343b8361Ce32A9e570C1fC8D4244d32848df88B';
 
     {
       // LQDR SpiritSwap strategies
@@ -1171,6 +1227,40 @@ async function gulpAll(privateKey, network) {
             const name = await getTokenSymbol(privateKey, network, address);
             return { name, type: 'SpookySwapStrategy', address, tx };
           }
+        }
+      }
+    }
+
+    {
+      // DEUS SpookySwap strategies
+      const addresses = [
+        // 1 - stkUSDC/DEIv3
+        [1, '0x1DE2bC09527Aa3F6a3Aa35271471966b2dd4E215', USDC, SPO_USDC_DEI, BOO_MASTERCHEF_V2],
+      ];
+      for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
+        const amount1 = await getTokenBalance(privateKey, network, DEUS, address);
+        const amount2 = await getPendingBalanceDeus(privateKey, network, masterChef, pid, address);
+        const MINIMUM_AMOUNT = 1000000000000000000n; // 1 DEUS
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, SPO_EXCHANGE, DEUS, routingToken, reserveToken);
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'SpookySwapStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
+      // stkUSDC/DEIv3 DEUS adapter
+      const address = '0x744ed0c7453b4332885e650cE66611cEd9f6e50b';
+      const amount = await getTokenBalance(privateKey, network, DEUS, address);
+      const MINIMUM_AMOUNT = 1000000000000000000n; // 1 DEUS
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'DEUS', type: 'SpookySwapAdapter', address, tx };
         }
       }
     }
