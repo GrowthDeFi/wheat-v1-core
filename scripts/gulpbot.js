@@ -832,7 +832,7 @@ const GULP_INTERVAL = {
   '0xD51fd17f7d5B4C4486257bad5553dB3689F9FCe2': 5 * 60, // 5 minutes
 
   // MOR/bb-yv-USD AMO [Fantom]
-  '0x53AAF3c5FC977E2ED7E0e746306Dec3927829AE5': 5 * 60, // 5 minutes
+  '0x53AAF3c5FC977E2ED7E0e746306Dec3927829AE5': 12 * 60 * 60, // 12 hours
 
 /*
   // 5 - stkCAKE
