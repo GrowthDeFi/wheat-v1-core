@@ -1156,6 +1156,7 @@ async function gulpAll(privateKey, network) {
     const SPO_FTM_MIM = '0x6f86e65b255c9111109d2D2325ca2dFc82456efc';
     const SPO_FTM_SCREAM = '0x30872e4fc4edbFD7a352bFC2463eb4fAe9C09086';
     const SPO_USDC_DEI = '0xD343b8361Ce32A9e570C1fC8D4244d32848df88B';
+    const SPO_FTM_DEUS = '0xaF918eF5b9f33231764A5557881E6D3e5277d456';
 
     {
       // LQDR SpiritSwap strategies
@@ -1236,6 +1237,8 @@ async function gulpAll(privateKey, network) {
       const addresses = [
         // 1 - stkUSDC/DEIv3
         [1, '0x1DE2bC09527Aa3F6a3Aa35271471966b2dd4E215', USDC, SPO_USDC_DEI, BOO_MASTERCHEF_V2],
+        // 2 - stkFTM/DEUSv3
+        [2, '0xDE98dFbFCa4Bce256AF0b9Aa7664051a6B414548', DEUS, SPO_FTM_DEUS, BOO_MASTERCHEF_V2],
       ];
       for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
         const amount1 = await getTokenBalance(privateKey, network, DEUS, address);
@@ -1253,7 +1256,7 @@ async function gulpAll(privateKey, network) {
     }
 
     {
-      // stkUSDC/DEIv3 DEUS adapter
+      // DEUS => USDC adapter
       const address = '0x744ed0c7453b4332885e650cE66611cEd9f6e50b';
       const amount = await getTokenBalance(privateKey, network, DEUS, address);
       const MINIMUM_AMOUNT = 1000000000000000000n; // 1 DEUS
