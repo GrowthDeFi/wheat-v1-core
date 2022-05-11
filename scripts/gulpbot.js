@@ -286,7 +286,20 @@ const AMO_ABI = [
   },
 ];
 
-const MASTERCHEFBOO_ABI = [
+const MASTERCHEFBOOV1_ABI = [
+  {
+    type: 'function',
+    name: 'pendingBOO',
+    inputs: [
+      { type: 'uint256', name: '_pid' },
+      { type: 'address', name: '_user' },
+    ],
+    'stateMutability': 'view',
+    outputs:[{ type: 'uint256', name: '_amount' }],
+  },
+];
+
+const MASTERCHEFBOOV2_ABI = [
   {
     type: 'function',
     name: 'rewarder',
@@ -414,12 +427,25 @@ async function getPendingBalanceLqdr(privateKey, network, address, pid, account 
   }
 }
 
+async function getPendingBalanceBoo(privateKey, network, address, pid, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = MASTERCHEFBOOV1_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const amount = await contract.methods.pendingBOO(pid, account).call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
 async function getPendingBalanceDeus(privateKey, network, address, pid, account = null) {
   const web3 = getWeb3(privateKey, network);
   if (account === null) [account] = web3.currentProvider.getAddresses();
   let rewarder;
   {
-    const abi = MASTERCHEFBOO_ABI;
+    const abi = MASTERCHEFBOOV2_ABI;
     const contract = new web3.eth.Contract(abi, address);
     try {
       rewarder = await contract.methods.rewarder(pid).call();
@@ -1129,11 +1155,13 @@ async function gulpAll(privateKey, network) {
 
     const LQDR = '0x10b620b2dbAC4Faa7D7FFD71Da486f5D44cd86f9';
     const LQDR_MASTERCHEF_V2 = '0x6e2ad6527901c9664f016466b8DA1357a004db0f';
+    const BOO_MASTERCHEF_V1 = '0x2b2929E785374c651a81A63878Ab22742656DcDd';
     const BOO_MASTERCHEF_V2 = '0x18b4f774fdC7BF685daeeF66c2990b1dDd9ea6aD';
     const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
     const GEIST = '0xd8321AA83Fb0a4ECd6348D4577431310A6E0814d';
     const CRV = '0x1E4F97b9f9F913c46F1632781732927B9019C68b';
     const USDC = '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75';
+    const BOO = '0x841FAD6EAe12c286d1Fd18d1d525DFfA75C7EFFE';
     const DEUS = '0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44';
     const SPI_EXCHANGE = '0x7c50808E072a5531eC5D3DCc88Bd7a4Afc36dbf9';
     const SPO_EXCHANGE = '0x3FDbFdc60Cf80465E7dC05041AE4f03E5e2D55cB';
@@ -1233,6 +1261,27 @@ async function gulpAll(privateKey, network) {
     }
 
     {
+      // BOO SpookySwap strategies
+      const addresses = [
+        // 0 - stkFTM/BOOv3
+        [0, '0xaebd31E9FFcB222feE947f22369257cEcf1F96CA', BOO, SPO_FTM_BOO, BOO_MASTERCHEF_V1],
+      ];
+      for (const [pid, address, routingToken, reserveToken, masterChef] of addresses) {
+        const amount1 = await getTokenBalance(privateKey, network, BOO, address);
+        const amount2 = await getPendingBalanceBoo(privateKey, network, masterChef, pid, address);
+        const MINIMUM_AMOUNT = 10000000000000000000n; // 10 BOO
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, SPO_EXCHANGE, BOO, routingToken, reserveToken);
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'SpookySwapStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
       // DEUS SpookySwap strategies
       const addresses = [
         // 1 - stkUSDC/DEIv3
@@ -1251,6 +1300,19 @@ async function gulpAll(privateKey, network) {
             const name = await getTokenSymbol(privateKey, network, address);
             return { name, type: 'SpookySwapStrategy', address, tx };
           }
+        }
+      }
+    }
+
+    {
+      // BOO => USDC adapter
+      const address = '0x855aba982505d8C702dCFaB3e957A998b10D8049';
+      const amount = await getTokenBalance(privateKey, network, BOO, address);
+      const MINIMUM_AMOUNT = 10000000000000000000n; // 10 BOO
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'BOO', type: 'SpookySwapAdapter', address, tx };
         }
       }
     }
