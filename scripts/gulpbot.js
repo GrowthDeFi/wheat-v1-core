@@ -1355,6 +1355,19 @@ async function gulpAll(privateKey, network) {
     }
 
     {
+      // beFTM => USDC adapter
+      const address = '0x3023Cb7F9E4bB79c869B3B25248F1d85903c443F';
+      const amount = await getTokenBalance(privateKey, network, BEFTM, address);
+      const MINIMUM_AMOUNT = 40000000000000000000n; // 40 BEFTM
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'beFTM', type: 'SpookySwapAdapter', address, tx };
+        }
+      }
+    }
+
+    {
       // BOO => USDC adapter
       const address = '0x855aba982505d8C702dCFaB3e957A998b10D8049';
       const amount = await getTokenBalance(privateKey, network, BOO, address);
