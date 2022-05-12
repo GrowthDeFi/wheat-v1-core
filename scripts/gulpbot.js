@@ -326,6 +326,19 @@ const IREWARDER_ABI = [
   },
 ];
 
+const ACELAB_ABI = [
+  {
+    type: 'function',
+    name: 'pendingReward',
+    inputs: [
+      { type: 'uint256', name: '_pid' },
+      { type: 'address', name: '_user' },
+    ],
+    'stateMutability': 'view',
+    outputs:[{ type: 'uint256', name: '_amount' }],
+  },
+];
+
 const MASTERCHEF_ADDRESS = {
   'bscmain': '0x95fABAe2E9Fb0A269cE307550cAC3093A3cdB448',
   'bsctest': '0xF4748df5D63F6AB01e276065E6bD098Ce8dEA98a',
@@ -421,6 +434,19 @@ async function getPendingBalanceLqdr(privateKey, network, address, pid, account 
   if (account === null) [account] = web3.currentProvider.getAddresses();
   try {
     const amount = await contract.methods.pendingLqdr(pid, account).call();
+    return amount;
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function getPendingBalanceAceLab(privateKey, network, address, pid, account = null) {
+  const web3 = getWeb3(privateKey, network);
+  const abi = ACELAB_ABI;
+  const contract = new web3.eth.Contract(abi, address);
+  if (account === null) [account] = web3.currentProvider.getAddresses();
+  try {
+    const amount = await contract.methods.pendingReward(pid, account).call();
     return amount;
   } catch (e) {
     throw new Error(e.message);
@@ -1157,12 +1183,15 @@ async function gulpAll(privateKey, network) {
     const LQDR_MASTERCHEF_V2 = '0x6e2ad6527901c9664f016466b8DA1357a004db0f';
     const BOO_MASTERCHEF_V1 = '0x2b2929E785374c651a81A63878Ab22742656DcDd';
     const BOO_MASTERCHEF_V2 = '0x18b4f774fdC7BF685daeeF66c2990b1dDd9ea6aD';
+    const XBOO_ACELAB = '0x2352b745561e7e6FCD03c093cE7220e3e126ace0';
     const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
     const GEIST = '0xd8321AA83Fb0a4ECd6348D4577431310A6E0814d';
     const CRV = '0x1E4F97b9f9F913c46F1632781732927B9019C68b';
     const USDC = '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75';
     const BOO = '0x841FAD6EAe12c286d1Fd18d1d525DFfA75C7EFFE';
     const DEUS = '0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44';
+    const XBOO = '0xa48d959AE2E88f1dAA7D5F611E01908106dE7598';
+    const BEFTM = '0x7381eD41F6dE418DdE5e84B55590422a57917886';
     const SPI_EXCHANGE = '0x7c50808E072a5531eC5D3DCc88Bd7a4Afc36dbf9';
     const SPO_EXCHANGE = '0x3FDbFdc60Cf80465E7dC05041AE4f03E5e2D55cB';
     const SPI_FTM_LQDR = '0x4Fe6f19031239F105F753D1DF8A0d24857D0cAA2';
@@ -1251,6 +1280,27 @@ async function gulpAll(privateKey, network) {
         const MINIMUM_AMOUNT = 20000000000000000000n; // 20 LQDR
         if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
           await fixTwap(privateKey, network, address, SPO_EXCHANGE, LQDR, routingToken, reserveToken);
+          const tx = await safeGulp(privateKey, network, address);
+          if (tx !== null) {
+            const name = await getTokenSymbol(privateKey, network, address);
+            return { name, type: 'SpookySwapStrategy', address, tx };
+          }
+        }
+      }
+    }
+
+    {
+      // xBOO SpookySwap strategies (reward varies)
+      const addresses = [
+        // 32 - stkxBOOv3
+        [32, '0xB8b6676Ac3aFa8676dF5aBC7882396Ccb69eE933', WFTM, BOO, XBOO_ACELAB],
+      ];
+      for (const [pid, address, routingToken, reserveToken, aceLab] of addresses) {
+        const amount1 = await getTokenBalance(privateKey, network, BEFTM, address);
+        const amount2 = await getPendingBalanceAceLab(privateKey, network, aceLab, pid, address);
+        const MINIMUM_AMOUNT = 40000000000000000000n; // 40 beFTM
+        if (BigInt(amount1) + BigInt(amount2) >= MINIMUM_AMOUNT) {
+          await fixTwap(privateKey, network, address, SPO_EXCHANGE, BEFTM, routingToken, reserveToken);
           const tx = await safeGulp(privateKey, network, address);
           if (tx !== null) {
             const name = await getTokenSymbol(privateKey, network, address);
