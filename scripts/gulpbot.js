@@ -1293,7 +1293,7 @@ async function gulpAll(privateKey, network) {
       // xBOO SpookySwap strategies (reward varies)
       const addresses = [
         // 32 - stkxBOOv3
-        [32, '0xB8b6676Ac3aFa8676dF5aBC7882396Ccb69eE933', WFTM, BOO, XBOO_ACELAB],
+        [32, '0x30463d33735677B4E70f956e3dd61c6e94D70DFe', WFTM, BOO, XBOO_ACELAB],
       ];
       for (const [pid, address, routingToken, reserveToken, aceLab] of addresses) {
         const amount1 = await getTokenBalance(privateKey, network, BEFTM, address);
