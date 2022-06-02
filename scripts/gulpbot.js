@@ -1192,6 +1192,7 @@ async function gulpAll(privateKey, network) {
     const DEUS = '0xDE5ed76E7c05eC5e4572CfC88d1ACEA165109E44';
     const XBOO = '0xa48d959AE2E88f1dAA7D5F611E01908106dE7598';
     const BEFTM = '0x7381eD41F6dE418DdE5e84B55590422a57917886';
+    const PGK = '0x188a168280589bC3E483d77aae6b4A1d26bD22dC';
     const SPI_EXCHANGE = '0x7c50808E072a5531eC5D3DCc88Bd7a4Afc36dbf9';
     const SPO_EXCHANGE = '0x3FDbFdc60Cf80465E7dC05041AE4f03E5e2D55cB';
     const SPI_FTM_LQDR = '0x4Fe6f19031239F105F753D1DF8A0d24857D0cAA2';
@@ -1355,10 +1356,23 @@ async function gulpAll(privateKey, network) {
     }
 
     {
+      // PGK => USDC adapter
+      const address = '0x40d0AA6FeC07A5B0770b6A4f34c8C69e93249668';
+      const amount = await getTokenBalance(privateKey, network, PGK, address);
+      const MINIMUM_AMOUNT = 500000000000000000000n; // 500 PGK
+      if (BigInt(amount) >= MINIMUM_AMOUNT) {
+        const tx = await safeGulp(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'PGK', type: 'SpookySwapAdapter', address, tx };
+        }
+      }
+    }
+
+    {
       // beFTM => USDC adapter
       const address = '0x3023Cb7F9E4bB79c869B3B25248F1d85903c443F';
       const amount = await getTokenBalance(privateKey, network, BEFTM, address);
-      const MINIMUM_AMOUNT = 40000000000000000000n; // 40 BEFTM
+      const MINIMUM_AMOUNT = 25000000000000000000n; // 25 BEFTM
       if (BigInt(amount) >= MINIMUM_AMOUNT) {
         const tx = await safeGulp(privateKey, network, address);
         if (tx !== null) {
