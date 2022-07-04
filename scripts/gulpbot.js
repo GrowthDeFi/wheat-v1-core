@@ -158,6 +158,7 @@ const HTTP_PROVIDER_URLS = {
   ],
   'ftmmain': [
     'https://rpc.ftm.tools/',
+    // 'https://rpc.fantom.network/',
   ],
   'ftmtest': [
     'https://rpc.testnet.fantom.network/',
@@ -886,6 +887,9 @@ const GULP_INTERVAL = {
   // MOR/bb-yv-USD AMO [Fantom]
   '0x53AAF3c5FC977E2ED7E0e746306Dec3927829AE5': 12 * 60 * 60, // 12 hours
 
+  // Payroll [Fantom]
+  '0x7AA3136a31Dd238E1413294a8b89689f97073625': 5 * 60, // 5 minutes
+
 /*
   // 5 - stkCAKE
   '0x84BA65DB2da175051E25F86e2f459C863CBb3E0C': 24 * 60 * 60, // 24 hours
@@ -1486,6 +1490,18 @@ async function gulpAll(privateKey, network) {
         const tx = await safeRebalance(privateKey, network, address);
         if (tx !== null) {
           return { name: 'MOR+bb-yv-USD', type: 'BeethovenxStablePhantomPoolDssAmo0', address, tx };
+        }
+      }
+    }
+
+    {
+      // Payroll [Fantom]
+      const address = '0x7AA3136a31Dd238E1413294a8b89689f97073625';
+      const flag =  await unallocated(privateKey, network, address);
+      if (flag) {
+        const tx = await safeAllocate(privateKey, network, address);
+        if (tx !== null) {
+          return { name: 'GRO', type: 'Payroll', address, tx };
         }
       }
     }
