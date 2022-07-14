@@ -873,7 +873,7 @@ const GULP_INTERVAL = {
   // cLQDR Extension
   '0x30d1900306FD84EcFBCb16F821Aba69054aca15C': 24 * 60 * 60, // 24 hours
   // cLQDR Receiver (obsolete)
-  '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f': 24 * 60 * 60, // 24 hours
+  // '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f': 24 * 60 * 60, // 24 hours
   // cLQDR Receiver
   '0xCD3563CD8dE2602701d5d9f960db30710fcc4053': 24 * 60 * 60, // 24 hours
 
@@ -1452,6 +1452,7 @@ async function gulpAll(privateKey, network) {
       }
     }
 
+    /*
     {
       // cLQDR RECEIVER (obsolete)
       const address = '0x6f1c4303bC40AEee0aa60dD90e4eeC353487b66f';
@@ -1464,6 +1465,7 @@ async function gulpAll(privateKey, network) {
         }
       //}
     }
+    */
 
     {
       // cLQDR RECEIVER
